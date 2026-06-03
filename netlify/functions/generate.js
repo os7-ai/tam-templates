@@ -35,39 +35,37 @@ function repVars(text, vars) {
   return r;
 }
 
+function removeEmptyDirs(zipBuffer) {
+  const AdmZipClean = require('adm-zip');
+  const zipIn = new AdmZipClean(zipBuffer);
+  const zipOut = new AdmZipClean();
+  zipIn.getEntries().forEach(entry => {
+    if (entry.isDirectory) return;
+    zipOut.addFile(entry.entryName, zipIn.readFile(entry));
+  });
+  return zipOut.toBuffer();
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
-
   try {
     const { templateFile, vars } = JSON.parse(event.body);
-
     const sb = createClient(SURL, SKEY);
     const { data, error } = await sb.storage.from('templates').download(templateFile);
     if (error) throw new Error('فشل تحميل القالب: ' + error.message);
-
-    const arrayBuffer = await data.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
+    const buffer = Buffer.from(await data.arrayBuffer());
     const zip = new AdmZip(buffer);
-    const xmlFiles = ['word/document.xml', 'word/header1.xml', 'word/footer1.xml', 'word/header2.xml', 'word/footer2.xml'];
-
-    for (const xmlFile of xmlFiles) {
+    for (const xmlFile of ['word/document.xml','word/header1.xml','word/footer1.xml','word/header2.xml','word/footer2.xml']) {
       const entry = zip.getEntry(xmlFile);
       if (!entry) continue;
-      const content = zip.readAsText(entry, 'utf8');
-      zip.updateFile(xmlFile, Buffer.from(repVars(content, vars), 'utf8'));
+      zip.updateFile(xmlFile, Buffer.from(repVars(zip.readAsText(entry, 'utf8'), vars), 'utf8'));
     }
-
-    const result = zip.toBuffer();
-
+    const result = removeEmptyDirs(zip.toBuffer());
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': 'attachment',
-      },
+      headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': 'attachment' },
       body: result.toString('base64'),
       isBase64Encoded: true,
     };
