@@ -1,0 +1,8 @@
+{
+  "name": "tam-templates",
+  "version": "1.0.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "adm-zip": "^0.5.10"
+  }
+}
