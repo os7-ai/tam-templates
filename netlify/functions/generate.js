@@ -4,68 +4,30 @@ const AdmZip = require('adm-zip');
 const SURL = 'https://ghpjrvnyrlcqsfcjyiuq.supabase.co';
 const SKEY = 'sb_publishable_WkOLENVn0HqysJetM6H6NA_tQe3Cn0n';
 
-function repVars(text, vars) {
-  let r = text;
-  for (const [k, v] of Object.entries(vars)) {
-    const sv = v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const tagStr = `<w:tag w:val="${k}"/>`;
-    let pos = 0;
-    while (true) {
-      const tagIdx = r.indexOf(tagStr, pos);
-      if (tagIdx === -1) break;
-      const sdtStart = r.lastIndexOf('<w:sdt>', tagIdx);
-      if (sdtStart === -1) { pos = tagIdx + 1; continue; }
-      const sdtEnd = r.indexOf('</w:sdt>', tagIdx);
-      if (sdtEnd === -1) { pos = tagIdx + 1; continue; }
-      const sdtFull = r.substring(sdtStart, sdtEnd + 8);
-      const scStart = sdtFull.indexOf('<w:sdtContent>');
-      const scEnd = sdtFull.indexOf('</w:sdtContent>');
-      if (scStart === -1 || scEnd === -1) { pos = tagIdx + 1; continue; }
-      const oldContent = sdtFull.substring(scStart, scEnd + 15);
-      const innerContent = sdtFull.substring(scStart + 14, scEnd);
-      const rprStart = innerContent.indexOf('<w:rPr>');
-      const rprEnd = innerContent.indexOf('</w:rPr>');
-      const rpr = rprStart !== -1 && rprEnd !== -1 ? innerContent.substring(rprStart, rprEnd + 8) : '';
-      const newContent = `<w:sdtContent><w:r>${rpr}<w:t xml:space="preserve">${sv}</w:t></w:r></w:sdtContent>`;
-      const replaceAt = sdtStart + sdtFull.indexOf(oldContent);
-      r = r.substring(0, replaceAt) + newContent + r.substring(replaceAt + oldContent.length);
-      pos = replaceAt + newContent.length;
-    }
-  }
-  return r;
-}
-
-function removeEmptyDirs(zipBuffer) {
-  const AdmZipClean = require('adm-zip');
-  const zipIn = new AdmZipClean(zipBuffer);
-  const zipOut = new AdmZipClean();
-  zipIn.getEntries().forEach(entry => {
-    if (entry.isDirectory) return;
-    zipOut.addFile(entry.entryName, zipIn.readFile(entry));
-  });
-  return zipOut.toBuffer();
-}
-
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
+
   try {
-    const { templateFile, vars } = JSON.parse(event.body);
+    const { templateFile } = JSON.parse(event.body);
+
     const sb = createClient(SURL, SKEY);
     const { data, error } = await sb.storage.from('templates').download(templateFile);
     if (error) throw new Error('فشل تحميل القالب: ' + error.message);
+
     const buffer = Buffer.from(await data.arrayBuffer());
     const zip = new AdmZip(buffer);
-    for (const xmlFile of ['word/document.xml','word/header1.xml','word/footer1.xml','word/header2.xml','word/footer2.xml']) {
-      const entry = zip.getEntry(xmlFile);
-      if (!entry) continue;
-      zip.updateFile(xmlFile, Buffer.from(repVars(zip.readAsText(entry, 'utf8'), vars), 'utf8'));
-    }
-    const result = removeEmptyDirs(zip.toBuffer());
+
+    // TEST MODE: بدون أي تعديل XML
+    const result = zip.toBuffer();
+
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': 'attachment' },
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': 'attachment',
+      },
       body: result.toString('base64'),
       isBase64Encoded: true,
     };
