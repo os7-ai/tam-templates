@@ -575,10 +575,55 @@ async function procDocx(ab,vars,templateFile){
   genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
 }
 
+function repVarsPptx(text,vars){
+  let r=text;
+  // First pass: merge split runs within each paragraph to handle PowerPoint text fragmentation
+  r=r.replace(/(<a:p[ >][\s\S]*?<\/a:p>)/g,para=>{
+    // Extract all run texts concatenated
+    const fullText=[];
+    const runPattern=/<a:r>([\s\S]*?)<\/a:r>/g;
+    let m;
+    while((m=runPattern.exec(para))!==null){
+      const tMatch=m[1].match(/<a:t[^>]*>([\s\S]*?)<\/a:t>/);
+      if(tMatch)fullText.push({run:m[0],text:tMatch[1],idx:m.index});
+    }
+    // Check if any variable is split across runs
+    let joined=fullText.map(x=>x.text).join('');
+    let hasVar=false;
+    for(const k of Object.keys(vars)){if(joined.includes('{{'+k+'}}'))hasVar=true;}
+    if(!hasVar)return para;
+    // Replace variables in joined text
+    let replaced=joined;
+    for(const[k,v]of Object.entries(vars)){
+      const sv=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      replaced=replaced.split('{{'+k+'}}').join(sv);
+    }
+    // Put all text in first run, clear the rest
+    if(fullText.length===0)return para;
+    let result=para;
+    // Replace last runs (reverse order to keep indices valid)
+    for(let i=fullText.length-1;i>0;i--){
+      result=result.slice(0,fullText[i].idx)+result.slice(fullText[i].idx+fullText[i].run.length);
+    }
+    // Update first run text
+    result=result.replace(/<a:t[^>]*>[\s\S]*?<\/a:t>/,m2=>{
+      const tag=m2.match(/^<a:t[^>]*>/)[0];
+      return tag+replaced+'</a:t>';
+    });
+    return result;
+  });
+  // Second pass: simple replacement for any remaining single-run {{vars}}
+  for(const[k,v]of Object.entries(vars)){
+    const sv=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    r=r.split('{{'+k+'}}').join(sv);
+  }
+  return r;
+}
+
 async function procPptx(ab,vars){
   const zip=await JSZip.loadAsync(ab);
-  const slides=Object.keys(zip.files).filter(f=>/^ppt\/slides\/slide[0-9]+\.xml$/.test(f));
-  for(const p of slides){let c=await zip.file(p).async('string');c=repVars(c,vars);zip.file(p,c);}
+  const targets=Object.keys(zip.files).filter(f=>/^ppt\/(slides\/slide|notesSlides\/notesSlide)[0-9]+\.xml$/.test(f));
+  for(const p of targets){let c=await zip.file(p).async('string');c=repVarsPptx(c,vars);zip.file(p,c);}
   const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
   genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
 }
