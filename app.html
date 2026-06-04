@@ -193,7 +193,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 const SURL='https://ghpjrvnyrlcqsfcjyiuq.supabase.co';
 const SKEY='sb_publishable_WkOLENVn0HqysJetM6H6NA_tQe3Cn0n';
 const sb=supabase.createClient(SURL,SKEY);
-let curTpl=null,genBlob=null,genName='',logoData=null;
+let curTpl=null,genBlob=null,genName='',logoData=null,logoW=0,logoH=0;
 
 sb.auth.getSession().then(({data:{session}})=>{
   if(!session){window.location.href='login.html';return;}
@@ -377,7 +377,7 @@ function renderForm(tid){
   const tmpl=T[tid];
   document.getElementById('formTitle').textContent=tmpl.name;
   const cont=document.getElementById('formFields');
-  cont.innerHTML=''; logoData=null;
+  cont.innerHTML=''; logoData=null; logoW=0; logoH=0;
   const grid=document.createElement('div');grid.className='fgrid';
   tmpl.fields.forEach(f=>{
     if(f.tp==='sep'){const s=document.createElement('div');s.className='fsep';grid.appendChild(s);return;}
@@ -459,7 +459,7 @@ function renderForm(tid){
       d.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p>اضغط لرفع شعار الجهة</p>';
       d.onclick=()=>document.getElementById('logoInp').click();
       const i=document.createElement('input');i.type='file';i.id='logoInp';i.accept='image/*';i.style.display='none';
-      i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{logoData=ev.target.result;d.classList.add('has');d.innerHTML='<img src="'+logoData+'" class="lup"><p>✅ تم رفع الشعار</p>';};r.readAsDataURL(f);};
+      i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{logoData=ev.target.result;const img=new Image();img.onload=()=>{logoW=img.naturalWidth;logoH=img.naturalHeight;};img.src=logoData;d.classList.add('has');d.innerHTML='<img src="'+logoData+'" class="lup"><p>✅ تم رفع الشعار</p>';};r.readAsDataURL(f);};
       w.appendChild(d);w.appendChild(i);
     }
     grid.appendChild(w);
@@ -684,11 +684,22 @@ async function insertLogoPptx(zip,slides){
     const offM=spPrXml.match(/<a:off x="(\d+)" y="(\d+)"/);
     const extM=spPrXml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
     if(!offM||!extM)continue;
-    const [,x_orig,y]=offM,[,cx_orig,cy_orig]=extM;
-    // Scale up 2x while keeping the right edge anchored (matches placeholder intent)
-    const cx=String(parseInt(cx_orig)*2);
-    const cy=String(parseInt(cy_orig)*2);
-    const x=String(parseInt(x_orig)-parseInt(cx_orig));
+    const [,x_orig,y_orig]=offM,[,cx_orig,cy_orig]=extM;
+    // Target area is 2x the placeholder; fit the logo within it maintaining aspect ratio
+    const targetCx=parseInt(cx_orig)*2;
+    const targetCy=parseInt(cy_orig)*2;
+    let finalCx,finalCy;
+    if(logoW&&logoH){
+      const imgRatio=logoW/logoH;
+      const boxRatio=targetCx/targetCy;
+      if(imgRatio>boxRatio){finalCx=targetCx;finalCy=Math.round(targetCx/imgRatio);}
+      else{finalCy=targetCy;finalCx=Math.round(targetCy*imgRatio);}
+    }else{finalCx=targetCx;finalCy=targetCy;}
+    const cx=String(finalCx);
+    const cy=String(finalCy);
+    // Center within the target area (right-edge anchored for RTL layout)
+    const x=String(parseInt(x_orig)-parseInt(cx_orig)+Math.round((targetCx-finalCx)/2));
+    const y=String(parseInt(y_orig)+Math.round((targetCy-finalCy)/2));
 
     // Add image relationship to slide rels
     const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
