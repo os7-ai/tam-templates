@@ -248,14 +248,14 @@ function toHijri(ds){
     rem2-=mdays[i];
   }
   // Force ASCII digits
-  return String(hy)+'/'+String(hm)+'/'+String(hd)+'هـ';
+  return String(hy)+'/'+String(hm)+'/'+String(hd);
 }
 
 function fmtDate(ds){
   if(!ds)return'';
   const p=ds.split('-');
   if(p.length!==3)return ds;
-  return p[0]+'/'+String(parseInt(p[1]))+'/'+String(parseInt(p[2]))+'م';
+  return p[0]+'/'+String(parseInt(p[1]))+'/'+String(parseInt(p[2]));
 }
 function fmtPeriod(f,t){return'من '+fmtDate(f)+' حتى '+fmtDate(t);}
 function fmt(n){return n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});}
