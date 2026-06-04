@@ -652,6 +652,14 @@ async function insertLogoPptx(zip,slides){
   const mediaPath='ppt/media/'+fileName;
   const IMAGE_REL='http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
 
+  // Read slide dimensions to prevent logo overflowing the slide boundary
+  let slideW=9144000,slideH=5143500;
+  if(zip.files['ppt/presentation.xml']){
+    const pxml=await zip.files['ppt/presentation.xml'].async('string');
+    const sm=pxml.match(/<p:sldSz[^>]+cx="(\d+)"[^>]+cy="(\d+)"/);
+    if(sm){slideW=parseInt(sm[1]);slideH=parseInt(sm[2]);}
+  }
+
   // Add image bytes to media folder
   zip.file(mediaPath,logoData.split(',')[1],{base64:true});
 
@@ -700,9 +708,11 @@ async function insertLogoPptx(zip,slides){
     }else{finalCx=targetCx;finalCy=Math.round(targetCx*0.4);}
     const cx=String(finalCx);
     const cy=String(finalCy);
-    // Anchor bottom-right of logo to bottom-right of placeholder
-    const x=String(x_int+cx_int-finalCx);
-    const y=String(y_int+cy_int-finalCy);
+    // Anchor bottom-right of logo to placeholder bottom-right, clamped inside slide
+    const rawX=x_int+cx_int-finalCx;
+    const rawY=y_int+cy_int-finalCy;
+    const x=String(Math.max(0,Math.min(rawX,slideW-finalCx)));
+    const y=String(Math.max(0,Math.min(rawY,slideH-finalCy)));
 
     // Add image relationship to slide rels
     const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
