@@ -65,7 +65,16 @@ exports.handler = async (event) => {
       const entry = zip.getEntry(xmlFile);
       if (!entry) continue;
       const content = zip.readAsText(entry, 'utf8');
-      zip.updateFile(xmlFile, Buffer.from(repVars(content, vars), 'utf8'));
+      const after = repVars(content, vars);
+      if (xmlFile === 'word/document.xml') {
+        const tagStr = '<w:tag w:val="' + Object.keys(vars)[0] + '"/>';
+        const tagIdx = after.indexOf(tagStr);
+        const sdtStart = after.lastIndexOf('<w:sdt', tagIdx);
+        const sdtEnd = after.indexOf('</w:sdt>', tagIdx) + 8;
+        console.log('BEFORE:', content.substring(sdtStart, sdtEnd));
+        console.log('AFTER:', after.substring(sdtStart, sdtEnd));
+      }
+      zip.updateFile(xmlFile, Buffer.from(after, 'utf8'));
     }
 
     const result = zip.toBuffer();
