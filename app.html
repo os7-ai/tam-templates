@@ -59,6 +59,8 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 .ff .warn{font-size:11px;color:var(--orange);font-weight:600}
 .ff input,.ff select{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;color:var(--text);background:var(--bg);transition:all .18s}
 .ff input[type=date]{direction:ltr;text-align:right}
+.ff input[type=date]::-webkit-datetime-edit{direction:ltr;unicode-bidi:normal}
+.ff input[type=date]::-webkit-datetime-edit-fields-wrapper{direction:ltr}
 .ff input:focus,.ff select:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(78,153,211,.13)}
 .ff input[readonly]{background:#f1f5f9;color:var(--muted);cursor:default}
 .comp-row{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;margin-top:8px}
@@ -388,7 +390,7 @@ function renderForm(tid){
       applyConstraints(i,f.id);
       w.appendChild(i);
     }else if(f.tp==='date'){
-      const i=document.createElement('input');i.type='date';i.id='f_'+f.id;i.lang='en';
+      const i=document.createElement('input');i.type='date';i.id='f_'+f.id;i.lang='en-US';i.dir='ltr';i.style.textAlign='right';
       if(f.auto)i.value=todayLocal();
       w.appendChild(i);
     }else if(f.tp==='hijri'){
@@ -446,7 +448,7 @@ function renderForm(tid){
       ['f_period_from','f_period_to'].forEach((id,idx)=>{
         const d=document.createElement('div');d.className='ff';
         const l=document.createElement('label');l.textContent=idx===0?'من تاريخ':'حتى تاريخ';
-        const i=document.createElement('input');i.type='date';i.id=id;i.lang='en';
+        const i=document.createElement('input');i.type='date';i.id=id;i.lang='en-US';i.dir='ltr';i.style.textAlign='right';
         d.appendChild(l);d.appendChild(i);r.appendChild(d);
       });
       const periodErr=document.createElement('div');periodErr.id='periodErrMsg';periodErr.style.cssText='display:none;color:#e53e3e;font-size:12px;margin-top:4px;grid-column:1/-1';
