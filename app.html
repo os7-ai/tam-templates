@@ -265,11 +265,18 @@ function tafqeet(n){
   const o=['','واحد','اثنان','ثلاثة','أربعة','خمسة','ستة','سبعة','ثمانية','تسعة','عشرة','أحد عشر','اثنا عشر','ثلاثة عشر','أربعة عشر','خمسة عشر','ستة عشر','سبعة عشر','ثمانية عشر','تسعة عشر'];
   const t=['','','عشرون','ثلاثون','أربعون','خمسون','ستون','سبعون','ثمانون','تسعون'];
   const h=['','مئة','مئتان','ثلاثمئة','أربعمئة','خمسمئة','ستمئة','سبعمئة','ثمانمئة','تسعمئة'];
-  if(n===0)return'صفر';if(n<20)return o[n];
-  if(n<100){const tt=Math.floor(n/10),oo=n%10;return oo?o[oo]+' و'+t[tt]:t[tt];}
-  if(n<1000){const hh=Math.floor(n/100),r=n%100;return r?h[hh]+' و'+tafqeet(r):h[hh];}
-  if(n<1000000){const tt=Math.floor(n/1000),r=n%1000;let ts=tt===1?'ألف':tt===2?'ألفان':tt<11?tafqeet(tt)+' آلاف':tafqeet(tt)+' ألف';return r?ts+' و'+tafqeet(r):ts;}
-  return n.toString();
+  function int2ar(m){
+    if(m===0)return'صفر';if(m<20)return o[m];
+    if(m<100){const tt=Math.floor(m/10),oo=m%10;return oo?o[oo]+' و'+t[tt]:t[tt];}
+    if(m<1000){const hh=Math.floor(m/100),r=m%100;return r?h[hh]+' و'+int2ar(r):h[hh];}
+    if(m<1000000){const tt=Math.floor(m/1000),r=m%1000;let ts=tt===1?'ألف':tt===2?'ألفان':tt<11?int2ar(tt)+' آلاف':int2ar(tt)+' ألف';return r?ts+' و'+int2ar(r):ts;}
+    return m.toString();
+  }
+  const riyals=Math.floor(n);
+  const halala=Math.round((n-riyals)*100);
+  let result=int2ar(riyals)+' ريالاً';
+  if(halala>0)result+=' و'+int2ar(halala)+' هللة';
+  return result;
 }
 
 // Templates
@@ -377,8 +384,8 @@ function renderForm(tid){
     }else if(f.tp==='fiscal'){
       const s=document.createElement('select');s.id='f_'+f.id;
       const yr=new Date().getFullYear();
-      [(yr-1)+'/12/31م',yr+'/12/31م',(yr+1)+'/12/31م','أخرى'].forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;s.appendChild(op);});
-      s.value=yr+'/12/31م';
+      [(yr-1)+'/12/31',yr+'/12/31',(yr+1)+'/12/31','أخرى'].forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;s.appendChild(op);});
+      s.value=yr+'/12/31';
       // Add date picker for custom fiscal year
       const dateWrap=document.createElement('div');dateWrap.id='fiscal_custom_wrap';dateWrap.style.cssText='display:none;margin-top:8px';
       const dateInp=document.createElement('input');dateInp.type='date';dateInp.id='fiscal_custom_date';
@@ -461,7 +468,7 @@ function collectVars(tid){
       vars['fees_before_vat']=fmt(base);
       vars['vat_amount']=fmt(tx);
       vars['total_with_vat']=fmt(total);
-      vars['fees_in_words']=tafqeet(Math.round(total))+' ريال سعودي';return;
+      vars['fees_in_words']=tafqeet(total)+' سعودي';return;
     }
     if(f.tp==='select'){
       let v=document.getElementById('f_'+f.id)?.value||'';
