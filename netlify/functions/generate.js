@@ -1,13 +1,28 @@
 const { createClient } = require('@supabase/supabase-js');
 const AdmZip = require('adm-zip');
 
-const SURL = 'https://ghpjrvnyrlcqsfcjyiuq.supabase.co';
-const SKEY = 'sb_publishable_WkOLENVn0HqysJetM6H6NA_tQe3Cn0n';
+const SURL = process.env.SUPABASE_URL;
+const SKEY = process.env.SUPABASE_KEY;
+
+const ALLOWED_TEMPLATES = new Set([
+  'entity-engagement.docx',
+  'contract-engagement.docx',
+  'confirmation-letter.docx',
+]);
+
+function escXml(v) {
+  return v
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
 function repVars(text, vars) {
   let r = text;
   for (const [k, v] of Object.entries(vars)) {
-    const sv = v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const sv = escXml(v);
     const tagStr = '<w:tag w:val="' + k + '"/>';
     let pos = 0;
     while (true) {
@@ -43,10 +58,16 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
+  if (!SURL || !SKEY) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'Server configuration error' }) };
+  }
+
   try {
     const { templateFile, vars } = JSON.parse(event.body);
-    console.log('templateFile:', templateFile);
-    console.log('vars keys:', Object.keys(vars || {}));
+
+    if (!ALLOWED_TEMPLATES.has(templateFile)) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'قالب غير مسموح' }) };
+    }
 
     const sb = createClient(SURL, SKEY);
     const { data, error } = await sb.storage.from('templates').download(templateFile);
