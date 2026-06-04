@@ -638,10 +638,69 @@ function repVarsPptx(text,vars){
 
 async function procPptx(ab,vars){
   const zip=await JSZip.loadAsync(ab);
-  const targets=Object.keys(zip.files).filter(f=>/^ppt\/(slides\/slide|notesSlides\/notesSlide)[0-9]+\.xml$/.test(f));
-  for(const p of targets){let c=await zip.file(p).async('string');c=repVarsPptx(c,vars);zip.file(p,c);}
+  const slides=Object.keys(zip.files).filter(f=>/^ppt\/slides\/slide[0-9]+\.xml$/.test(f));
+  for(const p of slides){let c=await zip.file(p).async('string');c=repVarsPptx(c,vars);zip.file(p,c);}
+  if(logoData)await insertLogoPptx(zip,slides);
   const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
   genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
+}
+
+async function insertLogoPptx(zip,slides){
+  const mime=logoData.split(';')[0].split(':')[1]||'image/png';
+  const ext=(mime.split('/')[1]||'png').replace('jpeg','jpg');
+  const fileName='logo_company.'+ext;
+  const mediaPath='ppt/media/'+fileName;
+  const IMAGE_REL='http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
+
+  // Add image bytes to media folder
+  zip.file(mediaPath,logoData.split(',')[1],{base64:true});
+
+  // Register content type if missing
+  let ct=await zip.files['[Content_Types].xml'].async('string');
+  if(!ct.includes('"'+ext+'"')&&!ct.includes("'"+ext+"'")){
+    ct=ct.replace('</Types>','<Default Extension="'+ext+'" ContentType="'+mime+'"/></Types>');
+    zip.file('[Content_Types].xml',ct);
+  }
+
+  for(const p of slides){
+    if(!zip.files[p])continue;
+    let xml=await zip.files[p].async('string');
+
+    // Find placeholder — middle run contains 'شعار_الجهة' as text
+    const logoText='<a:t>شعار_الجهة</a:t>';
+    const logoIdx=xml.indexOf(logoText);
+    if(logoIdx===-1)continue;
+
+    const spStart=xml.lastIndexOf('<p:sp>',logoIdx);
+    const spEnd=xml.indexOf('</p:sp>',logoIdx)+7;
+    if(spStart===-1||spEnd<7)continue;
+    const spXml=xml.slice(spStart,spEnd);
+
+    // Extract position from spPr
+    const spPrS=spXml.indexOf('<p:spPr>');
+    const spPrE=spXml.indexOf('</p:spPr>')+9;
+    if(spPrS===-1)continue;
+    const spPrXml=spXml.slice(spPrS,spPrE);
+    const offM=spPrXml.match(/<a:off x="(\d+)" y="(\d+)"/);
+    const extM=spPrXml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
+    if(!offM||!extM)continue;
+    const [,x,y]=offM,[,cx,cy]=extM;
+
+    // Add image relationship to slide rels
+    const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
+    let relsXml=zip.files[relsPath]
+      ?await zip.files[relsPath].async('string')
+      :'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    const existIds=[...relsXml.matchAll(/Id="rId(\d+)"/g)].map(m=>parseInt(m[1]));
+    const newRid='rId'+((existIds.length?Math.max(...existIds):0)+1);
+    relsXml=relsXml.replace('</Relationships>','<Relationship Id="'+newRid+'" Type="'+IMAGE_REL+'" Target="../media/'+fileName+'"/></Relationships>');
+    zip.file(relsPath,relsXml);
+
+    // Replace <p:sp> with <p:pic>
+    const picXml='<p:pic><p:nvPicPr><p:cNvPr id="999" name="logo_company"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="'+newRid+'"><a:extLst><a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}"><a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/></a:ext></a:extLst></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="'+x+'" y="'+y+'"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+    xml=xml.slice(0,spStart)+picXml+xml.slice(spEnd);
+    zip.file(p,xml);
+  }
 }
 
 function repVars(text,vars){
