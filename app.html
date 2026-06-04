@@ -275,76 +275,76 @@ function tafqeet(n){
 // Templates
 const T={
   'entity-proposal':{name:'العرض الفني والمالي - على مستوى المنشأة',file:'entity-proposal.pptx',ext:'pptx',fields:[
-    {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'2025-001'},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
-    {id:'السنة_المالية',lb:'السنة المالية',tp:'fiscal'},
-    {id:'الأتعاب_المهنية',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بدون كلمة ريال'},
-    {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
+    {id:'fiscal_year',lb:'السنة المالية',tp:'fiscal'},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بدون كلمة ريال'},
+    {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
   'contract-proposal':{name:'العرض الفني والمالي - على مستوى العقد',file:'contract-proposal.pptx',ext:'pptx',fields:[
-    {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العقد',lb:'رقم العقد',tp:'text',ph:'92748304'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'2025-001'},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
-    {id:'فترة_القياس',lb:'فترة القياس',tp:'period'},
-    {id:'الأتعاب_المهنية',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بدون كلمة ريال'},
-    {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
+    {id:'measurement_period',lb:'فترة القياس',tp:'period'},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بدون كلمة ريال'},
+    {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
   'entity-engagement':{name:'خطاب الارتباط - على مستوى المنشأة',file:'entity-engagement.docx',ext:'docx',fields:[
-    {id:'التاريخ_الميلادي',lb:'تاريخ الخطاب',tp:'date',auto:true},
-    {id:'التاريخ_الهجري',lb:'التاريخ الهجري',tp:'hijri'},
-    {id:'رقم_الخطاب',lb:'رقم الخطاب',tp:'text',ph:'9348'},
+    {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
+    {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
+    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348'},
     {tp:'sep'},
-    {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
-    {id:'السجل_التجاري',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
-    {id:'تاريخ_السجل_التجاري',lb:'تاريخ السجل التجاري',tp:'date'},
-    {id:'الرقم_الموحد',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
-    {id:'الرقم_الضريبي',lb:'الرقم الضريبي',tp:'text',ph:'300012345600003'},
-    {id:'العنوان_الوطني',lb:'العنوان الوطني',tp:'text',ph:'الرياض، حي العليا، شارع الملك فهد',full:true},
-    {id:'السنة_المالية',lb:'السنة المالية',tp:'fiscal'},
+    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
+    {id:'commercial_reg_date',lb:'تاريخ السجل التجاري',tp:'date'},
+    {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
+    {id:'tax_number',lb:'الرقم الضريبي',tp:'text',ph:'300012345600003'},
+    {id:'national_address',lb:'العنوان الوطني',tp:'text',ph:'الرياض، حي العليا، شارع الملك فهد',full:true},
+    {id:'fiscal_year',lb:'السنة المالية',tp:'fiscal'},
     {tp:'sep'},
-    {id:'بداية_العمل',lb:'بداية العمل',tp:'select',opts:['بعد إصدار أمر الشراء','بعد استلام الأتعاب المهنية']},
-    {id:'مسؤول_التواصل',lb:'مسؤول التواصل (من العميل)',tp:'text',ph:'اسم الشخص'},
-    {id:'رقم_الجوال',lb:'رقم الجوال',tp:'text',ph:'05xxxxxxxx'},
-    {id:'البريد_الإلكتروني',lb:'البريد الإلكتروني',tp:'text',ph:'email@company.com'},
+    {id:'work_start',lb:'بداية العمل',tp:'select',opts:['بعد إصدار أمر الشراء','بعد استلام الأتعاب المهنية']},
+    {id:'contact_person',lb:'مسؤول التواصل (من العميل)',tp:'text',ph:'اسم الشخص'},
+    {id:'mobile_number',lb:'رقم الجوال',tp:'text',ph:'05xxxxxxxx'},
+    {id:'email',lb:'البريد الإلكتروني',tp:'text',ph:'email@company.com'},
     {tp:'sep'},
-    {id:'الأتعاب_المهنية',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة، وبدون كلمة ريال',full:true},
-    {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة، وبدون كلمة ريال',full:true},
+    {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
   ]},
   'contract-engagement':{name:'خطاب الارتباط - على مستوى العقد',file:'contract-engagement.docx',ext:'docx',fields:[
-    {id:'التاريخ_الميلادي',lb:'تاريخ الخطاب',tp:'date',auto:true},
-    {id:'التاريخ_الهجري',lb:'التاريخ الهجري',tp:'hijri'},
-    {id:'رقم_الخطاب',lb:'رقم الخطاب',tp:'text',ph:'9348'},
+    {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
+    {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
+    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348'},
     {tp:'sep'},
-    {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
-    {id:'السجل_التجاري',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
-    {id:'تاريخ_السجل_التجاري',lb:'تاريخ السجل التجاري',tp:'date'},
-    {id:'الرقم_الموحد',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
-    {id:'الرقم_الضريبي',lb:'الرقم الضريبي',tp:'text',ph:'300012345600003'},
-    {id:'العنوان_الوطني',lb:'العنوان الوطني',tp:'text',ph:'الرياض، حي العليا، شارع الملك فهد',full:true},
-    {id:'اسم_المشروع',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
-    {id:'رقم_المشروع',lb:'رقم المشروع',tp:'text',ph:'PRJ-2025-001'},
-    {id:'فترة_القياس',lb:'فترة القياس',tp:'period'},
+    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
+    {id:'commercial_reg_date',lb:'تاريخ السجل التجاري',tp:'date'},
+    {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
+    {id:'tax_number',lb:'الرقم الضريبي',tp:'text',ph:'300012345600003'},
+    {id:'national_address',lb:'العنوان الوطني',tp:'text',ph:'الرياض، حي العليا، شارع الملك فهد',full:true},
+    {id:'project_name',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
+    {id:'project_number',lb:'رقم المشروع',tp:'text',ph:'PRJ-2025-001'},
+    {id:'measurement_period',lb:'فترة القياس',tp:'period'},
     {tp:'sep'},
-    {id:'بداية_العمل',lb:'بداية العمل',tp:'select',opts:['بعد إصدار أمر الشراء','بعد استلام الأتعاب المهنية']},
-    {id:'مسؤول_التواصل',lb:'مسؤول التواصل (من العميل)',tp:'text',ph:'اسم الشخص'},
-    {id:'رقم_الجوال',lb:'رقم الجوال',tp:'text',ph:'05xxxxxxxx'},
-    {id:'البريد_الإلكتروني',lb:'البريد الإلكتروني',tp:'text',ph:'email@company.com'},
+    {id:'work_start',lb:'بداية العمل',tp:'select',opts:['بعد إصدار أمر الشراء','بعد استلام الأتعاب المهنية']},
+    {id:'contact_person',lb:'مسؤول التواصل (من العميل)',tp:'text',ph:'اسم الشخص'},
+    {id:'mobile_number',lb:'رقم الجوال',tp:'text',ph:'05xxxxxxxx'},
+    {id:'email',lb:'البريد الإلكتروني',tp:'text',ph:'email@company.com'},
     {tp:'sep'},
-    {id:'الأتعاب_المهنية',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة، وبدون كلمة ريال',full:true},
-    {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة، وبدون كلمة ريال',full:true},
+    {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
   ]},
   'confirmation-letter':{name:'خطاب الإفادة',file:'confirmation-letter.docx',ext:'docx',fields:[
-    {id:'التاريخ_الميلادي',lb:'تاريخ الخطاب',tp:'date',auto:true},
-    {id:'التاريخ_الهجري',lb:'التاريخ الهجري',tp:'hijri'},
-    {id:'رقم_الخطاب',lb:'رقم الخطاب',tp:'text',ph:'9348'},
+    {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
+    {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
+    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348'},
     {tp:'sep'},
-    {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
-    {id:'السجل_التجاري',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
-    {id:'العام_المالي',lb:'العام المالي',tp:'fiscal'},
+    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
+    {id:'fiscal_year',lb:'العام المالي',tp:'fiscal'},
   ]}
 };
 
@@ -402,7 +402,7 @@ function renderForm(tid){
     }else if(f.tp==='fee'){
       const i=document.createElement('input');i.type='number';i.id='f_'+f.id;i.placeholder='19000';i.min='0';w.appendChild(i);
     }else if(f.tp==='engfee'){
-      const i=document.createElement('input');i.type='number';i.id='f_الأتعاب_المهنية';i.placeholder='19000';i.min='0';i.style.marginBottom='8px';w.appendChild(i);
+      const i=document.createElement('input');i.type='number';i.id='f_total_fees';i.placeholder='19000';i.min='0';i.style.marginBottom='8px';w.appendChild(i);
       const c=document.createElement('div');c.className='comp-row';
       c.innerHTML='<div>الأتعاب: <span id="cw">—</span></div><div>الضريبة 15%: <span id="ct">—</span></div><div>الإجمالي: <span id="ci">—</span></div>';
       w.appendChild(c);
@@ -439,7 +439,7 @@ function collectVars(tid){
     if(f.tp==='sep'||f.tp==='logo')return;
     if(!f.id&&f.tp!=='engfee')return;
     if(f.tp==='period'){
-      vars['فترة_القياس']=fmtPeriod(document.getElementById('f_period_from')?.value||'',document.getElementById('f_period_to')?.value||'');return;
+      vars['measurement_period']=fmtPeriod(document.getElementById('f_period_from')?.value||'',document.getElementById('f_period_to')?.value||'');return;
     }
     if(f.tp==='date'){
       const el=document.getElementById('f_'+f.id);
@@ -451,17 +451,17 @@ function collectVars(tid){
     }
     if(f.tp==='fee'){
       const v=parseFloat(document.getElementById('f_'+f.id)?.value)||0;
-      vars['الأتعاب_المهنية']=fmt(v);return;
+      vars['total_fees']=fmt(v);return;
     }
     if(f.tp==='engfee'){
-      const base=parseFloat(document.getElementById('f_الأتعاب_المهنية')?.value)||0;
+      const base=parseFloat(document.getElementById('f_total_fees')?.value)||0;
       const tx=Math.round(base*0.15*100)/100;
       const total=Math.round((base+tx)*100)/100;
-      vars['الأتعاب_المهنية']=fmt(total);
-      vars['الأتعاب_بدون_الضريبة']=fmt(base);
-      vars['ضريبة_الأتعاب']=fmt(tx);
-      vars['اجمالي_الأتعاب']=fmt(total);
-      vars['تفقيط_الأتعاب']=tafqeet(Math.round(total))+' ريال سعودي';return;
+      vars['total_fees']=fmt(total);
+      vars['fees_before_vat']=fmt(base);
+      vars['vat_amount']=fmt(tx);
+      vars['total_with_vat']=fmt(total);
+      vars['fees_in_words']=tafqeet(Math.round(total))+' ريال سعودي';return;
     }
     if(f.tp==='select'){
       let v=document.getElementById('f_'+f.id)?.value||'';
@@ -477,7 +477,7 @@ function collectVars(tid){
 function buildName(tid,vars){
   const m={'entity-proposal':'العرض الفني والمالي_على مستوى المنشأة','contract-proposal':'العرض الفني والمالي_على مستوى العقد','entity-engagement':'خطاب الارتباط_على مستوى المنشأة','contract-engagement':'خطاب الارتباط_على مستوى العقد','confirmation-letter':'خطاب الإفادة'};
   const ext=T[tid].ext;
-  const parts=[m[tid],vars['اسم_الجهة']||'',vars['رقم_العرض']||vars['رقم_الخطاب']||''].filter(Boolean);
+  const parts=[m[tid],vars['entity_name']||'',vars['رقم_العرض']||vars['letter_number']||''].filter(Boolean);
   return parts.join('_')+'.'+ext;
 }
 
@@ -489,7 +489,7 @@ function validate(tid){
     const el=document.getElementById('f_'+f.id);
     if(el&&!el.value&&f.tp!=='select'&&f.tp!=='fiscal')return'يرجى إدخال: '+f.lb;
   }
-  const fe=document.getElementById('f_الأتعاب_المهنية');
+  const fe=document.getElementById('f_total_fees');
   if(fe&&(!fe.value||parseFloat(fe.value)<=0))return'يرجى إدخال الأتعاب المهنية';
   return null;
 }
