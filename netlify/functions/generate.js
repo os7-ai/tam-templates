@@ -45,6 +45,8 @@ exports.handler = async (event) => {
 
   try {
     const { templateFile, vars } = JSON.parse(event.body);
+    console.log('templateFile:', templateFile);
+    console.log('vars keys:', Object.keys(vars || {}));
 
     const sb = createClient(SURL, SKEY);
     const { data, error } = await sb.storage.from('templates').download(templateFile);
@@ -65,16 +67,7 @@ exports.handler = async (event) => {
       const entry = zip.getEntry(xmlFile);
       if (!entry) continue;
       const content = zip.readAsText(entry, 'utf8');
-      const after = repVars(content, vars);
-      if (xmlFile === 'word/document.xml') {
-        const tagStr = '<w:tag w:val="' + Object.keys(vars)[0] + '"/>';
-        const tagIdx = after.indexOf(tagStr);
-        const sdtStart = after.lastIndexOf('<w:sdt', tagIdx);
-        const sdtEnd = after.indexOf('</w:sdt>', tagIdx) + 8;
-        console.log('BEFORE:', content.substring(sdtStart, sdtEnd));
-        console.log('AFTER:', after.substring(sdtStart, sdtEnd));
-      }
-      zip.updateFile(xmlFile, Buffer.from(after, 'utf8'));
+      zip.updateFile(xmlFile, Buffer.from(repVars(content, vars), 'utf8'));
     }
 
     const result = zip.toBuffer();
@@ -89,6 +82,7 @@ exports.handler = async (event) => {
       isBase64Encoded: true,
     };
   } catch (err) {
+    console.log('ERROR:', err.message);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
