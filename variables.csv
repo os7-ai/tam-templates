@@ -1,0 +1,28 @@
+المتغير (Tag),الاسم العربي,النوع,entity-engagement,contract-engagement,confirmation-letter,entity-proposal,contract-proposal
+entity_name,اسم الجهة,نص,✅,✅,✅,✅,✅
+gregorian_date,تاريخ الخطاب/العرض,تاريخ ميلادي,✅,✅,✅,✅,✅
+hijri_date,التاريخ الهجري,تاريخ هجري,✅,✅,❌,❌,❌
+letter_number,رقم الخطاب,نص,✅,✅,✅,❌,❌
+commercial_reg,السجل التجاري,نص,✅,✅,✅,❌,❌
+commercial_reg_date,تاريخ السجل التجاري,تاريخ,✅,✅,❌,❌,❌
+unified_number,الرقم الموحد,نص,✅,✅,❌,❌,❌
+tax_number,الرقم الضريبي,نص,✅,✅,❌,❌,❌
+national_address,العنوان الوطني,نص,✅,✅,❌,❌,❌
+fiscal_year,السنة المالية,نص,✅,❌,✅,✅,❌
+work_start,بداية العمل,قائمة,✅,✅,❌,❌,❌
+contact_person,مسؤول التواصل,نص,✅,✅,❌,❌,❌
+mobile_number,رقم الجوال,نص,✅,✅,❌,❌,❌
+email,البريد الإلكتروني,نص,✅,✅,❌,❌,❌
+total_fees,الأتعاب المهنية,رقم,✅,✅,❌,✅,✅
+fees_before_vat,الأتعاب قبل الضريبة,رقم محسوب,✅,✅,❌,❌,❌
+vat_amount,ضريبة القيمة المضافة,رقم محسوب,✅,✅,❌,❌,❌
+total_with_vat,الإجمالي مع الضريبة,رقم محسوب,✅,✅,❌,❌,❌
+fees_in_words,الأتعاب كتابةً,نص محسوب,✅,✅,❌,✅,✅
+payment_method,طريقة السداد,قائمة,✅,✅,❌,✅,✅
+project_name,اسم المشروع,نص,❌,✅,❌,❌,❌
+project_number,رقم المشروع,نص,❌,✅,❌,❌,❌
+measurement_period,فترة القياس,تاريخين,❌,✅,❌,❌,✅
+proposal_number,رقم العرض,نص,❌,❌,❌,✅,✅
+proposal_date,تاريخ العرض,تاريخ,❌,❌,❌,✅,✅
+contract_number,رقم العقد,نص,❌,❌,❌,❌,✅
+entity_logo,شعار الجهة,صورة,❌,❌,❌,✅,✅
