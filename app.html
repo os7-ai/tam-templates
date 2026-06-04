@@ -86,7 +86,19 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 .sw h2{font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px}
 .sw p{font-size:13.5px;color:var(--muted);margin-bottom:24px}
 .bdl{background:linear-gradient(135deg,var(--green),#15803d);color:#fff;border:none;padding:13px 28px;border-radius:11px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 18px rgba(22,163,74,.3);margin-bottom:12px}
+.bdl-pdf{background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;padding:13px 28px;border-radius:11px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 18px rgba(220,38,38,.25);margin-bottom:12px;margin-right:10px}
 .bnw{background:transparent;border:1.5px solid var(--border);color:var(--navy);padding:11px 22px;border-radius:11px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.pdf-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+.pdf-modal.open{display:flex}
+.pdf-box{background:#fff;border-radius:16px;padding:32px;max-width:480px;width:90%;direction:rtl}
+.pdf-box h3{font-size:17px;font-weight:900;color:var(--navy);margin-bottom:6px}
+.pdf-box p{font-size:13px;color:var(--muted);margin-bottom:20px}
+.pdf-steps{list-style:none;margin-bottom:24px}
+.pdf-steps li{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;font-size:13px;color:var(--text)}
+.pdf-steps li .psn{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.pdf-actions{display:flex;gap:10px;flex-wrap:wrap}
+.pdf-actions a{flex:1;text-align:center;padding:10px 16px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;text-decoration:none;background:var(--navy);color:#fff}
+.pdf-actions button{flex:1;padding:10px 16px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;background:transparent;border:1.5px solid var(--border);color:var(--muted);cursor:pointer}
 .hidden{display:none!important}
 </style>
 </head>
@@ -182,6 +194,10 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
         <button class="bdl" id="btnDl">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           تحميل الملف
+        </button>
+        <button class="bdl-pdf" onclick="showPdfModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+          تحميل PDF
         </button><br><br>
         <button class="bnw" onclick="resetApp()">إعداد مستند جديد</button>
       </div>
@@ -782,6 +798,32 @@ function setLoad(on){
   document.getElementById('genSpin').style.display=on?'block':'none';
   document.getElementById('genTxt').textContent=on?'جارٍ التوليد...':'توليد المستند';
 }
+
+function showPdfModal(){
+  const isPptx=curTpl&&T[curTpl]&&T[curTpl].ext==='pptx';
+  document.getElementById('pdfConvLink').href=isPptx
+    ?'https://www.ilovepdf.com/ar/powerpoint_to_pdf'
+    :'https://www.ilovepdf.com/ar/word_to_pdf';
+  document.getElementById('pdfModal').classList.add('open');
+}
+function closePdfModal(){document.getElementById('pdfModal').classList.remove('open');}
+function dlAndClose(){if(genBlob&&genName)dlBlob(genBlob,genName);closePdfModal();}
 </script>
+
+<div class="pdf-modal" id="pdfModal" onclick="if(event.target===this)closePdfModal()">
+  <div class="pdf-box">
+    <h3>📄 تحويل المستند إلى PDF</h3>
+    <p>حمّل الملف أولاً ثم حوّله عبر الخطوات التالية</p>
+    <ol class="pdf-steps">
+      <li><span class="psn">1</span><span>اضغط <strong>"تحميل الملف"</strong> لحفظ المستند على جهازك</span></li>
+      <li><span class="psn">2</span><span>افتح الموقع أدناه وارفع الملف</span></li>
+      <li><span class="psn">3</span><span>اضغط تحويل ثم حمّل الـ PDF</span></li>
+    </ol>
+    <div class="pdf-actions">
+      <a id="pdfConvLink" href="https://www.ilovepdf.com/ar/word_to_pdf" target="_blank" onclick="dlAndClose()">فتح أداة التحويل ↗</a>
+      <button onclick="closePdfModal()">إغلاق</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
