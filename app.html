@@ -288,22 +288,22 @@ function tafqeet(n){
 // Templates
 const T={
   'entity-proposal':{name:'العرض الفني والمالي - على مستوى المنشأة',file:'entity-proposal.pptx',ext:'pptx',fields:[
-    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'2025-001'},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
-    {id:'fiscal_year',lb:'السنة المالية',tp:'fiscal'},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بالأرقام فقط'},
-    {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
+    {id:'السنة_المالية',lb:'السنة المالية',tp:'fiscal'},
+    {id:'الأتعاب_المهنية',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ كتابة الأتعاب بدون الضريبة'},
+    {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
   'contract-proposal':{name:'العرض الفني والمالي - على مستوى العقد',file:'contract-proposal.pptx',ext:'pptx',fields:[
-    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العقد',lb:'رقم العقد',tp:'text',ph:'92748304'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'2025-001'},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
-    {id:'measurement_period',lb:'فترة القياس',tp:'period'},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بالأرقام فقط'},
-    {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
+    {id:'فترة_القياس',lb:'فترة القياس',tp:'period'},
+    {id:'الأتعاب_المهنية',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ كتابة الأتعاب بدون الضريبة'},
+    {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
   'entity-engagement':{name:'خطاب الارتباط - على مستوى المنشأة',file:'entity-engagement.docx',ext:'docx',fields:[
@@ -473,7 +473,7 @@ function collectVars(tid){
     if(f.tp==='sep'||f.tp==='logo')return;
     if(!f.id&&f.tp!=='engfee')return;
     if(f.tp==='period'){
-      vars['measurement_period']=fmtPeriod(document.getElementById('f_period_from')?.value||'',document.getElementById('f_period_to')?.value||'');return;
+      vars[f.id]=fmtPeriod(document.getElementById('f_period_from')?.value||'',document.getElementById('f_period_to')?.value||'');return;
     }
     if(f.tp==='date'){
       const el=document.getElementById('f_'+f.id);
@@ -485,7 +485,7 @@ function collectVars(tid){
     }
     if(f.tp==='fee'){
       const v=parseFloat((document.getElementById('f_'+f.id)?.value||'').replace(/,/g,''))||0;
-      vars['total_fees']=fmt(v);return;
+      vars[f.id]=fmt(v);return;
     }
     if(f.tp==='engfee'){
       const base=parseFloat((document.getElementById('f_total_fees')?.value||'').replace(/,/g,''))||0;
@@ -511,7 +511,7 @@ function collectVars(tid){
 function buildName(tid,vars){
   const m={'entity-proposal':'العرض الفني والمالي_على مستوى المنشأة','contract-proposal':'العرض الفني والمالي_على مستوى العقد','entity-engagement':'خطاب الارتباط_على مستوى المنشأة','contract-engagement':'خطاب الارتباط_على مستوى العقد','confirmation-letter':'خطاب الإفادة'};
   const ext=T[tid].ext;
-  const parts=[m[tid],vars['entity_name']||'',vars['رقم_العرض']||vars['letter_number']||''].filter(Boolean);
+  const parts=[m[tid],vars['entity_name']||vars['اسم_الجهة']||'',vars['رقم_العرض']||vars['letter_number']||''].filter(Boolean);
   return parts.join('_')+'.'+ext;
 }
 
@@ -537,8 +537,12 @@ function validate(tid){
       if(f.id==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value))return'البريد الإلكتروني غير صحيح';
     }
   }
-  const fe=document.getElementById('f_total_fees');
-  if(fe&&(!fe.value||parseFloat(fe.value.replace(/,/g,''))<=0))return'يرجى إدخال الأتعاب المهنية';
+  const feeField=T[tid].fields.find(f=>f.tp==='fee'||f.tp==='engfee');
+  if(feeField){
+    const feId=feeField.tp==='engfee'?'f_total_fees':'f_'+feeField.id;
+    const fe=document.getElementById(feId);
+    if(fe&&(!fe.value||parseFloat(fe.value.replace(/,/g,''))<=0))return'يرجى إدخال الأتعاب المهنية';
+  }
   return null;
 }
 
