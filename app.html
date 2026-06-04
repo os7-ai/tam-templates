@@ -251,6 +251,10 @@ function toHijri(ds){
   return String(hy)+'/'+String(hm)+'/'+String(hd);
 }
 
+function todayLocal(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function fmtDate(ds){
   if(!ds)return'';
   const p=ds.split('-');
@@ -286,7 +290,7 @@ const T={
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'2025-001'},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'fiscal_year',lb:'السنة المالية',tp:'fiscal'},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بدون كلمة ريال'},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بالأرقام فقط'},
     {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
@@ -296,7 +300,7 @@ const T={
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'2025-001'},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'measurement_period',lb:'فترة القياس',tp:'period'},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بدون كلمة ريال'},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بالأرقام فقط'},
     {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
@@ -317,7 +321,7 @@ const T={
     {id:'mobile_number',lb:'رقم الجوال',tp:'text',ph:'05xxxxxxxx'},
     {id:'email',lb:'البريد الإلكتروني',tp:'text',ph:'email@company.com'},
     {tp:'sep'},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة، وبدون كلمة ريال',full:true},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة',full:true},
     {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
   ]},
   'contract-engagement':{name:'خطاب الارتباط - على مستوى العقد',file:'contract-engagement.docx',ext:'docx',fields:[
@@ -339,7 +343,7 @@ const T={
     {id:'mobile_number',lb:'رقم الجوال',tp:'text',ph:'05xxxxxxxx'},
     {id:'email',lb:'البريد الإلكتروني',tp:'text',ph:'email@company.com'},
     {tp:'sep'},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة، وبدون كلمة ريال',full:true},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة',full:true},
     {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
   ]},
   'confirmation-letter':{name:'خطاب الإفادة',file:'confirmation-letter.docx',ext:'docx',fields:[
@@ -352,6 +356,20 @@ const T={
     {id:'fiscal_year',lb:'العام المالي',tp:'fiscal'},
   ]}
 };
+
+function applyConstraints(inp, id){
+  const nums=['commercial_reg','unified_number','tax_number','mobile_number'];
+  if(nums.includes(id)){
+    inp.inputMode='numeric';
+    inp.addEventListener('input',()=>{inp.value=inp.value.replace(/[^0-9]/g,'');});
+  }
+  if(id==='commercial_reg') inp.maxLength=10;
+  if(id==='mobile_number') inp.maxLength=10;
+  if(id==='entity_name'||id==='contact_person'){
+    inp.addEventListener('input',()=>{inp.value=inp.value.replace(/[0-9]/g,'');});
+  }
+  if(id==='email'){inp.type='email';inp.inputMode='email';}
+}
 
 function renderForm(tid){
   const tmpl=T[tid];
@@ -366,15 +384,16 @@ function renderForm(tid){
     if(f.lb){const l=document.createElement('label');l.textContent=f.lb;w.appendChild(l);}
     if(f.wn){const h=document.createElement('div');h.className='warn';h.textContent=f.wn;w.appendChild(h);}
     if(f.tp==='text'){
-      const i=document.createElement('input');i.type='text';i.id='f_'+f.id;i.placeholder=f.ph||'';w.appendChild(i);
+      const i=document.createElement('input');i.type='text';i.id='f_'+f.id;i.placeholder=f.ph||'';
+      applyConstraints(i,f.id);
+      w.appendChild(i);
     }else if(f.tp==='date'){
-      const i=document.createElement('input');i.type='date';i.id='f_'+f.id;
-      if(f.auto)i.value=new Date().toISOString().split('T')[0];
-      // dates are independent
+      const i=document.createElement('input');i.type='date';i.id='f_'+f.id;i.lang='en';
+      if(f.auto)i.value=todayLocal();
       w.appendChild(i);
     }else if(f.tp==='hijri'){
       const i=document.createElement('input');i.type='text';i.id='f_'+f.id;
-      i.value=toHijri(new Date().toISOString().split('T')[0]);
+      i.value=toHijri(todayLocal());
       i.placeholder='1447/12/2هـ';
       i.style.direction='ltr';i.style.textAlign='right';
       w.appendChild(i);
@@ -405,25 +424,33 @@ function renderForm(tid){
       f.opts.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;s.appendChild(op);});
       w.appendChild(s);
     }else if(f.tp==='fee'){
-      const i=document.createElement('input');i.type='number';i.id='f_'+f.id;i.placeholder='19000';i.min='0';w.appendChild(i);
+      const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder='19,000';
+      i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9.]/g,'');});
+      i.addEventListener('blur',()=>{const v=parseFloat(i.value)||0;if(v>0)i.value=v.toLocaleString('en-US',{maximumFractionDigits:2});});
+      i.addEventListener('focus',()=>{i.value=i.value.replace(/,/g,'');});
+      w.appendChild(i);
     }else if(f.tp==='engfee'){
-      const i=document.createElement('input');i.type='number';i.id='f_total_fees';i.placeholder='19000';i.min='0';i.style.marginBottom='8px';w.appendChild(i);
+      const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_total_fees';i.placeholder='19,000';i.style.marginBottom='8px';w.appendChild(i);
       const c=document.createElement('div');c.className='comp-row';
       c.innerHTML='<div>الأتعاب: <span id="cw">—</span></div><div>الضريبة 15%: <span id="ct">—</span></div><div>الإجمالي: <span id="ci">—</span></div>';
       w.appendChild(c);
       i.addEventListener('input',()=>{
-        const v=parseFloat(i.value)||0;
+        const v=parseFloat(i.value.replace(/,/g,''))||0;
         if(v>0){const tx=Math.round(v*.15*100)/100;document.getElementById('cw').textContent=fmt(v)+' ريال';document.getElementById('ct').textContent=fmt(tx)+' ريال';document.getElementById('ci').textContent=fmt(v+tx)+' ريال';}
         else['cw','ct','ci'].forEach(id=>document.getElementById(id).textContent='—');
       });
+      i.addEventListener('blur',()=>{const v=parseFloat(i.value.replace(/,/g,''))||0;if(v>0)i.value=v.toLocaleString('en-US',{maximumFractionDigits:2});});
+      i.addEventListener('focus',()=>{i.value=i.value.replace(/,/g,'');});
     }else if(f.tp==='period'){
       const r=document.createElement('div');r.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%';
       ['f_period_from','f_period_to'].forEach((id,idx)=>{
         const d=document.createElement('div');d.className='ff';
         const l=document.createElement('label');l.textContent=idx===0?'من تاريخ':'حتى تاريخ';
-        const i=document.createElement('input');i.type='date';i.id=id;
+        const i=document.createElement('input');i.type='date';i.id=id;i.lang='en';
         d.appendChild(l);d.appendChild(i);r.appendChild(d);
       });
+      const periodErr=document.createElement('div');periodErr.id='periodErrMsg';periodErr.style.cssText='display:none;color:#e53e3e;font-size:12px;margin-top:4px;grid-column:1/-1';
+      r.appendChild(periodErr);
       w.appendChild(r);
     }else if(f.tp==='logo'){
       const d=document.createElement('div');d.className='lu';d.id='luArea';
@@ -455,11 +482,11 @@ function collectVars(tid){
       vars[f.id]=el?el.value:'';return;
     }
     if(f.tp==='fee'){
-      const v=parseFloat(document.getElementById('f_'+f.id)?.value)||0;
+      const v=parseFloat((document.getElementById('f_'+f.id)?.value||'').replace(/,/g,''))||0;
       vars['total_fees']=fmt(v);return;
     }
     if(f.tp==='engfee'){
-      const base=parseFloat(document.getElementById('f_total_fees')?.value)||0;
+      const base=parseFloat((document.getElementById('f_total_fees')?.value||'').replace(/,/g,''))||0;
       const tx=Math.round(base*0.15*100)/100;
       const total=Math.round((base+tx)*100)/100;
       vars['total_fees']=fmt(total);
@@ -490,12 +517,26 @@ function validate(tid){
   const tmpl=T[tid];
   for(const f of tmpl.fields){
     if(!f.id||['logo','sep','hijri','engfee','fee'].includes(f.tp))continue;
-    if(f.tp==='period'){if(!document.getElementById('f_period_from')?.value)return'يرجى تحديد بداية فترة القياس';if(!document.getElementById('f_period_to')?.value)return'يرجى تحديد نهاية فترة القياس';continue;}
+    if(f.tp==='period'){
+      const pf=document.getElementById('f_period_from')?.value;
+      const pt=document.getElementById('f_period_to')?.value;
+      const pErr=document.getElementById('periodErrMsg');
+      if(!pf){if(pErr){pErr.textContent='يرجى تحديد تاريخ البداية';pErr.style.display='block';}return'يرجى تحديد بداية فترة القياس';}
+      if(!pt){if(pErr){pErr.textContent='يرجى تحديد تاريخ النهاية';pErr.style.display='block';}return'يرجى تحديد نهاية فترة القياس';}
+      if(pf>pt){if(pErr){pErr.textContent='تاريخ البداية يجب أن يكون قبل تاريخ النهاية';pErr.style.display='block';}return'تاريخ البداية يجب أن يكون قبل تاريخ النهاية';}
+      if(pErr)pErr.style.display='none';
+      continue;
+    }
     const el=document.getElementById('f_'+f.id);
     if(el&&!el.value&&f.tp!=='select'&&f.tp!=='fiscal')return'يرجى إدخال: '+f.lb;
+    if(el&&el.value){
+      if(f.id==='commercial_reg'&&el.value.length!==10)return'السجل التجاري يجب أن يكون 10 أرقام بالضبط';
+      if(f.id==='mobile_number'&&!/^05\d{8}$/.test(el.value))return'رقم الجوال يجب أن يبدأ بـ 05 ويكون 10 أرقام';
+      if(f.id==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value))return'البريد الإلكتروني غير صحيح';
+    }
   }
   const fe=document.getElementById('f_total_fees');
-  if(fe&&(!fe.value||parseFloat(fe.value)<=0))return'يرجى إدخال الأتعاب المهنية';
+  if(fe&&(!fe.value||parseFloat(fe.value.replace(/,/g,''))<=0))return'يرجى إدخال الأتعاب المهنية';
   return null;
 }
 
