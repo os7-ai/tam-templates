@@ -190,18 +190,17 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 </div>
 
 <script>
-// Supabase anon (publishable) key — safe to expose client-side per Supabase security model.
-// Security is enforced via Row Level Security policies in Supabase, not key secrecy.
-const SURL='https://ghpjrvnyrlcqsfcjyiuq.supabase.co';
-const SKEY='sb_publishable_WkOLENVn0HqysJetM6H6NA_tQe3Cn0n';
-const sb=supabase.createClient(SURL,SKEY);
-let curTpl=null,genBlob=null,genName='',logoData=null,logoW=0,logoH=0;
+let sb,curTpl=null,genBlob=null,genName='',logoData=null,logoW=0,logoH=0;
 
-sb.auth.getSession().then(({data:{session}})=>{
+(async()=>{
+  const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
+  sb=supabase.createClient(cfg.url,cfg.key);
+  const {data:{session}}=await sb.auth.getSession();
   if(!session){window.location.href='login.html';return;}
   document.getElementById('userEmail').textContent=session.user.email;
-});
-function logout(){sb.auth.signOut().then(()=>window.location.href='login.html');}
+})();
+
+function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
 
 // Steps
 function setStep(n){

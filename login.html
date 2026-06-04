@@ -82,15 +82,17 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;displa
   <div class="footer">🔒 جميع البيانات محمية ومشفرة | مجموعة ألفا الاستشارية</div>
 </div>
 <script>
-const SURL = 'https://ghpjrvnyrlcqsfcjyiuq.supabase.co';
-const SKEY = 'sb_publishable_WkOLENVn0HqysJetM6H6NA_tQe3Cn0n';
-const sb = supabase.createClient(SURL, SKEY);
+let sb;
 
-sb.auth.getSession().then(({data:{session}}) => {
+(async()=>{
+  const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
+  sb=supabase.createClient(cfg.url,cfg.key);
+  const {data:{session}}=await sb.auth.getSession();
   if(session) goHome(session);
-});
+})();
 
 async function login() {
+  if(!sb){ showErr('جارٍ التهيئة، حاول مجدداً'); return; }
   const email = document.getElementById('email').value.trim();
   const pass  = document.getElementById('password').value;
   document.getElementById('errAlert').classList.remove('show');
