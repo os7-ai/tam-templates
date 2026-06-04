@@ -186,6 +186,13 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
         <button class="bnw" onclick="resetApp()">إعداد مستند جديد</button>
       </div>
     </div>
+    <div id="plannerReminder" class="hidden" style="margin-top:16px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:14px;padding:16px 20px;display:flex;align-items:flex-start;gap:12px;direction:rtl">
+      <span style="font-size:22px;flex-shrink:0">🗓️</span>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:2px">تذكير</div>
+        <div style="font-size:13px;color:#78350f">لا تنسَ إضافة العميل في إكسل العملاء والبلانر</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -562,6 +569,8 @@ async function genDoc(){
     else await procPptx(ab,vars);
     setStep(3);
     document.getElementById('sucMsg').textContent=genName;
+    const isProposal=curTpl==='entity-proposal'||curTpl==='contract-proposal';
+    document.getElementById('plannerReminder').classList.toggle('hidden',!isProposal);
   }catch(e){
     document.getElementById('formErrMsg').textContent='حدث خطأ: '+e.message;
     document.getElementById('formErr').classList.add('show');
