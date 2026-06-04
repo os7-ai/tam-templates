@@ -581,9 +581,10 @@ async function procDocx(ab,vars,templateFile){
 
 function repVarsPptx(text,vars){
   let r=text;
-  // Build escaped values once
   const esc={};
   for(const[k,v]of Object.entries(vars))esc[k]=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  function escRx(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 
   // For each paragraph, merge runs then replace — handles PowerPoint splitting across runs with mixed lang attributes
   r=r.replace(/(<a:p[ >][\s\S]*?<\/a:p>)/g,para=>{
@@ -596,29 +597,27 @@ function repVarsPptx(text,vars){
     }
     if(runs.length===0)return para;
     const joined=runs.map(x=>x.text).join('');
-    // Check both {{k}} and }}k{{ patterns
+    // Check both {{k}} and }}k{{ patterns, allowing optional whitespace around variable name
     let hasVar=false;
     for(const k of Object.keys(esc)){
-      if(joined.includes('{{'+k+'}}') || joined.includes('}}'+k+'{{'))hasVar=true;
+      const kr=escRx(k);
+      if(new RegExp('\\{\\{\\s*'+kr+'\\s*\\}\\}').test(joined)||new RegExp('\\}\\}\\s*'+kr+'\\s*\\{\\{').test(joined))hasVar=true;
     }
     if(!hasVar)return para;
-    // Replace in joined text
     let replaced=joined;
     for(const[k,sv]of Object.entries(esc)){
-      replaced=replaced.split('{{'+k+'}}').join(sv);
-      replaced=replaced.split('}}'+k+'{{').join(sv);
+      const kr=escRx(k);
+      replaced=replaced.replace(new RegExp('\\{\\{\\s*'+kr+'\\s*\\}\\}','g'),sv);
+      replaced=replaced.replace(new RegExp('\\}\\}\\s*'+kr+'\\s*\\{\\{','g'),sv);
     }
     // Find Arabic run (lang=ar-SA) to use as the surviving run, fallback to first run
     let keepIdx=runs.findIndex(x=>x.run.includes('lang="ar-SA"'));
     if(keepIdx===-1)keepIdx=0;
-    // Remove all runs except the one we keep, then update its text
     let result=para;
     for(let i=runs.length-1;i>=0;i--){
       if(i===keepIdx)continue;
       result=result.slice(0,runs[i].idx)+result.slice(runs[i].idx+runs[i].run.length);
     }
-    // Recalculate keepIdx position after deletions (it may have shifted)
-    // Re-find the surviving run and update its <a:t>
     result=result.replace(/<a:r>([\s\S]*?)<\/a:r>/,full=>{
       return full.replace(/<a:t[^>]*>[\s\S]*?<\/a:t>/,inner=>{
         const tag=inner.match(/^<a:t[^>]*>/)[0];
@@ -630,8 +629,9 @@ function repVarsPptx(text,vars){
   // Second pass: simple replacement for any remaining {{vars}} or }}vars{{ (RTL reversed)
   for(const[k,v]of Object.entries(vars)){
     const sv=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    r=r.split('{{'+k+'}}').join(sv);
-    r=r.split('}}'+k+'{{').join(sv);
+    const kr=escRx(k);
+    r=r.replace(new RegExp('\\{\\{\\s*'+kr+'\\s*\\}\\}','g'),sv);
+    r=r.replace(new RegExp('\\}\\}\\s*'+kr+'\\s*\\{\\{','g'),sv);
   }
   return r;
 }
@@ -684,7 +684,11 @@ async function insertLogoPptx(zip,slides){
     const offM=spPrXml.match(/<a:off x="(\d+)" y="(\d+)"/);
     const extM=spPrXml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
     if(!offM||!extM)continue;
-    const [,x,y]=offM,[,cx,cy]=extM;
+    const [,x_orig,y]=offM,[,cx_orig,cy_orig]=extM;
+    // Scale up 2x while keeping the right edge anchored (matches placeholder intent)
+    const cx=String(parseInt(cx_orig)*2);
+    const cy=String(parseInt(cy_orig)*2);
+    const x=String(parseInt(x_orig)-parseInt(cx_orig));
 
     // Add image relationship to slide rels
     const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
