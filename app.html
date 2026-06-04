@@ -685,21 +685,24 @@ async function insertLogoPptx(zip,slides){
     const extM=spPrXml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
     if(!offM||!extM)continue;
     const [,x_orig,y_orig]=offM,[,cx_orig,cy_orig]=extM;
-    // Target area is 2x the placeholder; fit the logo within it maintaining aspect ratio
-    const targetCx=parseInt(cx_orig)*2;
-    const targetCy=parseInt(cy_orig)*2;
+    const cx_int=parseInt(cx_orig),cy_int=parseInt(cy_orig);
+    const x_int=parseInt(x_orig),y_int=parseInt(y_orig);
+    // Fixed target width: between 2" and 3.33" (1.5x placeholder, clamped)
+    const targetCx=Math.min(Math.max(Math.round(cx_int*1.5),1828800),3048000);
     let finalCx,finalCy;
     if(logoW&&logoH){
-      const imgRatio=logoW/logoH;
-      const boxRatio=targetCx/targetCy;
-      if(imgRatio>boxRatio){finalCx=targetCx;finalCy=Math.round(targetCx/imgRatio);}
-      else{finalCy=targetCy;finalCx=Math.round(targetCy*imgRatio);}
-    }else{finalCx=targetCx;finalCy=targetCy;}
+      const ratio=logoW/logoH;
+      finalCx=targetCx;
+      finalCy=Math.round(targetCx/ratio);
+      // Cap height at 60% of targetCx to prevent very tall logos
+      const maxCy=Math.round(targetCx*0.6);
+      if(finalCy>maxCy){finalCy=maxCy;finalCx=Math.round(maxCy*ratio);}
+    }else{finalCx=targetCx;finalCy=Math.round(targetCx*0.4);}
     const cx=String(finalCx);
     const cy=String(finalCy);
-    // Center within the target area (right-edge anchored for RTL layout)
-    const x=String(parseInt(x_orig)-parseInt(cx_orig)+Math.round((targetCx-finalCx)/2));
-    const y=String(parseInt(y_orig)+Math.round((targetCy-finalCy)/2));
+    // Anchor bottom-right of logo to bottom-right of placeholder
+    const x=String(x_int+cx_int-finalCx);
+    const y=String(y_int+cy_int-finalCy);
 
     // Add image relationship to slide rels
     const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
