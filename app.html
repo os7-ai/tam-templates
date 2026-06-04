@@ -612,10 +612,11 @@ function repVarsPptx(text,vars){
     });
     return result;
   });
-  // Second pass: simple replacement for any remaining single-run {{vars}}
+  // Second pass: simple replacement for any remaining {{vars}} or }}vars{{ (RTL reversed)
   for(const[k,v]of Object.entries(vars)){
     const sv=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     r=r.split('{{'+k+'}}').join(sv);
+    r=r.split('}}'+k+'{{').join(sv);
   }
   return r;
 }
