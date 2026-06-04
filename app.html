@@ -581,38 +581,49 @@ async function procDocx(ab,vars,templateFile){
 
 function repVarsPptx(text,vars){
   let r=text;
-  // First pass: merge split runs within each paragraph to handle PowerPoint text fragmentation
+  // Build escaped values once
+  const esc={};
+  for(const[k,v]of Object.entries(vars))esc[k]=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // For each paragraph, merge runs then replace — handles PowerPoint splitting across runs with mixed lang attributes
   r=r.replace(/(<a:p[ >][\s\S]*?<\/a:p>)/g,para=>{
-    // Extract all run texts concatenated
-    const fullText=[];
-    const runPattern=/<a:r>([\s\S]*?)<\/a:r>/g;
+    const runs=[];
+    const runPat=/<a:r>([\s\S]*?)<\/a:r>/g;
     let m;
-    while((m=runPattern.exec(para))!==null){
+    while((m=runPat.exec(para))!==null){
       const tMatch=m[1].match(/<a:t[^>]*>([\s\S]*?)<\/a:t>/);
-      if(tMatch)fullText.push({run:m[0],text:tMatch[1],idx:m.index});
+      if(tMatch)runs.push({run:m[0],text:tMatch[1],idx:m.index});
     }
-    // Check if any variable is split across runs
-    let joined=fullText.map(x=>x.text).join('');
+    if(runs.length===0)return para;
+    const joined=runs.map(x=>x.text).join('');
+    // Check both {{k}} and }}k{{ patterns
     let hasVar=false;
-    for(const k of Object.keys(vars)){if(joined.includes('{{'+k+'}}'))hasVar=true;}
+    for(const k of Object.keys(esc)){
+      if(joined.includes('{{'+k+'}}') || joined.includes('}}'+k+'{{'))hasVar=true;
+    }
     if(!hasVar)return para;
-    // Replace variables in joined text
+    // Replace in joined text
     let replaced=joined;
-    for(const[k,v]of Object.entries(vars)){
-      const sv=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    for(const[k,sv]of Object.entries(esc)){
       replaced=replaced.split('{{'+k+'}}').join(sv);
+      replaced=replaced.split('}}'+k+'{{').join(sv);
     }
-    // Put all text in first run, clear the rest
-    if(fullText.length===0)return para;
+    // Find Arabic run (lang=ar-SA) to use as the surviving run, fallback to first run
+    let keepIdx=runs.findIndex(x=>x.run.includes('lang="ar-SA"'));
+    if(keepIdx===-1)keepIdx=0;
+    // Remove all runs except the one we keep, then update its text
     let result=para;
-    // Replace last runs (reverse order to keep indices valid)
-    for(let i=fullText.length-1;i>0;i--){
-      result=result.slice(0,fullText[i].idx)+result.slice(fullText[i].idx+fullText[i].run.length);
+    for(let i=runs.length-1;i>=0;i--){
+      if(i===keepIdx)continue;
+      result=result.slice(0,runs[i].idx)+result.slice(runs[i].idx+runs[i].run.length);
     }
-    // Update first run text
-    result=result.replace(/<a:t[^>]*>[\s\S]*?<\/a:t>/,m2=>{
-      const tag=m2.match(/^<a:t[^>]*>/)[0];
-      return tag+replaced+'</a:t>';
+    // Recalculate keepIdx position after deletions (it may have shifted)
+    // Re-find the surviving run and update its <a:t>
+    result=result.replace(/<a:r>([\s\S]*?)<\/a:r>/,full=>{
+      return full.replace(/<a:t[^>]*>[\s\S]*?<\/a:t>/,inner=>{
+        const tag=inner.match(/^<a:t[^>]*>/)[0];
+        return tag+replaced+'</a:t>';
+      });
     });
     return result;
   });
