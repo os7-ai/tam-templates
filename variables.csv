@@ -1,4 +1,4 @@
-المتغير (Tag),الاسم العربي,النوع,entity-engagement,contract-engagement,confirmation-letter,entity-proposal,contract-proposal
+﻿المتغير (Tag),الاسم العربي,النوع,entity-engagement,contract-engagement,confirmation-letter,entity-proposal,contract-proposal
 entity_name,اسم الجهة,نص,✅,✅,✅,✅,✅
 gregorian_date,تاريخ الخطاب/العرض,تاريخ ميلادي,✅,✅,✅,✅,✅
 hijri_date,التاريخ الهجري,تاريخ هجري,✅,✅,❌,❌,❌
