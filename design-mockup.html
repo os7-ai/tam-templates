@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>معاينة التصميم المقترح — منصة الأتمتة</title>
+<style>
+  :root {
+    --navy-900: #0d1f35;
+    --navy-800: #1a2e4a;
+    --navy-700: #243f65;
+    --navy-600: #2d4f7c;
+    --navy-500: #3a6095;
+    --navy-400: #5580b0;
+    --navy-200: #c3d4e8;
+    --navy-100: #e8eff7;
+    --navy-50:  #f4f7fb;
+    --white:    #ffffff;
+    --text-dark: #1a2e4a;
+    --text-muted: #5a7090;
+    --shadow-sm: 0 2px 8px rgba(13,31,53,.10);
+    --shadow-md: 0 6px 24px rgba(13,31,53,.16);
+    --shadow-lg: 0 12px 40px rgba(13,31,53,.22);
+    --radius: 16px;
+    --transition: all .28s cubic-bezier(.4,0,.2,1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', 'Tahoma', system-ui, sans-serif;
+    background: var(--navy-50);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  /* ── Header ─────────────────────────────────────── */
+  .site-header {
+    background: var(--navy-800);
+    color: var(--white);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-md);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .site-header .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .site-header .brand-icon {
+    width: 42px; height: 42px;
+    background: var(--navy-600);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .site-header .brand-text h1 {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .site-header .brand-text span {
+    font-size: 11px;
+    opacity: .65;
+  }
+  .header-user {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .header-user .avatar {
+    width: 34px; height: 34px;
+    background: var(--navy-600);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .header-user .info {
+    text-align: start;
+  }
+  .header-user .info small {
+    display: block;
+    font-size: 11px;
+    opacity: .6;
+  }
+  .header-user .info span {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .btn-logout {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: var(--white);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: var(--transition);
+  }
+  .btn-logout:hover { background: rgba(255,255,255,.22); }
+
+  /* ── Page shell ──────────────────────────────────── */
+  .page-shell {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+
+  .page-title {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .page-title h2 {
+    font-size: 22px;
+    color: var(--navy-800);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .page-title p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  /* ── Cards grid ──────────────────────────────────── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 640px) {
+    .cards-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── Single card ─────────────────────────────────── */
+  .tpl-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1.5px solid var(--navy-100);
+    overflow: hidden;
+    transition: var(--transition);
+    cursor: pointer;
+  }
+  .tpl-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--navy-400);
+    transform: translateY(-3px);
+  }
+  .tpl-card.is-open {
+    border-color: var(--navy-600);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-3px);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 22px 22px 18px;
+  }
+  .card-icon {
+    width: 52px; height: 52px;
+    background: var(--navy-100);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    transition: var(--transition);
+  }
+  .tpl-card:hover .card-icon,
+  .tpl-card.is-open .card-icon {
+    background: var(--navy-800);
+    color: var(--white);
+  }
+  .card-meta { flex: 1; }
+  .card-meta h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy-800);
+    margin-bottom: 5px;
+    line-height: 1.4;
+  }
+  .card-meta p {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .card-chevron {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: var(--navy-100);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    color: var(--navy-600);
+    transition: var(--transition);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .tpl-card.is-open .card-chevron {
+    background: var(--navy-700);
+    color: var(--white);
+    transform: rotate(180deg);
+  }
+
+  /* direct-action badge */
+  .direct-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--navy-100);
+    color: var(--navy-700);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    margin-top: 8px;
+    font-weight: 600;
+    transition: var(--transition);
+  }
+  .tpl-card:hover .direct-badge {
+    background: var(--navy-700);
+    color: var(--white);
+  }
+
+  /* ── Accordion body (sub-options) ────────────────── */
+  .card-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .32s cubic-bezier(.4,0,.2,1),
+                opacity .22s ease;
+    opacity: 0;
+  }
+  .tpl-card.is-open .card-body {
+    max-height: 240px;
+    opacity: 1;
+  }
+
+  .sub-divider {
+    height: 1px;
+    background: var(--navy-100);
+    margin: 0 22px;
+  }
+  .sub-label {
+    padding: 12px 22px 6px;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: .03em;
+  }
+  .sub-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 22px 18px;
+  }
+  .sub-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--navy-50);
+    border: 1.5px solid var(--navy-100);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: right;
+  }
+  .sub-btn:hover {
+    background: var(--navy-800);
+    border-color: var(--navy-800);
+    color: var(--white);
+  }
+  .sub-btn span {
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
+  }
+  .sub-btn .arrow {
+    font-size: 11px;
+    opacity: .6;
+  }
+  .sub-btn:hover .arrow { opacity: 1; }
+
+  /* ── SECTION 2: Form view preview ───────────────── */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 56px 0 32px;
+  }
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--navy-200);
+  }
+  .section-divider span {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--navy-50);
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--navy-200);
+    white-space: nowrap;
+  }
+
+  /* ── Progress bar ────────────────────────────────── */
+  .progress-area {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    border: 1.5px solid var(--navy-100);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+  }
+  .progress-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .progress-top .back-btn {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .progress-top .back-btn:hover { color: var(--navy-700); }
+  .progress-top .tpl-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy-800);
+  }
+  .steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+  }
+  .step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: -50%;
+    width: 100%;
+    height: 2px;
+    background: var(--navy-200);
+    z-index: 0;
+  }
+  .step.done:not(:last-child)::after { background: var(--navy-700); }
+  .step-dot {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--navy-200);
+    color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+    transition: var(--transition);
+  }
+  .step.done .step-dot { background: var(--navy-700); }
+  .step.active .step-dot { background: var(--navy-500); box-shadow: 0 0 0 4px var(--navy-100); }
+  .step-label {
+    font-size: 10.5px;
+    margin-top: 6px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .step.done .step-label,
+  .step.active .step-label { color: var(--navy-700); font-weight: 600; }
+
+  /* Form preview */
+  .form-preview {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 28px;
+    border: 1.5px solid var(--navy-100);
+    box-shadow: var(--shadow-sm);
+  }
+  .form-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy-700);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--navy-100);
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+  .form-field label {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+  }
+  .form-field input,
+  .form-field select {
+    width: 100%;
+    padding: 10px 13px;
+    border: 1.5px solid var(--navy-200);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-dark);
+    background: var(--navy-50);
+    font-family: inherit;
+    transition: var(--transition);
+    outline: none;
+  }
+  .form-field input:focus,
+  .form-field select:focus {
+    border-color: var(--navy-600);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(45,79,124,.12);
+  }
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+    justify-content: flex-start;
+  }
+  .btn-primary {
+    background: var(--navy-800);
+    color: var(--white);
+    border: none;
+    padding: 11px 24px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+  }
+  .btn-primary:hover { background: var(--navy-700); }
+  .btn-secondary {
+    background: var(--white);
+    color: var(--navy-700);
+    border: 1.5px solid var(--navy-200);
+    padding: 11px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+  }
+  .btn-secondary:hover { border-color: var(--navy-500); color: var(--navy-800); }
+
+  /* ── Annotation labels (mockup only) ─────────────── */
+  .mockup-note {
+    display: inline-block;
+    background: #fff8e1;
+    border: 1px solid #ffc107;
+    color: #6d4c00;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+
+  /* ── Mobile preview strip ────────────────────────── */
+  .mobile-strip {
+    margin-top: 48px;
+    text-align: center;
+  }
+  .mobile-frame {
+    display: inline-block;
+    border: 3px solid var(--navy-700);
+    border-radius: 28px;
+    width: 320px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    text-align: right;
+  }
+  .mobile-header {
+    background: var(--navy-800);
+    color: var(--white);
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .mobile-cards {
+    background: var(--navy-50);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .mobile-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 14px;
+    border: 1.5px solid var(--navy-100);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .mobile-card-icon {
+    width: 38px; height: 38px;
+    background: var(--navy-100);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .mobile-card h4 { font-size: 12px; font-weight: 700; color: var(--navy-800); }
+  .mobile-card p { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     SECTION 1 — الشاشة الرئيسية (اختيار القالب)
+══════════════════════════════════════════════════ -->
+
+<header class="site-header">
+  <div class="brand">
+    <div class="brand-icon">🏢</div>
+    <div class="brand-text">
+      <h1>منصة أتمتة المستندات</h1>
+      <span>قسم المحتوى المحلي — Alpha Consulting Group</span>
+    </div>
+  </div>
+  <div class="header-user">
+    <div class="avatar">👤</div>
+    <div class="info">
+      <small>مرحباً</small>
+      <span>المستخدم</span>
+    </div>
+    <button class="btn-logout">تسجيل خروج</button>
+  </div>
+</header>
+
+<div class="page-shell">
+
+  <!-- Page title -->
+  <div class="page-title">
+    <div class="mockup-note">⚡ معاينة التصميم المقترح — الشاشة الرئيسية</div>
+    <h2>ماذا تريد إعداد اليوم؟</h2>
+    <p>اختر نوع المستند ثم اتبع الخطوات لإنشائه تلقائياً</p>
+  </div>
+
+  <!-- 2×2 Cards grid -->
+  <div class="cards-grid">
+
+    <!-- Card 1: عرض فني ومالي (branched → accordion) -->
+    <div class="tpl-card is-open" onclick="this.classList.toggle('is-open')">
+      <div class="card-header">
+        <div class="card-icon">📊</div>
+        <div class="card-meta">
+          <h3>عرض فني ومالي</h3>
+          <p>إعداد عرض فني ومالي متكامل للعميل</p>
+        </div>
+        <div class="card-chevron">▼</div>
+      </div>
+      <div class="card-body">
+        <div class="sub-divider"></div>
+        <div class="sub-label">اختر مستوى العرض</div>
+        <div class="sub-options">
+          <button class="sub-btn">
+            <span>على مستوى المنشأة</span>
+            <span class="arrow">←</span>
+          </button>
+          <button class="sub-btn">
+            <span>على مستوى العقد</span>
+            <span class="arrow">←</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: خطاب ارتباط (branched → accordion) -->
+    <div class="tpl-card" onclick="this.classList.toggle('is-open')">
+      <div class="card-header">
+        <div class="card-icon">📝</div>
+        <div class="card-meta">
+          <h3>خطاب ارتباط</h3>
+          <p>إعداد خطاب ارتباط للمنشأة أو العقد</p>
+        </div>
+        <div class="card-chevron">▼</div>
+      </div>
+      <div class="card-body">
+        <div class="sub-divider"></div>
+        <div class="sub-label">اختر مستوى الخطاب</div>
+        <div class="sub-options">
+          <button class="sub-btn">
+            <span>على مستوى المنشأة</span>
+            <span class="arrow">←</span>
+          </button>
+          <button class="sub-btn">
+            <span>على مستوى العقد</span>
+            <span class="arrow">←</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: خطاب إفادة (direct) -->
+    <div class="tpl-card" onclick="this.classList.toggle('is-open')">
+      <div class="card-header">
+        <div class="card-icon">✉️</div>
+        <div class="card-meta">
+          <h3>خطاب إفادة</h3>
+          <p>إنشاء خطابات الإفادة عن حالة المراجعة</p>
+          <div class="direct-badge">⚡ ابدأ مباشرةً</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: نموذج فوترة (direct) -->
+    <div class="tpl-card" onclick="this.classList.toggle('is-open')">
+      <div class="card-header">
+        <div class="card-icon">🧾</div>
+        <div class="card-meta">
+          <h3>نموذج فوترة عميل</h3>
+          <p>إعداد نموذج طلب فوترة العميل</p>
+          <div class="direct-badge">⚡ ابدأ مباشرةً</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /cards-grid -->
+
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 2 — شاشة النموذج (بعد الاختيار)
+  ══════════════════════════════════════════════════ -->
+
+  <div class="section-divider">
+    <span>▼ بعد الضغط على أحد الخيارات — شاشة تعبئة النموذج</span>
+  </div>
+
+  <!-- Progress bar (only shown here, not on homepage) -->
+  <div class="progress-area">
+    <div class="progress-top">
+      <button class="back-btn">→ رجوع للرئيسية</button>
+      <span class="tpl-name">📊 عرض فني ومالي — على مستوى المنشأة</span>
+    </div>
+    <div class="steps">
+      <div class="step done">
+        <div class="step-dot">✓</div>
+        <div class="step-label">اختيار النوع</div>
+      </div>
+      <div class="step active">
+        <div class="step-dot">2</div>
+        <div class="step-label">بيانات المنشأة</div>
+      </div>
+      <div class="step">
+        <div class="step-dot">3</div>
+        <div class="step-label">تفاصيل العرض</div>
+      </div>
+      <div class="step">
+        <div class="step-dot">4</div>
+        <div class="step-label">مراجعة وتحميل</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form preview -->
+  <div class="form-preview">
+    <div class="mockup-note">مثال — الخطوة 2: بيانات المنشأة</div>
+    <div class="form-section-title">بيانات المنشأة</div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>اسم المنشأة</label>
+        <input type="text" placeholder="مثال: شركة الأفق للاستشارات">
+      </div>
+      <div class="form-field">
+        <label>رقم السجل الموحد</label>
+        <input type="text" placeholder="1010xxxxxx">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>المدينة</label>
+        <select><option>الرياض</option><option>جدة</option><option>الدمام</option></select>
+      </div>
+      <div class="form-field">
+        <label>رقم تسجيل ضريبة القيمة المضافة</label>
+        <input type="text" placeholder="3xxxxxxxxxx3">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary">التالي ←</button>
+      <button class="btn-secondary">رجوع</button>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       SECTION 3 — معاينة الجوال
+  ══════════════════════════════════════════════════ -->
+
+  <div class="section-divider">
+    <span>📱 معاينة على الجوال (عمود واحد)</span>
+  </div>
+
+  <div class="mobile-strip">
+    <div class="mobile-frame">
+      <div class="mobile-header">
+        <span>منصة الأتمتة</span>
+        <span>☰</span>
+      </div>
+      <div class="mobile-cards">
+        <div class="mobile-card">
+          <div class="mobile-card-icon">📊</div>
+          <div>
+            <h4>عرض فني ومالي</h4>
+            <p>إعداد عرض فني ومالي للعميل</p>
+          </div>
+        </div>
+        <div class="mobile-card">
+          <div class="mobile-card-icon">📝</div>
+          <div>
+            <h4>خطاب ارتباط</h4>
+            <p>إعداد خطاب ارتباط للمنشأة أو العقد</p>
+          </div>
+        </div>
+        <div class="mobile-card">
+          <div class="mobile-card-icon">✉️</div>
+          <div>
+            <h4>خطاب إفادة</h4>
+            <p>إنشاء خطابات الإفادة</p>
+          </div>
+        </div>
+        <div class="mobile-card">
+          <div class="mobile-card-icon">🧾</div>
+          <div>
+            <h4>نموذج فوترة عميل</h4>
+            <p>إعداد نموذج طلب الفوترة</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-shell -->
+
+</body>
+</html>
