@@ -88,6 +88,30 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 .bdl{background:linear-gradient(135deg,var(--green),#15803d);color:#fff;border:none;padding:13px 28px;border-radius:11px;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 18px rgba(22,163,74,.3);margin-bottom:12px}
 .bnw{background:transparent;border:1.5px solid var(--border);color:var(--navy);padding:11px 22px;border-radius:11px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
 .hidden{display:none!important}
+/* ── Home cards ─────────────────────────────────── */
+.home-cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.hcard{background:var(--card);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:all .28s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 10px rgba(28,38,83,.07)}
+.hcard:hover,.hcard.hcard-open{box-shadow:0 8px 28px rgba(28,38,83,.16);border-color:var(--navy);transform:translateY(-3px)}
+.hcard-main{display:flex;align-items:flex-start;gap:14px;padding:20px;cursor:pointer}
+.hcard-icon{width:50px;height:50px;background:var(--bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;transition:all .28s}
+.hcard:hover .hcard-icon,.hcard.hcard-open .hcard-icon{background:var(--navy)}
+.hcard-meta{flex:1}
+.hcard-meta h3{font-size:14.5px;font-weight:700;color:var(--text);margin-bottom:4px}
+.hcard-meta p{font-size:12px;color:var(--muted);line-height:1.6}
+.hcard-chev{width:26px;height:26px;background:var(--bg);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--navy);transition:all .28s;flex-shrink:0}
+.hcard.hcard-open .hcard-chev{background:var(--navy);color:#fff;transform:rotate(180deg)}
+.hcard-badge{display:inline-flex;align-items:center;gap:4px;background:var(--bg);color:var(--navy);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:8px;transition:all .28s}
+.hcard:hover .hcard-badge{background:var(--navy);color:#fff}
+.hcard-body{max-height:0;overflow:hidden;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;opacity:0}
+.hcard.hcard-open .hcard-body{max-height:200px;opacity:1}
+.hcard-sublbl{padding:8px 20px 6px;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.03em;border-top:1px solid var(--border)}
+.hcard-subs{display:flex;flex-direction:column;gap:6px;padding:0 20px 16px}
+.hcard-sub{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;color:var(--text);transition:all .22s;text-align:right}
+.hcard-sub:hover{background:var(--navy);border-color:var(--navy);color:#fff}
+.page-hero{text-align:center;margin-bottom:28px}
+.page-hero h2{font-size:20px;font-weight:900;color:var(--text);margin-bottom:6px}
+.page-hero p{font-size:13px;color:var(--muted)}
+@media(max-width:600px){.home-cards{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -104,65 +128,83 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 </div>
 
 <div class="main">
-  <div class="steps">
-    <div class="step"><div class="sn active" id="s1">1</div><span class="sl active" id="sl1">اختر النموذج</span></div>
-    <div class="sline" id="line1"></div>
-    <div class="step"><div class="sn inactive" id="s2">2</div><span class="sl" id="sl2">أدخل البيانات</span></div>
+  <div class="steps" id="stepsBar" style="display:none;margin-bottom:36px">
+    <div class="step"><div class="sn done" id="s1">✓</div><span class="sl" id="sl1">اختيار النوع</span></div>
+    <div class="sline done" id="line1"></div>
+    <div class="step"><div class="sn active" id="s2">2</div><span class="sl active" id="sl2">إدخال البيانات</span></div>
     <div class="sline" id="line2"></div>
     <div class="step"><div class="sn inactive" id="s3">3</div><span class="sl" id="sl3">تحميل الملف</span></div>
   </div>
 
   <div id="step1">
-    <div class="sec-title">اختر النموذج</div>
-    <div class="sec-sub">اختر نوع المستند الذي تريد إعداده</div>
-    <div class="tsec">
-      <div class="cat-lbl">على مستوى المنشأة</div>
-      <div class="tgrid">
-        <div class="tc" id="tc-entity-proposal" onclick="sel('entity-proposal')">
-          <div class="tck"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="tic pp">📊</div><div class="tn">العرض الفني والمالي</div><span class="tbg pp">PowerPoint</span>
+    <div class="page-hero">
+      <h2>ماذا تريد إعداد اليوم؟</h2>
+      <p>اختر نوع المستند ثم اتبع الخطوات لإنشائه تلقائياً</p>
+    </div>
+    <div class="home-cards">
+
+      <!-- عرض فني ومالي (branched) -->
+      <div class="hcard" id="hc-proposal">
+        <div class="hcard-main" onclick="toggleCard('proposal')">
+          <div class="hcard-icon">📊</div>
+          <div class="hcard-meta">
+            <h3>عرض فني ومالي</h3>
+            <p>إعداد عرض فني ومالي متكامل للعميل</p>
+          </div>
+          <div class="hcard-chev">▼</div>
         </div>
-        <div class="tc" id="tc-entity-engagement" onclick="sel('entity-engagement')">
-          <div class="tck"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="tic dx">📄</div><div class="tn">خطاب الارتباط</div><span class="tbg dx">Word</span>
+        <div class="hcard-body">
+          <div class="hcard-sublbl">اختر مستوى العرض</div>
+          <div class="hcard-subs">
+            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('entity-proposal')">على مستوى المنشأة <span>←</span></button>
+            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('contract-proposal')">على مستوى العقد <span>←</span></button>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="tsec">
-      <div class="cat-lbl">على مستوى العقد</div>
-      <div class="tgrid">
-        <div class="tc" id="tc-contract-proposal" onclick="sel('contract-proposal')">
-          <div class="tck"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="tic pp">📋</div><div class="tn">العرض الفني والمالي</div><span class="tbg pp">PowerPoint</span>
+
+      <!-- خطاب ارتباط (branched) -->
+      <div class="hcard" id="hc-engagement">
+        <div class="hcard-main" onclick="toggleCard('engagement')">
+          <div class="hcard-icon">📝</div>
+          <div class="hcard-meta">
+            <h3>خطاب ارتباط</h3>
+            <p>إعداد خطاب ارتباط للمنشأة أو العقد</p>
+          </div>
+          <div class="hcard-chev">▼</div>
         </div>
-        <div class="tc" id="tc-contract-engagement" onclick="sel('contract-engagement')">
-          <div class="tck"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="tic dx">📝</div><div class="tn">خطاب الارتباط</div><span class="tbg dx">Word</span>
-        </div>
-      </div>
-    </div>
-    <div class="tsec">
-      <div class="cat-lbl">أخرى</div>
-      <div class="tgrid">
-        <div class="tc" id="tc-confirmation-letter" onclick="sel('confirmation-letter')">
-          <div class="tck"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="tic dx">✉️</div><div class="tn">خطاب الإفادة</div><span class="tbg dx">Word</span>
+        <div class="hcard-body">
+          <div class="hcard-sublbl">اختر مستوى الخطاب</div>
+          <div class="hcard-subs">
+            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('entity-engagement')">على مستوى المنشأة <span>←</span></button>
+            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('contract-engagement')">على مستوى العقد <span>←</span></button>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="tsec">
-      <div class="cat-lbl">المالية والتشغيلية</div>
-      <div class="tgrid">
-        <div class="tc" id="tc-invoice-request" onclick="sel('invoice-request')">
-          <div class="tck"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="tic xl">🧾</div><div class="tn">نموذج طلب فوترة عميل</div><span class="tbg xl">Excel</span>
+
+      <!-- خطاب إفادة (direct) -->
+      <div class="hcard" onclick="selAndGo('confirmation-letter')">
+        <div class="hcard-main">
+          <div class="hcard-icon">✉️</div>
+          <div class="hcard-meta">
+            <h3>خطاب إفادة</h3>
+            <p>إنشاء خطابات الإفادة عن حالة المراجعة</p>
+            <span class="hcard-badge">⚡ ابدأ مباشرةً</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="brow">
-      <button class="bpr" id="btnNext1" onclick="goStep2()" disabled>
-        التالي <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </button>
+
+      <!-- نموذج فوترة عميل (direct) -->
+      <div class="hcard" onclick="selAndGo('invoice-request')">
+        <div class="hcard-main">
+          <div class="hcard-icon">🧾</div>
+          <div class="hcard-meta">
+            <h3>نموذج فوترة عميل</h3>
+            <p>إعداد نموذج طلب فوترة العميل</p>
+            <span class="hcard-badge">⚡ ابدأ مباشرةً</span>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -213,11 +255,15 @@ function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.h
 // Steps
 function setStep(n){
   ['step1','step2','step3'].forEach((s,i)=>document.getElementById(s).classList.toggle('hidden',i+1!==n));
-  for(let i=1;i<=3;i++){
+  const bar=document.getElementById('stepsBar');
+  if(bar)bar.style.display=n===1?'none':'flex';
+  // steps bar maps: step2→bar-step2 active, step3→bar-step3 active (step1 always done)
+  const barN=n===1?2:n; // while on homepage show bar at step2 (hidden anyway)
+  for(let i=2;i<=3;i++){
     const num=document.getElementById('s'+i),lbl=document.getElementById('sl'+i),line=i<3?document.getElementById('line'+i):null;
-    if(i<n){num.className='sn done';lbl.className='sl';if(line)line.className='sline done';}
-    else if(i===n){num.className='sn active';lbl.className='sl active';}
-    else{num.className='sn inactive';lbl.className='sl';if(line)line.className='sline';}
+    if(i<barN){num.className='sn done';num.textContent='✓';lbl.className='sl';if(line)line.className='sline done';}
+    else if(i===barN){num.className='sn active';num.textContent=i-1;lbl.className='sl active';}
+    else{num.className='sn inactive';num.textContent=i-1;lbl.className='sl';if(line)line.className='sline';}
   }
 }
 function sel(id){
@@ -226,7 +272,7 @@ function sel(id){
   curTpl=id;
   document.getElementById('btnNext1').disabled=false;
 }
-function goStep1(){setStep(1);}
+function goStep1(){document.querySelectorAll('.hcard').forEach(c=>c.classList.remove('hcard-open'));setStep(1);}
 function goStep2(){if(!curTpl)return;renderForm(curTpl);setStep(2);}
 
 // Hijri
@@ -855,8 +901,19 @@ function dlBlob(blob,name){
 
 function resetApp(){
   curTpl=null;genBlob=null;
-  document.querySelectorAll('.tc').forEach(c=>c.classList.remove('sel'));
-  document.getElementById('btnNext1').disabled=true;setStep(1);
+  document.querySelectorAll('.hcard').forEach(c=>c.classList.remove('hcard-open'));
+  setStep(1);
+}
+function toggleCard(id){
+  const card=document.getElementById('hc-'+id);
+  const wasOpen=card.classList.contains('hcard-open');
+  document.querySelectorAll('.hcard').forEach(c=>c.classList.remove('hcard-open'));
+  if(!wasOpen)card.classList.add('hcard-open');
+}
+function selAndGo(tid){
+  curTpl=tid;
+  renderForm(tid);
+  setStep(2);
 }
 
 function setLoad(on){
