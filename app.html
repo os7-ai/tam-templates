@@ -500,31 +500,59 @@ function renderForm(tid){
       w.appendChild(d);w.appendChild(i);
     }else if(f.tp==='service-rows'){
       const DEPT='خدمات المراجعة Audit Services';
-      const SUBS=['مراجعة القوائم المالية','إصدار تقرير المحتوى المحلي','خدمات البيع على الخارطة','المساهمات العقارية','التقارير الخاصة','خدمات المراجعة الأخرى'];
+      const SUBS=[
+        'مراجعة القوائم المالية  Financial Statements Audit',
+        'إصدار تقرير المحتوى المحلي Local Content Report Issuance',
+        'خدمات البيع على الخارطة Off-Plan Sales Services',
+        'المساهمات العقارية Real Estate Contributions',
+        'التقارير الخاصة Special Reports',
+        'خدمات المراجعة الأخرى Others (Auditing Services)',
+      ];
       const wrap=document.createElement('div');
       const deptInfo=document.createElement('div');
       deptInfo.className='hint';deptInfo.style.cssText='margin-bottom:10px;padding:6px 10px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)';
       deptInfo.textContent='القسم: '+DEPT;wrap.appendChild(deptInfo);
-      const g=document.createElement('div');
-      g.style.cssText='display:grid;grid-template-columns:2fr 2fr 1.5fr;gap:8px;align-items:center';
+      // Column headers
+      const hdrRow=document.createElement('div');
+      hdrRow.style.cssText='display:grid;grid-template-columns:2fr 2fr 1.5fr;gap:8px;margin-bottom:4px';
       ['التصنيف الفرعي','وصف الخدمة','المبلغ (ريال، قبل ض.ق.م)'].forEach(h=>{
         const hd=document.createElement('div');
-        hd.style.cssText='font-size:11.5px;font-weight:700;color:var(--muted);padding:4px 0';
-        hd.textContent=h;g.appendChild(hd);
+        hd.style.cssText='font-size:11.5px;font-weight:700;color:var(--muted)';
+        hd.textContent=h;hdrRow.appendChild(hd);
       });
+      wrap.appendChild(hdrRow);
+      // Row container — tracks how many rows are visible via data-row-count
+      const rc=document.createElement('div');rc.id='svcRows';rc.dataset.rowCount='1';
+      rc.style.cssText='display:flex;flex-direction:column;gap:8px';
       for(let i=1;i<=4;i++){
+        const row=document.createElement('div');row.id='svcRow_'+i;
+        row.style.cssText='display:'+(i===1?'grid':'none')+';grid-template-columns:2fr 2fr 1.5fr;gap:8px';
         const sub=document.createElement('select');sub.id='f_service_subcategory_'+i;
         ['',...SUBS].forEach((s,j)=>{const o=document.createElement('option');o.value=s;o.textContent=j===0?'-- اختر --':s;sub.appendChild(o);});
-        g.appendChild(sub);
+        row.appendChild(sub);
         const desc=document.createElement('input');desc.type='text';desc.id='f_service_description_'+i;desc.placeholder='وصف الخدمة';
-        g.appendChild(desc);
+        row.appendChild(desc);
         const amt=document.createElement('input');amt.type='text';amt.inputMode='numeric';amt.id='f_invoice_amount_before_vat_'+i;amt.placeholder='0';
         amt.addEventListener('input',()=>{amt.value=amt.value.replace(/[^0-9.]/g,'');});
-        g.appendChild(amt);
+        row.appendChild(amt);
+        rc.appendChild(row);
       }
-      const hint=document.createElement('div');hint.className='hint';hint.style.marginTop='8px';
-      hint.textContent='الصف الأول مطلوب — الصفوف 2-4 اختيارية';
-      wrap.appendChild(g);wrap.appendChild(hint);w.appendChild(wrap);
+      wrap.appendChild(rc);
+      // Add-row button
+      const addBtn=document.createElement('button');addBtn.type='button';
+      addBtn.textContent='+ إضافة خدمة';
+      addBtn.style.cssText='margin-top:10px;background:transparent;border:1.5px dashed var(--border);color:var(--navy);padding:7px 18px;border-radius:9px;font-family:Cairo,sans-serif;font-size:12px;font-weight:700;cursor:pointer';
+      addBtn.onclick=()=>{
+        const c=document.getElementById('svcRows');
+        const cur=parseInt(c.dataset.rowCount);
+        if(cur>=4)return;
+        const next=cur+1;
+        c.dataset.rowCount=String(next);
+        const row=document.getElementById('svcRow_'+next);
+        if(row)row.style.display='grid';
+        if(next>=4)addBtn.style.display='none';
+      };
+      wrap.appendChild(addBtn);w.appendChild(wrap);
     }
     grid.appendChild(w);
   });
@@ -537,12 +565,21 @@ function collectVars(tid){
     if(f.tp==='sep'||f.tp==='logo')return;
     if(f.tp==='service-rows'){
       const DEPT='خدمات المراجعة Audit Services';
+      const rowCount=parseInt(document.getElementById('svcRows')?.dataset.rowCount||'1');
       for(let i=1;i<=4;i++){
-        const suf=i===1?'':'_'+i; // row 1 has no suffix in template, rows 2-4 use _2 _3 _4
-        vars['service_department'+suf]=DEPT;
-        vars['service_subcategory'+suf]=document.getElementById('f_service_subcategory_'+i)?.value||'';
-        vars['service_description'+suf]=document.getElementById('f_service_description_'+i)?.value||'';
-        vars['invoice_amount_before_vat'+suf]=parseFloat(document.getElementById('f_invoice_amount_before_vat_'+i)?.value||'')||0;
+        const suf=i===1?'':'_'+i;
+        if(i<=rowCount){
+          vars['service_department'+suf]=DEPT;
+          vars['service_subcategory'+suf]=document.getElementById('f_service_subcategory_'+i)?.value||'';
+          vars['service_description'+suf]=document.getElementById('f_service_description_'+i)?.value||'';
+          vars['invoice_amount_before_vat'+suf]=parseFloat(document.getElementById('f_invoice_amount_before_vat_'+i)?.value||'')||0;
+        }else{
+          // hidden rows → send empty so template shows blank
+          vars['service_department'+suf]='';
+          vars['service_subcategory'+suf]='';
+          vars['service_description'+suf]='';
+          vars['invoice_amount_before_vat'+suf]='';
+        }
       }
       return;
     }
@@ -598,10 +635,13 @@ function validate(tid){
   const tmpl=T[tid];
   for(const f of tmpl.fields){
     if(f.tp==='service-rows'){
-      const sub1=document.getElementById('f_service_subcategory_1')?.value;
-      const amt1=parseFloat(document.getElementById('f_invoice_amount_before_vat_1')?.value||'')||0;
-      if(!sub1)return'يرجى اختيار التصنيف الفرعي للخدمة الأولى';
-      if(amt1<=0)return'يرجى إدخال مبلغ الفاتورة للخدمة الأولى';
+      const rowCount=parseInt(document.getElementById('svcRows')?.dataset.rowCount||'1');
+      for(let i=1;i<=rowCount;i++){
+        const sub=document.getElementById('f_service_subcategory_'+i)?.value;
+        const amt=parseFloat(document.getElementById('f_invoice_amount_before_vat_'+i)?.value||'')||0;
+        if(!sub)return'يرجى اختيار التصنيف الفرعي للخدمة '+(i===1?'الأولى':i);
+        if(amt<=0)return'يرجى إدخال مبلغ الفاتورة للخدمة '+(i===1?'الأولى':i);
+      }
       continue;
     }
     if(f.tp==='inv-amount'){

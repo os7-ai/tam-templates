@@ -1,10 +1,19 @@
 const { createClient } = require('@supabase/supabase-js');
-const ExcelJS = require('exceljs');
+const AdmZip = require('adm-zip');
 
 const SURL = process.env.SUPABASE_URL;
 const SKEY = process.env.SUPABASE_KEY;
 
 const ALLOWED = new Set(['invoice-request.xlsx']);
+
+function escXml(v) {
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -24,23 +33,33 @@ exports.handler = async (event) => {
     if (error) throw new Error('فشل تحميل القالب: ' + error.message);
 
     const buffer = Buffer.from(await data.arrayBuffer());
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    const zip = new AdmZip(buffer);
 
-    // Replace {{variable_name}} placeholders in all sheets
-    workbook.eachSheet((sheet) => {
-      sheet.eachRow((row) => {
-        row.eachCell({ includeEmpty: false }, (cell) => {
-          if (cell.type !== ExcelJS.ValueType.String) return;
-          const m = String(cell.value).trim().match(/^\{\{(\w+)\}\}$/);
-          if (!m) return;
-          const key = m[1];
-          if (key in vars) cell.value = vars[key];
-        });
+    // Replace {{variable}} placeholders in shared strings (covers all text cells)
+    const ssEntry = zip.getEntry('xl/sharedStrings.xml');
+    if (ssEntry) {
+      let xml = zip.readAsText(ssEntry, 'utf8');
+      for (const [key, val] of Object.entries(vars)) {
+        xml = xml.split('{{' + key + '}}').join(escXml(String(val)));
+      }
+      zip.updateFile('xl/sharedStrings.xml', Buffer.from(xml, 'utf8'));
+    }
+
+    // Also replace in worksheets (covers inline strings)
+    zip.getEntries()
+      .filter(e => /^xl\/worksheets\/sheet\d+\.xml$/.test(e.entryName))
+      .forEach(entry => {
+        let xml = zip.readAsText(entry, 'utf8');
+        let changed = false;
+        for (const [key, val] of Object.entries(vars)) {
+          const ph = '{{' + key + '}}';
+          if (xml.includes(ph)) {
+            xml = xml.split(ph).join(escXml(String(val)));
+            changed = true;
+          }
+        }
+        if (changed) zip.updateFile(entry.entryName, Buffer.from(xml, 'utf8'));
       });
-    });
-
-    const outBuffer = await workbook.xlsx.writeBuffer();
 
     return {
       statusCode: 200,
@@ -48,7 +67,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': 'attachment',
       },
-      body: Buffer.from(outBuffer).toString('base64'),
+      body: zip.toBuffer().toString('base64'),
       isBase64Encoded: true,
     };
   } catch (err) {
