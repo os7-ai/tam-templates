@@ -50,6 +50,8 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 .tbg{padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;pointer-events:none}
 .tbg.pp{background:#EBF4FF;color:#1a6bb5}
 .tbg.dx{background:#F0FDF4;color:#15803d}
+.tbg.xl{background:#FFF7ED;color:#9a3412}
+.tic.xl{background:#FFF7ED}
 .fcard{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;box-shadow:0 4px 20px rgba(28,38,83,.08)}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .ff{display:flex;flex-direction:column;gap:5px}
@@ -148,6 +150,15 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
         </div>
       </div>
     </div>
+    <div class="tsec">
+      <div class="cat-lbl">المالية والتشغيلية</div>
+      <div class="tgrid">
+        <div class="tc" id="tc-invoice-request" onclick="sel('invoice-request')">
+          <div class="tck"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="tic xl">🧾</div><div class="tn">نموذج طلب فوترة عميل</div><span class="tbg xl">Excel</span>
+        </div>
+      </div>
+    </div>
     <div class="brow">
       <button class="bpr" id="btnNext1" onclick="goStep2()" disabled>
         التالي <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -188,16 +199,16 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 </div>
 
 <script>
-const SURL='https://ghpjrvnyrlcqsfcjyiuq.supabase.co';
-const SKEY='sb_publishable_WkOLENVn0HqysJetM6H6NA_tQe3Cn0n';
-const sb=supabase.createClient(SURL,SKEY);
-let curTpl=null,genBlob=null,genName='',logoData=null;
+let sb,curTpl=null,genBlob=null,genName='',logoData=null,logoW=0,logoH=0;
 
-sb.auth.getSession().then(({data:{session}})=>{
+(async()=>{
+  const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
+  sb=supabase.createClient(cfg.url,cfg.key);
+  const {data:{session}}=await sb.auth.getSession();
   if(!session){window.location.href='login.html';return;}
   document.getElementById('userEmail').textContent=session.user.email;
-});
-function logout(){sb.auth.signOut().then(()=>window.location.href='login.html');}
+})();
+function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
 
 // Steps
 function setStep(n){
@@ -354,17 +365,39 @@ const T={
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
     {id:'fiscal_year',lb:'العام المالي',tp:'fiscal'},
+  ]},
+  'invoice-request':{name:'نموذج طلب فوترة عميل',file:'invoice-request.xlsx',ext:'xlsx',fields:[
+    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
+    {id:'vat_registration_number',lb:'رقم تسجيل ضريبة القيمة المضافة',tp:'text',ph:'300012345600003'},
+    {tp:'sep'},
+    {id:'street',lb:'الشارع',tp:'text',ph:'شارع الملك فهد'},
+    {id:'building_number',lb:'رقم المبنى',tp:'text',ph:'1234'},
+    {id:'district',lb:'الحي',tp:'text',ph:'حي العليا'},
+    {id:'additional_number',lb:'الرقم الإضافي',tp:'text',ph:'5678'},
+    {id:'region',lb:'المنطقة',tp:'text',ph:'الرياض'},
+    {id:'city',lb:'المدينة',tp:'text',ph:'الرياض'},
+    {id:'postal_code',lb:'الرمز البريدي',tp:'text',ph:'12345'},
+    {tp:'sep'},
+    {id:'engagement_letter_number',lb:'رقم خطاب الارتباط',tp:'text',ph:'LTR-2025-001'},
+    {id:'engagement_letter_date',lb:'تاريخ خطاب الارتباط',tp:'date'},
+    {id:'contract_value_before_vat',lb:'قيمة العقد قبل الضريبة',tp:'inv-amount',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة'},
+    {id:'service_location',lb:'موقع تقديم الخدمة',tp:'select',opts:['داخل المملكة','خارج المملكة']},
+    {tp:'sep'},
+    {lb:'الخدمات المطلوب الفوترة عنها',tp:'service-rows'},
   ]}
 };
 
 function applyConstraints(inp, id){
-  const nums=['commercial_reg','unified_number','tax_number','mobile_number'];
+  const nums=['commercial_reg','unified_number','tax_number','mobile_number','vat_registration_number','building_number','additional_number','postal_code'];
   if(nums.includes(id)){
     inp.inputMode='numeric';
     inp.addEventListener('input',()=>{inp.value=inp.value.replace(/[^0-9]/g,'');});
   }
   if(id==='commercial_reg') inp.maxLength=10;
   if(id==='mobile_number') inp.maxLength=10;
+  if(id==='vat_registration_number') inp.maxLength=15;
+  if(id==='postal_code') inp.maxLength=5;
   if(id==='entity_name'||id==='contact_person'){
     inp.addEventListener('input',()=>{inp.value=inp.value.replace(/[0-9]/g,'');});
   }
@@ -380,7 +413,7 @@ function renderForm(tid){
   tmpl.fields.forEach(f=>{
     if(f.tp==='sep'){const s=document.createElement('div');s.className='fsep';grid.appendChild(s);return;}
     const w=document.createElement('div');
-    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'?' full':'');
+    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'?' full':'');
     if(f.lb){const l=document.createElement('label');l.textContent=f.lb;w.appendChild(l);}
     if(f.wn){const h=document.createElement('div');h.className='warn';h.textContent=f.wn;w.appendChild(h);}
     if(f.tp==='text'){
@@ -429,6 +462,12 @@ function renderForm(tid){
       i.addEventListener('blur',()=>{const v=parseFloat(i.value)||0;if(v>0)i.value=v.toLocaleString('en-US',{maximumFractionDigits:2});});
       i.addEventListener('focus',()=>{i.value=i.value.replace(/,/g,'');});
       w.appendChild(i);
+    }else if(f.tp==='inv-amount'){
+      const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder='100,000';
+      i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9.]/g,'');});
+      i.addEventListener('blur',()=>{const v=parseFloat(i.value)||0;if(v>0)i.value=v.toLocaleString('en-US',{maximumFractionDigits:2});});
+      i.addEventListener('focus',()=>{i.value=i.value.replace(/,/g,'');});
+      w.appendChild(i);
     }else if(f.tp==='engfee'){
       const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_total_fees';i.placeholder='19,000';i.style.marginBottom='8px';w.appendChild(i);
       const c=document.createElement('div');c.className='comp-row';
@@ -459,6 +498,33 @@ function renderForm(tid){
       const i=document.createElement('input');i.type='file';i.id='logoInp';i.accept='image/*';i.style.display='none';
       i.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{logoData=ev.target.result;d.classList.add('has');d.innerHTML='<img src="'+logoData+'" class="lup"><p>✅ تم رفع الشعار</p>';};r.readAsDataURL(f);};
       w.appendChild(d);w.appendChild(i);
+    }else if(f.tp==='service-rows'){
+      const DEPT='خدمات المراجعة Audit Services';
+      const SUBS=['مراجعة القوائم المالية','إصدار تقرير المحتوى المحلي','خدمات البيع على الخارطة','المساهمات العقارية','التقارير الخاصة','خدمات المراجعة الأخرى'];
+      const wrap=document.createElement('div');
+      const deptInfo=document.createElement('div');
+      deptInfo.className='hint';deptInfo.style.cssText='margin-bottom:10px;padding:6px 10px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)';
+      deptInfo.textContent='القسم: '+DEPT;wrap.appendChild(deptInfo);
+      const g=document.createElement('div');
+      g.style.cssText='display:grid;grid-template-columns:2fr 2fr 1.5fr;gap:8px;align-items:center';
+      ['التصنيف الفرعي','وصف الخدمة','المبلغ (ريال، قبل ض.ق.م)'].forEach(h=>{
+        const hd=document.createElement('div');
+        hd.style.cssText='font-size:11.5px;font-weight:700;color:var(--muted);padding:4px 0';
+        hd.textContent=h;g.appendChild(hd);
+      });
+      for(let i=1;i<=4;i++){
+        const sub=document.createElement('select');sub.id='f_service_subcategory_'+i;
+        ['',...SUBS].forEach((s,j)=>{const o=document.createElement('option');o.value=s;o.textContent=j===0?'-- اختر --':s;sub.appendChild(o);});
+        g.appendChild(sub);
+        const desc=document.createElement('input');desc.type='text';desc.id='f_service_description_'+i;desc.placeholder='وصف الخدمة';
+        g.appendChild(desc);
+        const amt=document.createElement('input');amt.type='text';amt.inputMode='numeric';amt.id='f_invoice_amount_before_vat_'+i;amt.placeholder='0';
+        amt.addEventListener('input',()=>{amt.value=amt.value.replace(/[^0-9.]/g,'');});
+        g.appendChild(amt);
+      }
+      const hint=document.createElement('div');hint.className='hint';hint.style.marginTop='8px';
+      hint.textContent='الصف الأول مطلوب — الصفوف 2-4 اختيارية';
+      wrap.appendChild(g);wrap.appendChild(hint);w.appendChild(wrap);
     }
     grid.appendChild(w);
   });
@@ -469,7 +535,22 @@ function collectVars(tid){
   const tmpl=T[tid],vars={};
   tmpl.fields.forEach(f=>{
     if(f.tp==='sep'||f.tp==='logo')return;
+    if(f.tp==='service-rows'){
+      const DEPT='خدمات المراجعة Audit Services';
+      for(let i=1;i<=4;i++){
+        const suf=i===1?'':'_'+i; // row 1 has no suffix in template, rows 2-4 use _2 _3 _4
+        vars['service_department'+suf]=DEPT;
+        vars['service_subcategory'+suf]=document.getElementById('f_service_subcategory_'+i)?.value||'';
+        vars['service_description'+suf]=document.getElementById('f_service_description_'+i)?.value||'';
+        vars['invoice_amount_before_vat'+suf]=parseFloat(document.getElementById('f_invoice_amount_before_vat_'+i)?.value||'')||0;
+      }
+      return;
+    }
     if(!f.id&&f.tp!=='engfee')return;
+    if(f.tp==='inv-amount'){
+      vars[f.id]=parseFloat((document.getElementById('f_'+f.id)?.value||'').replace(/,/g,''))||0;
+      return;
+    }
     if(f.tp==='period'){
       vars['measurement_period']=fmtPeriod(document.getElementById('f_period_from')?.value||'',document.getElementById('f_period_to')?.value||'');return;
     }
@@ -507,15 +588,28 @@ function collectVars(tid){
 }
 
 function buildName(tid,vars){
-  const m={'entity-proposal':'العرض الفني والمالي_على مستوى المنشأة','contract-proposal':'العرض الفني والمالي_على مستوى العقد','entity-engagement':'خطاب الارتباط_على مستوى المنشأة','contract-engagement':'خطاب الارتباط_على مستوى العقد','confirmation-letter':'خطاب الإفادة'};
+  const m={'entity-proposal':'العرض الفني والمالي_على مستوى المنشأة','contract-proposal':'العرض الفني والمالي_على مستوى العقد','entity-engagement':'خطاب الارتباط_على مستوى المنشأة','contract-engagement':'خطاب الارتباط_على مستوى العقد','confirmation-letter':'خطاب الإفادة','invoice-request':'نموذج طلب فوترة'};
   const ext=T[tid].ext;
-  const parts=[m[tid],vars['entity_name']||'',vars['رقم_العرض']||vars['letter_number']||''].filter(Boolean);
+  const parts=[m[tid],vars['entity_name']||vars['اسم_الجهة']||'',vars['رقم_العرض']||vars['letter_number']||vars['engagement_letter_number']||''].filter(Boolean);
   return parts.join('_')+'.'+ext;
 }
 
 function validate(tid){
   const tmpl=T[tid];
   for(const f of tmpl.fields){
+    if(f.tp==='service-rows'){
+      const sub1=document.getElementById('f_service_subcategory_1')?.value;
+      const amt1=parseFloat(document.getElementById('f_invoice_amount_before_vat_1')?.value||'')||0;
+      if(!sub1)return'يرجى اختيار التصنيف الفرعي للخدمة الأولى';
+      if(amt1<=0)return'يرجى إدخال مبلغ الفاتورة للخدمة الأولى';
+      continue;
+    }
+    if(f.tp==='inv-amount'){
+      const el=document.getElementById('f_'+f.id);
+      const v=parseFloat((el?.value||'').replace(/,/g,''));
+      if(!v||v<=0)return'يرجى إدخال: '+f.lb;
+      continue;
+    }
     if(!f.id||['logo','sep','hijri','engfee','fee'].includes(f.tp))continue;
     if(f.tp==='period'){
       const pf=document.getElementById('f_period_from')?.value;
@@ -548,11 +642,15 @@ async function genDoc(){
   try{
     const tmpl=T[curTpl],vars=collectVars(curTpl);
     genName=buildName(curTpl,vars);
-    const{data,error}=await sb.storage.from('templates').download(tmpl.file);
-    if(error)throw new Error('فشل تحميل النموذج: '+error.message);
-    const ab=await data.arrayBuffer();
-    if(tmpl.ext==='docx')await procDocx(ab,vars,tmpl.file);
-    else await procPptx(ab,vars);
+    if(tmpl.ext==='xlsx'){
+      await procExcel(vars,tmpl.file);
+    }else{
+      const{data,error}=await sb.storage.from('templates').download(tmpl.file);
+      if(error)throw new Error('فشل تحميل النموذج: '+error.message);
+      const ab=await data.arrayBuffer();
+      if(tmpl.ext==='docx')await procDocx(ab,vars,tmpl.file);
+      else await procPptx(ab,vars);
+    }
     setStep(3);
     document.getElementById('sucMsg').textContent=genName;
   }catch(e){
@@ -573,12 +671,147 @@ async function procDocx(ab,vars,templateFile){
   genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
 }
 
+async function procExcel(vars,templateFile){
+  const resp=await fetch('/.netlify/functions/generate-excel',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({templateFile,vars})
+  });
+  if(!resp.ok){let e={error:'فشل التوليد'};try{e=await resp.json();}catch(x){}throw new Error(e.error);}
+  const blob=await resp.blob();
+  genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
+}
+
+function repVarsPptx(text,vars){
+  let r=text;
+  const esc={};
+  for(const[k,v]of Object.entries(vars))esc[k]=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  function escRx(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+
+  // For each paragraph, merge runs then replace — handles PowerPoint splitting across runs with mixed lang attributes
+  r=r.replace(/(<a:p[ >][\s\S]*?<\/a:p>)/g,para=>{
+    const runs=[];
+    const runPat=/<a:r>([\s\S]*?)<\/a:r>/g;
+    let m;
+    while((m=runPat.exec(para))!==null){
+      const tMatch=m[1].match(/<a:t[^>]*>([\s\S]*?)<\/a:t>/);
+      if(tMatch)runs.push({run:m[0],text:tMatch[1],idx:m.index});
+    }
+    if(runs.length===0)return para;
+    const joined=runs.map(x=>x.text).join('');
+    // Check both {{k}} and }}k{{ patterns, allowing optional whitespace around variable name
+    let hasVar=false;
+    for(const k of Object.keys(esc)){
+      const kr=escRx(k);
+      if(new RegExp('\\{\\{\\s*'+kr+'\\s*\\}\\}').test(joined)||new RegExp('\\}\\}\\s*'+kr+'\\s*\\{\\{').test(joined))hasVar=true;
+    }
+    if(!hasVar)return para;
+    let replaced=joined;
+    for(const[k,sv]of Object.entries(esc)){
+      const kr=escRx(k);
+      replaced=replaced.replace(new RegExp('\\{\\{\\s*'+kr+'\\s*\\}\\}','g'),sv);
+      replaced=replaced.replace(new RegExp('\\}\\}\\s*'+kr+'\\s*\\{\\{','g'),sv);
+    }
+    // Find Arabic run (lang=ar-SA) to use as the surviving run, fallback to first run
+    let keepIdx=runs.findIndex(x=>x.run.includes('lang="ar-SA"'));
+    if(keepIdx===-1)keepIdx=0;
+    let result=para;
+    for(let i=runs.length-1;i>=0;i--){
+      if(i===keepIdx)continue;
+      result=result.slice(0,runs[i].idx)+result.slice(runs[i].idx+runs[i].run.length);
+    }
+    result=result.replace(/<a:r>([\s\S]*?)<\/a:r>/,full=>{
+      return full.replace(/<a:t[^>]*>[\s\S]*?<\/a:t>/,inner=>{
+        const tag=inner.match(/^<a:t[^>]*>/)[0];
+        return tag+replaced+'</a:t>';
+      });
+    });
+    return result;
+  });
+  // Second pass: simple replacement for any remaining {{vars}} or }}vars{{ (RTL reversed)
+  for(const[k,v]of Object.entries(vars)){
+    const sv=v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const kr=escRx(k);
+    r=r.replace(new RegExp('\\{\\{\\s*'+kr+'\\s*\\}\\}','g'),sv);
+    r=r.replace(new RegExp('\\}\\}\\s*'+kr+'\\s*\\{\\{','g'),sv);
+  }
+  return r;
+}
+
 async function procPptx(ab,vars){
   const zip=await JSZip.loadAsync(ab);
   const slides=Object.keys(zip.files).filter(f=>/^ppt\/slides\/slide[0-9]+\.xml$/.test(f));
-  for(const p of slides){let c=await zip.file(p).async('string');c=repVars(c,vars);zip.file(p,c);}
+  for(const p of slides){let c=await zip.file(p).async('string');c=repVarsPptx(c,vars);zip.file(p,c);}
+  if(logoData)await insertLogoPptx(zip,slides);
   const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
   genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
+}
+
+async function insertLogoPptx(zip,slides){
+  const mime=logoData.split(';')[0].split(':')[1]||'image/png';
+  const ext=(mime.split('/')[1]||'png').replace('jpeg','jpg');
+  const fileName='logo_company.'+ext;
+  const mediaPath='ppt/media/'+fileName;
+  const IMAGE_REL='http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
+
+  let slideW=9144000,slideH=5143500;
+  if(zip.files['ppt/presentation.xml']){
+    const pxml=await zip.files['ppt/presentation.xml'].async('string');
+    const sm=pxml.match(/<p:sldSz[^>]+cx="(\d+)"[^>]+cy="(\d+)"/);
+    if(sm){slideW=parseInt(sm[1]);slideH=parseInt(sm[2]);}
+  }
+
+  zip.file(mediaPath,logoData.split(',')[1],{base64:true});
+
+  let ct=await zip.files['[Content_Types].xml'].async('string');
+  if(!ct.includes('"'+ext+'"')&&!ct.includes("'"+ext+"'")){
+    ct=ct.replace('</Types>','<Default Extension="'+ext+'" ContentType="'+mime+'"/></Types>');
+    zip.file('[Content_Types].xml',ct);
+  }
+
+  for(const p of slides){
+    if(!zip.files[p])continue;
+    let xml=await zip.files[p].async('string');
+    const logoText='<a:t>شعار_الجهة</a:t>';
+    const logoIdx=xml.indexOf(logoText);
+    if(logoIdx===-1)continue;
+    const spStart=xml.lastIndexOf('<p:sp>',logoIdx);
+    const spEnd=xml.indexOf('</p:sp>',logoIdx)+7;
+    if(spStart===-1||spEnd<7)continue;
+    const spXml=xml.slice(spStart,spEnd);
+    const spPrS=spXml.indexOf('<p:spPr>');
+    if(spPrS===-1)continue;
+    const spPrXml=spXml.slice(spPrS,spXml.indexOf('</p:spPr>')+9);
+    const offM=spPrXml.match(/<a:off x="(\d+)" y="(\d+)"/);
+    const extM=spPrXml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
+    if(!offM||!extM)continue;
+    const cx_int=parseInt(extM[1]),cy_int=parseInt(extM[2]);
+    const x_int=parseInt(offM[1]),y_int=parseInt(offM[2]);
+    const targetCx=Math.min(Math.max(Math.round(cx_int*1.5),1828800),3048000);
+    let finalCx,finalCy;
+    if(logoW&&logoH){
+      const ratio=logoW/logoH;
+      finalCx=targetCx;finalCy=Math.round(targetCx/ratio);
+      const maxCy=Math.round(targetCx*0.6);
+      if(finalCy>maxCy){finalCy=maxCy;finalCx=Math.round(maxCy*ratio);}
+    }else{finalCx=targetCx;finalCy=Math.round(targetCx*0.4);}
+    const rawX=x_int+cx_int-finalCx,rawY=y_int+cy_int-finalCy;
+    const x=String(Math.max(0,Math.min(rawX,slideW-finalCx)));
+    const y=String(Math.max(0,Math.min(rawY,slideH-finalCy)));
+    const cx=String(finalCx),cy=String(finalCy);
+    const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
+    let relsXml=zip.files[relsPath]
+      ?await zip.files[relsPath].async('string')
+      :'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    const existIds=[...relsXml.matchAll(/Id="rId(\d+)"/g)].map(m=>parseInt(m[1]));
+    const newRid='rId'+((existIds.length?Math.max(...existIds):0)+1);
+    relsXml=relsXml.replace('</Relationships>','<Relationship Id="'+newRid+'" Type="'+IMAGE_REL+'" Target="../media/'+fileName+'"/></Relationships>');
+    zip.file(relsPath,relsXml);
+    const picXml='<p:pic><p:nvPicPr><p:cNvPr id="999" name="logo_company"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="'+newRid+'"><a:extLst><a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}"><a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/></a:ext></a:extLst></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="'+x+'" y="'+y+'"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+    xml=xml.slice(0,spStart)+picXml+xml.slice(spEnd);
+    zip.file(p,xml);
+  }
 }
 
 function repVars(text,vars){
