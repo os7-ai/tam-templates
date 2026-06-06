@@ -361,20 +361,20 @@ function tafqeet(n){
 const T={
   'entity-proposal':{name:'العرض الفني والمالي - على مستوى المنشأة',file:'entity-proposal.pptx',ext:'pptx',fields:[
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
-    {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'2025-001'},
+    {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234'},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'السنة_المالية',lb:'السنة المالية',tp:'fiscal'},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بالأرقام فقط'},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
     {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
   'contract-proposal':{name:'العرض الفني والمالي - على مستوى العقد',file:'contract-proposal.pptx',ext:'pptx',fields:[
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العقد',lb:'رقم العقد',tp:'text',ph:'92748304'},
-    {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'2025-001'},
+    {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234'},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'measurement_period',lb:'فترة القياس',tp:'period'},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'⚠️ أدخل المبلغ بالأرقام فقط'},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
     {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
@@ -578,7 +578,7 @@ function renderForm(tid){
       // Column headers
       const hdrRow=document.createElement('div');
       hdrRow.style.cssText='display:grid;grid-template-columns:2fr 2fr 1.5fr;gap:8px;margin-bottom:4px';
-      ['التصنيف الفرعي','وصف الخدمة','المبلغ (ريال، قبل ض.ق.م)'].forEach(h=>{
+      ['التصنيف الفرعي','وصف الخدمة','المبلغ (غير شامل الضريبة)'].forEach(h=>{
         const hd=document.createElement('div');
         hd.style.cssText='font-size:11.5px;font-weight:700;color:var(--muted)';
         hd.textContent=h;hdrRow.appendChild(hd);
