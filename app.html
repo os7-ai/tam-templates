@@ -652,7 +652,8 @@ function collectVars(tid){
       return;
     }
     if(f.tp==='period'){
-      vars['measurement_period']=fmtPeriod(document.getElementById('f_period_from')?.value||'',document.getElementById('f_period_to')?.value||'');return;
+      const pv=fmtPeriod(document.getElementById('f_period_from')?.value||'',document.getElementById('f_period_to')?.value||'');
+      vars['measurement_period']=pv;vars['فترة_القياس']=pv;return;
     }
     if(f.tp==='date'){
       const el=document.getElementById('f_'+f.id);
