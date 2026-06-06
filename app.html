@@ -664,7 +664,7 @@ function collectVars(tid){
     }
     if(f.tp==='fee'){
       const v=parseFloat((document.getElementById('f_'+f.id)?.value||'').replace(/,/g,''))||0;
-      vars['total_fees']=fmt(v);return;
+      vars['total_fees']=fmt(v);vars['الأتعاب_المهنية']=fmt(v);return;
     }
     if(f.tp==='engfee'){
       const base=parseFloat((document.getElementById('f_total_fees')?.value||'').replace(/,/g,''))||0;
