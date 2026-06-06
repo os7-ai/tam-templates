@@ -62,14 +62,22 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: 'Server configuration error' }) };
   }
 
+  const token = (event.headers['authorization'] || '').replace('Bearer ', '').trim();
+  if (!token) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
+  const sb = createClient(SURL, SKEY);
+  const { data: { user }, error: authError } = await sb.auth.getUser(token);
+  if (authError || !user) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
+
   try {
     const { templateFile, vars } = JSON.parse(event.body);
 
     if (!ALLOWED_TEMPLATES.has(templateFile)) {
       return { statusCode: 400, body: JSON.stringify({ error: 'قالب غير مسموح' }) };
     }
-
-    const sb = createClient(SURL, SKEY);
     const { data, error } = await sb.storage.from('templates').download(templateFile);
     if (error) throw new Error('فشل تحميل القالب: ' + error.message);
 

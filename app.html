@@ -764,9 +764,10 @@ async function genDoc(){
 }
 
 async function procDocx(ab,vars,templateFile){
+  const {data:{session}}=await sb.auth.getSession();
   const resp=await fetch('/.netlify/functions/generate',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||'')},
     body:JSON.stringify({templateFile,vars})
   });
   if(!resp.ok){let e={error:'فشل التوليد'};try{e=await resp.json();}catch(x){}throw new Error(e.error);}
@@ -775,9 +776,10 @@ async function procDocx(ab,vars,templateFile){
 }
 
 async function procExcel(vars,templateFile){
+  const {data:{session}}=await sb.auth.getSession();
   const resp=await fetch('/.netlify/functions/generate-excel',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||'')},
     body:JSON.stringify({templateFile,vars})
   });
   if(!resp.ok){let e={error:'فشل التوليد'};try{e=await resp.json();}catch(x){}throw new Error(e.error);}
