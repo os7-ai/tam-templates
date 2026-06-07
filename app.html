@@ -114,6 +114,15 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
 .page-hero h2{font-size:22px;font-weight:900;color:var(--text);margin-bottom:6px}
 .page-hero p{font-size:13px;color:var(--muted)}
 @media(max-width:600px){.home-cards{grid-template-columns:1fr}}
+.hist-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:6px 14px;border-radius:8px;font-family:'Cairo',sans-serif;font-size:12px;cursor:pointer}
+.hist-btn:hover{background:rgba(255,255,255,.2)}
+.hist-wrap{overflow-x:auto}
+.hist-table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+.hist-table th{background:var(--navy);color:#fff;padding:10px 14px;text-align:right;font-weight:700;font-size:12px}
+.hist-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.hist-table tr:last-child td{border-bottom:none}
+.hist-table tbody tr:hover td{background:var(--bg)}
+.hist-empty{text-align:center;padding:48px;color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
@@ -130,6 +139,7 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
   </div>
   <div class="hu">
     <span id="userEmail"></span>
+    <button class="hist-btn" onclick="showHistory()">سجل النشاط</button>
     <button class="btn-lo" onclick="logout()">تسجيل خروج</button>
   </div>
 </div>
@@ -241,6 +251,16 @@ body{font-family:'Cairo',sans-serif;background:var(--bg);min-height:100vh;direct
     </div>
   </div>
 
+  <div id="histView" class="hidden">
+    <div class="fcard">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div class="sec-title">سجل النشاط</div>
+        <button class="bbk" onclick="showMain()">← رجوع</button>
+      </div>
+      <div id="histContent"><div class="hist-empty">جاري التحميل...</div></div>
+    </div>
+  </div>
+
   <div id="step3" class="hidden">
     <div class="fcard">
       <div class="sw">
@@ -268,6 +288,44 @@ let sb,curTpl=null,genBlob=null,genName='',logoData=null,logoW=0,logoH=0;
   document.getElementById('userEmail').textContent=session.user.email;
 })();
 function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
+
+async function logActivity(vars){
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session)return;
+    const entityName=vars['اسم_الجهة']||vars['entity_name']||'';
+    await sb.from('document_logs').insert({
+      user_id:session.user.id,
+      user_email:session.user.email,
+      template_name:T[curTpl].name,
+      entity_name:entityName
+    });
+  }catch(e){console.log('log error',e.message);}
+}
+
+async function showHistory(){
+  ['step1','step2','step3'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  document.getElementById('stepsBar').style.display='none';
+  document.getElementById('histView').classList.remove('hidden');
+  const content=document.getElementById('histContent');
+  content.innerHTML='<div class="hist-empty">جاري التحميل...</div>';
+  const{data,error}=await sb.from('document_logs').select('*').order('created_at',{ascending:false}).limit(100);
+  if(error||!data||data.length===0){
+    content.innerHTML='<div class="hist-empty">لا يوجد نشاط مسجّل بعد</div>';return;
+  }
+  const rows=data.map(r=>{
+    const d=new Date(r.created_at);
+    const date=d.toLocaleDateString('ar-SA',{year:'numeric',month:'short',day:'numeric'});
+    const time=d.toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+    return`<tr><td>${date}&nbsp;${time}</td><td>${r.user_email||'—'}</td><td>${r.template_name||'—'}</td><td>${r.entity_name||'—'}</td></tr>`;
+  }).join('');
+  content.innerHTML=`<div class="hist-wrap"><table class="hist-table"><thead><tr><th>التاريخ والوقت</th><th>المستخدم</th><th>النموذج</th><th>اسم الجهة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function showMain(){
+  document.getElementById('histView').classList.add('hidden');
+  setStep(1);
+}
 
 // Steps
 function setStep(n){
@@ -757,6 +815,7 @@ async function genDoc(){
     }
     setStep(3);
     document.getElementById('sucMsg').textContent=genName;
+    logActivity(vars);
   }catch(e){
     document.getElementById('formErrMsg').textContent='حدث خطأ: '+e.message;
     document.getElementById('formErr').classList.add('show');
