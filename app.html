@@ -294,13 +294,14 @@ async function logActivity(vars){
     const{data:{session}}=await sb.auth.getSession();
     if(!session)return;
     const entityName=vars['اسم_الجهة']||vars['entity_name']||'';
-    await sb.from('document_logs').insert({
+    const{error}=await sb.from('document_logs').insert({
       user_id:session.user.id,
       user_email:session.user.email,
       template_name:T[curTpl].name,
       entity_name:entityName
     });
-  }catch(e){console.log('log error',e.message);}
+    if(error)console.error('log insert error:',error.code,error.message,error.details);
+  }catch(e){console.error('log error',e.message);}
 }
 
 async function showHistory(){
@@ -310,7 +311,10 @@ async function showHistory(){
   const content=document.getElementById('histContent');
   content.innerHTML='<div class="hist-empty">جاري التحميل...</div>';
   const{data,error}=await sb.from('document_logs').select('*').order('created_at',{ascending:false}).limit(100);
-  if(error||!data||data.length===0){
+  if(error){
+    content.innerHTML=`<div class="hist-empty" style="color:#b91c1c">خطأ: ${error.message}<br><small>${error.code||''}</small></div>`;return;
+  }
+  if(!data||data.length===0){
     content.innerHTML='<div class="hist-empty">لا يوجد نشاط مسجّل بعد</div>';return;
   }
   const rows=data.map(r=>{
