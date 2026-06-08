@@ -955,16 +955,16 @@ async function insertLogoPptx(zip,slides){
     const offM=spPrXml.match(/<a:off x="(\d+)" y="(\d+)"/);
     const extM=spPrXml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
     if(!offM||!extM)continue;
-    const cx_int=parseInt(extM[1]),cy_int=parseInt(extM[2]);
     const x_int=parseInt(offM[1]),y_int=parseInt(offM[2]);
-    // Fit logo within placeholder box preserving aspect ratio
+    // Fixed logo slot: 2.5" wide x 1.25" tall (independent of placeholder text box size)
+    const SLOT_CX=2286000,SLOT_CY=1143000;
     const ratio=(logoW&&logoH)?logoW/logoH:1;
     let finalCx,finalCy;
-    if(ratio>=cx_int/cy_int){finalCx=cx_int;finalCy=Math.round(cx_int/ratio);}
-    else{finalCy=cy_int;finalCx=Math.round(cy_int*ratio);}
-    // Center within placeholder
-    const x=String(x_int+Math.round((cx_int-finalCx)/2));
-    const y=String(y_int+Math.round((cy_int-finalCy)/2));
+    if(ratio>=SLOT_CX/SLOT_CY){finalCx=SLOT_CX;finalCy=Math.round(SLOT_CX/ratio);}
+    else{finalCy=SLOT_CY;finalCx=Math.round(SLOT_CY*ratio);}
+    // Center within slot, anchored at placeholder position
+    const x=String(Math.max(0,x_int+Math.round((SLOT_CX-finalCx)/2)));
+    const y=String(Math.max(0,y_int+Math.round((SLOT_CY-finalCy)/2)));
     const cx=String(finalCx),cy=String(finalCy);
     const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
     let relsXml=zip.files[relsPath]
