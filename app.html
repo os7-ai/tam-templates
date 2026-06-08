@@ -917,6 +917,28 @@ async function procPptx(ab,vars){
   genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
 }
 
+async function findWhiteTriangle(zip){
+  const layouts=Object.keys(zip.files).filter(f=>/ppt\/slideLayouts\/slideLayout\d+\.xml$/.test(f));
+  for(const lf of layouts){
+    const lxml=await zip.files[lf].async('string');
+    let pos=0;
+    while(true){
+      const s=lxml.indexOf('<p:sp>',pos);if(s===-1)break;
+      const e=lxml.indexOf('</p:sp>',s)+7;
+      const sp=lxml.slice(s,e);pos=e;
+      if(!sp.includes('rtTriangle'))continue;
+      if(!sp.includes('bg1')&&!sp.includes('lt1')&&!sp.includes('FFFFFF'))continue;
+      const offM=sp.match(/<a:off x="(-?\d+)" y="(-?\d+)"/);
+      const extM=sp.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
+      if(!offM||!extM)continue;
+      const tx=parseInt(offM[1]),ty=parseInt(offM[2]),tcx=parseInt(extM[1]),tcy=parseInt(extM[2]);
+      const flipH=sp.includes('flipH="1"');
+      return{rx:flipH?tx+tcx:tx,ry:ty+tcy};
+    }
+  }
+  return null;
+}
+
 async function insertLogoPptx(zip,slides){
   const mime=logoData.split(';')[0].split(':')[1]||'image/png';
   const ext=(mime.split('/')[1]||'png').replace('jpeg','jpg');
@@ -931,6 +953,11 @@ async function insertLogoPptx(zip,slides){
     if(sm){slideW=parseInt(sm[1]);slideH=parseInt(sm[2]);}
   }
 
+  // Detect white triangle → use its right-angle corner as logo anchor
+  const tri=await findWhiteTriangle(zip);
+  const anchorX=tri?tri.rx:slideW;
+  const anchorY=tri?tri.ry:slideH;
+
   zip.file(mediaPath,logoData.split(',')[1],{base64:true});
 
   let ct=await zip.files['[Content_Types].xml'].async('string');
@@ -938,6 +965,18 @@ async function insertLogoPptx(zip,slides){
     ct=ct.replace('</Types>','<Default Extension="'+ext+'" ContentType="'+mime+'"/></Types>');
     zip.file('[Content_Types].xml',ct);
   }
+
+  // Logo sizing: fit within 2.5"×1.25" slot preserving aspect ratio
+  const SLOT_CX=2286000,SLOT_CY=1143000;
+  const ratio=(logoW&&logoH)?logoW/logoH:1;
+  let finalCx,finalCy;
+  if(ratio>=SLOT_CX/SLOT_CY){finalCx=SLOT_CX;finalCy=Math.round(SLOT_CX/ratio);}
+  else{finalCy=SLOT_CY;finalCx=Math.round(SLOT_CY*ratio);}
+  // Anchor bottom-right of logo to bottom-right of triangle (0.3" margin)
+  const MARGIN=274320;
+  const cx=String(finalCx),cy=String(finalCy);
+  const x=String(Math.max(0,anchorX-MARGIN-finalCx));
+  const y=String(Math.max(0,anchorY-MARGIN-finalCy));
 
   for(const p of slides){
     if(!zip.files[p])continue;
@@ -948,24 +987,6 @@ async function insertLogoPptx(zip,slides){
     const spStart=xml.lastIndexOf('<p:sp>',logoIdx);
     const spEnd=xml.indexOf('</p:sp>',logoIdx)+7;
     if(spStart===-1||spEnd<7)continue;
-    const spXml=xml.slice(spStart,spEnd);
-    const spPrS=spXml.indexOf('<p:spPr>');
-    if(spPrS===-1)continue;
-    const spPrXml=spXml.slice(spPrS,spXml.indexOf('</p:spPr>')+9);
-    const offM=spPrXml.match(/<a:off x="(\d+)" y="(\d+)"/);
-    const extM=spPrXml.match(/<a:ext cx="(\d+)" cy="(\d+)"/);
-    if(!offM||!extM)continue;
-    const x_int=parseInt(offM[1]),y_int=parseInt(offM[2]);
-    // Fixed logo slot: 2.5" wide x 1.25" tall (independent of placeholder text box size)
-    const SLOT_CX=2286000,SLOT_CY=1143000;
-    const ratio=(logoW&&logoH)?logoW/logoH:1;
-    let finalCx,finalCy;
-    if(ratio>=SLOT_CX/SLOT_CY){finalCx=SLOT_CX;finalCy=Math.round(SLOT_CX/ratio);}
-    else{finalCy=SLOT_CY;finalCx=Math.round(SLOT_CY*ratio);}
-    // Center within slot, anchored at placeholder position
-    const x=String(Math.max(0,x_int+Math.round((SLOT_CX-finalCx)/2)));
-    const y=String(Math.max(0,y_int+Math.round((SLOT_CY-finalCy)/2)));
-    const cx=String(finalCx),cy=String(finalCy);
     const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
     let relsXml=zip.files[relsPath]
       ?await zip.files[relsPath].async('string')
