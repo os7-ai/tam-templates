@@ -61,6 +61,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .ff label{font-size:12.5px;font-weight:700;color:var(--text)}
 .ff .hint{font-size:11px;color:var(--muted)}
 .ff .warn{font-size:11px;color:var(--orange);font-weight:600}
+.inp-row{display:flex;gap:6px;align-items:center}
+.inp-row input{flex:1}
+.lnk-btn{display:flex;align-items:center;justify-content:center;width:36px;height:38px;border:1.5px solid var(--border);border-radius:9px;background:var(--bg2);color:var(--muted);text-decoration:none;flex-shrink:0;transition:all .15s}
+.lnk-btn:hover{border-color:var(--accent);color:var(--accent);background:#f0fafd}
 .ff input,.ff select{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--text);background:var(--bg);transition:all .18s}
 .ff input[type=date]{direction:ltr;text-align:right}
 .ff input:focus,.ff select:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(78,153,211,.13)}
@@ -423,7 +427,7 @@ function tafqeet(n){
 const T={
   'entity-proposal':{name:'العرض الفني والمالي - على مستوى المنشأة',file:'entity-proposal.pptx',ext:'pptx',fields:[
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
-    {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234'},
+    {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'السنة_المالية',lb:'السنة المالية',tp:'fiscal'},
     {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
@@ -433,7 +437,7 @@ const T={
   'contract-proposal':{name:'العرض الفني والمالي - على مستوى العقد',file:'contract-proposal.pptx',ext:'pptx',fields:[
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العقد',lb:'رقم العقد',tp:'text',ph:'92748304'},
-    {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234'},
+    {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'measurement_period',lb:'فترة القياس',tp:'period'},
     {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
@@ -443,7 +447,7 @@ const T={
   'entity-engagement':{name:'خطاب الارتباط - على مستوى المنشأة',file:'entity-engagement.docx',ext:'docx',fields:[
     {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
-    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348'},
+    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
@@ -463,7 +467,7 @@ const T={
   'contract-engagement':{name:'خطاب الارتباط - على مستوى العقد',file:'contract-engagement.docx',ext:'docx',fields:[
     {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
-    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348'},
+    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
@@ -485,7 +489,7 @@ const T={
   'confirmation-letter':{name:'خطاب الإفادة',file:'confirmation-letter.docx',ext:'docx',fields:[
     {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
-    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348'},
+    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
@@ -544,7 +548,15 @@ function renderForm(tid){
     if(f.tp==='text'){
       const i=document.createElement('input');i.type='text';i.id='f_'+f.id;i.placeholder=f.ph||'';
       applyConstraints(i,f.id);
-      w.appendChild(i);
+      if(f.lnk){
+        const row=document.createElement('div');row.className='inp-row';
+        const a=document.createElement('a');
+        a.href='https://mcpacomsa.sharepoint.com/:x:/r/sites/AlmofaddaCPAConsultants/Shared%20Documents/General/11%20-%20%D8%A3%D8%AE%D8%B1%D9%89/%D9%81%D9%87%D8%B1%D8%B3%20%D8%AE%D8%B7%D8%A7%D8%A8%D8%A7%D8%AA%20%D8%A7%D9%84%D9%85%D9%83%D8%AA%D8%A8.xlsx?d=wd62ca3499d0a438da8d670ea7ce71c3f&csf=1&web=1&e=EAJVYz';
+        a.target='_blank';a.rel='noopener noreferrer';a.className='lnk-btn';a.title='فهرس الخطابات';
+        a.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+        row.appendChild(i);row.appendChild(a);w.appendChild(row);
+      }else{w.appendChild(i);}
+
     }else if(f.tp==='date'){
       const i=document.createElement('input');i.type='date';i.id='f_'+f.id;i.lang='en';
       if(f.auto)i.value=todayLocal();
