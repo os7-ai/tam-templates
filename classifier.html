@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مُصنِّف الأنشطة الاقتصادية — مِداد</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --bg:        #f4f6f9;
+    --bg2:       #ffffff;
+    --bg3:       #eef1f5;
+    --bg4:       #e4e8ef;
+    --border:    #d0d7e2;
+    --border2:   #b8c2d0;
+    --text:      #1a1f2e;
+    --text2:     #4a5568;
+    --text3:     #8a96a8;
+    --accent:    #2563eb;
+    --accent2:   #1a4fba;
+    --green:     #16a37a;
+    --amber:     #d97706;
+    --red:       #dc2626;
+    --code:      #1d4ed8;
+    --radius:    6px;
+    --radius2:   10px;
+  }
+
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  /* ─── GRID LINES BG ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(37,99,235,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(37,99,235,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .shell {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .header h1 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .header p {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+  .badge-version {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text3);
+    white-space: nowrap;
+  }
+
+  /* ─── PHASE INDICATOR ─── */
+  .phase-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .phase-step {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text3);
+    text-align: center;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    transition: all .2s;
+  }
+  .phase-step:last-child { border-left: none; }
+  .phase-step.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 500;
+  }
+  .phase-step.done {
+    color: var(--green);
+    background: rgba(46,204,138,.06);
+  }
+  .phase-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    display: block;
+    margin-bottom: 1px;
+  }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .card-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── INPUTS ─── */
+  input, textarea, select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    direction: rtl;
+    transition: border-color .2s, box-shadow .2s;
+    outline: none;
+    appearance: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(61,142,245,.12);
+  }
+  input::placeholder, textarea::placeholder { color: var(--text3); }
+  textarea { resize: vertical; min-height: 80px; }
+  select { cursor: pointer; }
+  select option { background: var(--bg3); }
+
+  .field { margin-bottom: 14px; }
+  .field-label {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .field-hint {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* ─── TABS ─── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3px;
+    margin-bottom: 12px;
+  }
+  .tab {
+    flex: 1;
+    padding: 7px 12px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--text3);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .tab.active {
+    background: var(--bg4);
+    color: var(--text);
+    border: 1px solid var(--border2);
+  }
+  .tab:hover:not(.active) { color: var(--text2); }
+
+  /* ─── IMAGE DROP ─── */
+  .img-drop {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    background: var(--bg3);
+    position: relative;
+  }
+  .img-drop:hover { border-color: var(--accent); background: rgba(61,142,245,.04); }
+  .img-drop .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .img-drop .drop-text { font-size: 13px; color: var(--text2); }
+  .img-drop .drop-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .img-preview { max-height: 100px; max-width: 100%; border-radius: 4px; }
+  #fileInput { display: none; }
+
+  /* ─── KNOWN MFR ALERT ─── */
+  .alert {
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    animation: slideIn .25s ease;
+  }
+  .alert.warning {
+    background: rgba(245,166,35,.08);
+    border: 1px solid rgba(245,166,35,.25);
+    color: var(--amber);
+  }
+  .alert.error {
+    background: rgba(224,80,80,.08);
+    border: 1px solid rgba(224,80,80,.25);
+    color: var(--red);
+  }
+  .alert.info {
+    background: rgba(61,142,245,.08);
+    border: 1px solid rgba(61,142,245,.25);
+    color: var(--accent);
+  }
+  .alert.success {
+    background: rgba(46,204,138,.08);
+    border: 1px solid rgba(46,204,138,.25);
+    color: var(--green);
+  }
+
+  /* ─── BUTTON ─── */
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: var(--bg4);
+    color: var(--text);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--bg3);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.primary {
+    background: var(--accent2);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn.primary:hover:not(:disabled) {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn.ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text3);
+    font-size: 13px;
+    padding: 9px;
+  }
+  .btn.ghost:hover:not(:disabled) {
+    color: var(--text2);
+    border-color: var(--border2);
+  }
+
+  /* ─── LOADING ─── */
+  .loading-bar {
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent), var(--accent2));
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+    border-radius: 2px;
+    margin-bottom: 20px;
+  }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* ─── CLARIFY PHASE ─── */
+  .clarify-q {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius2);
+    padding: 18px 20px;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.7;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .clarify-q::before {
+    content: '?';
+    position: absolute;
+    left: 16px;
+    top: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px;
+    color: var(--accent);
+    opacity: .4;
+  }
+  .clarify-opt {
+    width: 100%;
+    padding: 13px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: right;
+    direction: rtl;
+    transition: all .18s;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .clarify-opt:hover {
+    background: var(--bg3);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .clarify-opt-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text3);
+    background: var(--bg4);
+    border-radius: 4px;
+    padding: 2px 6px;
+    flex-shrink: 0;
+  }
+
+  /* ─── RESULT CARDS ─── */
+  .result-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    margin-bottom: 16px;
+  }
+  .result-role-icon {
+    font-size: 24px;
+    width: 44px; height: 44px;
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .result-vendor { font-weight: 500; font-size: 15px; }
+  .result-role-label { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .isic-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    transition: border-color .2s;
+    animation: fadeUp .3s ease backwards;
+  }
+  .isic-card:nth-child(1) { animation-delay: .05s; }
+  .isic-card:nth-child(2) { animation-delay: .12s; }
+  .isic-card:nth-child(3) { animation-delay: .19s; }
+  .isic-card.top { border-color: var(--accent2); }
+
+  .isic-top-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    background: rgba(61,142,245,.12);
+    border: 1px solid rgba(61,142,245,.25);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+
+  .isic-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .isic-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .isic-path {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+  .isic-path span { color: var(--text3); }
+  .isic-path .sep { margin: 0 4px; opacity: .4; }
+
+  .isic-code-block {
+    text-align: left;
+    flex-shrink: 0;
+  }
+  .isic-code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--code);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .isic-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+
+  .isic-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .tag {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tag.green { background: rgba(46,204,138,.1); color: var(--green); }
+  .tag.amber { background: rgba(245,166,35,.1); color: var(--amber); }
+  .tag.red   { background: rgba(224,80,80,.1);  color: var(--red); }
+  .tag.blue  { background: rgba(61,142,245,.1); color: var(--accent); }
+  .tag.gray  { background: var(--bg4); color: var(--text2); border: 1px solid var(--border); }
+
+  .isic-reason {
+    font-size: 12px;
+    color: var(--text3);
+    flex: 1;
+  }
+
+  /* ─── CONFLICT ─── */
+  .conflict-box {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(245,166,35,.07);
+    border: 1px solid rgba(245,166,35,.2);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--amber);
+    line-height: 1.6;
+  }
+
+  /* ─── AUDIT NOTE ─── */
+  .audit-note {
+    display: flex;
+    gap: 8px;
+    padding: 12px 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 16px;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── CONTEXT RECAP ─── */
+  .context-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 16px;
+  }
+  .context-pill span { color: var(--text3); }
+
+  /* ─── KNOWN MFR HINT ─── */
+  #mfrHint { display: none; }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text3);
+  }
+  .footer-source { font-family: 'IBM Plex Mono', monospace; }
+
+  /* ─── ANNEX B CARD ─── */
+  .annexb-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    animation: fadeUp .3s ease backwards;
+  }
+  .annexb-card.top { border-color: rgba(46,204,138,.4); }
+  .annexb-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:10px; }
+  .annexb-name { font-size:14px; font-weight:500; color:var(--text); line-height:1.5; }
+  .annexb-desc { font-size:12px; color:var(--text3); margin-top:3px; line-height:1.5; }
+  .annexb-num { text-align:left; flex-shrink:0; }
+  .annexb-pct {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:24px; font-weight:500;
+    line-height:1;
+  }
+  .annexb-pct.high  { color:var(--green); }
+  .annexb-pct.mid   { color:var(--amber); }
+  .annexb-pct.low   { color:var(--red); }
+  .annexb-footer {
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    padding-top:10px; border-top:1px solid var(--border);
+    font-size:11px; color:var(--text3);
+  }
+  .annexb-isic {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; padding:2px 7px;
+    background:var(--bg4); border:1px solid var(--border);
+    border-radius:4px; color:var(--text3);
+  }
+  .annexb-sector-num {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px; color:var(--text3);
+  }
+
+  /* ─── HEADER LINK ─── */
+  .top-link {
+    font-size:12px; color:var(--text3); text-decoration:none;
+    display:inline-flex; align-items:center; gap:5px;
+    padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius);
+    background:var(--bg2); transition:all .18s;
+  }
+  .top-link:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ─── DISCUSSION ─── */
+  .discuss {
+    margin-top:22px; border-top:1px solid var(--border); padding-top:18px;
+  }
+  .discuss-head {
+    display:flex; align-items:center; gap:8px; margin-bottom:12px;
+    font-size:13px; font-weight:500; color:var(--text);
+  }
+  .discuss-head .dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
+  .discuss-log { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+  .dmsg { padding:11px 14px; border-radius:var(--radius2); font-size:13.5px; line-height:1.7; max-width:92%; white-space:pre-wrap; }
+  .dmsg.user { background:var(--accent2); color:#fff; align-self:flex-start; border-bottom-right-radius:4px; }
+  .dmsg.bot  { background:var(--bg2); border:1px solid var(--border); color:var(--text); align-self:flex-end; border-bottom-left-radius:4px; }
+  .dmsg.bot .typing { display:inline-flex; gap:3px; }
+  .dmsg.bot .typing span { width:5px; height:5px; border-radius:50%; background:var(--text3); animation:blink 1s infinite; }
+  .dmsg.bot .typing span:nth-child(2){ animation-delay:.2s; }
+  .dmsg.bot .typing span:nth-child(3){ animation-delay:.4s; }
+  @keyframes blink { 0%,60%,100%{opacity:.25} 30%{opacity:1} }
+  .discuss-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .chip {
+    font-size:12px; padding:6px 11px; border-radius:16px; cursor:pointer;
+    background:var(--bg3); border:1px solid var(--border); color:var(--text2);
+    font-family:'Tajawal',sans-serif; transition:all .18s;
+  }
+  .chip:hover { border-color:var(--accent); color:var(--accent); }
+  .discuss-input { display:flex; gap:8px; }
+  .discuss-input input { flex:1; }
+  .discuss-input button {
+    flex-shrink:0; width:44px; border:1px solid var(--border2); border-radius:var(--radius);
+    background:var(--accent2); color:#fff; cursor:pointer; font-size:16px;
+    display:flex; align-items:center; justify-content:center; transition:all .18s;
+  }
+  .discuss-input button:hover:not(:disabled){ background:var(--accent); }
+  .discuss-input button:disabled { opacity:.5; cursor:not-allowed; }
+
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- HEADER -->
+    <header class="header">
+    <div class="header-logo" style="display:flex;align-items:center;gap:12px">
+      <svg viewBox="0 0 64 64" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="28" height="28" rx="7" fill="#4FCDE8"/>
+        <rect x="2" y="34" width="28" height="28" rx="7" fill="#0AAED0"/>
+        <rect x="34" y="34" width="28" height="28" rx="7" fill="#0AAED0"/>
+      </svg>
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--text)">مُصنِّف الأنشطة الاقتصادية</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">SSIC Classifier · المحتوى المحلي</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a href="app.html" class="top-link">→ منصة مِداد</a>
+    </div>
+  </header>
+
+  <!-- PHASE BAR -->
+  <div class="phase-bar">
+    <div class="phase-step active" id="ph1">
+      <span class="phase-num">01</span>البيانات
+    </div>
+    <div class="phase-step" id="ph2">
+      <span class="phase-num">02</span>توضيح
+    </div>
+    <div class="phase-step" id="ph3">
+      <span class="phase-num">03</span>النتيجة
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PHASE 1 — INPUT
+  ════════════════════════════════════════════════ -->
+  <div id="phaseInput">
+
+    <!-- Vendor info -->
+    <div class="card">
+      <div class="card-label">بيانات المورد</div>
+
+      <div class="field">
+        <div class="field-label">🏢 اسم الشركة / المورد</div>
+        <input type="text" id="vendorName" placeholder="مثال: شركة أسامة العالمية">
+      </div>
+
+      <div class="field">
+        <div class="field-label">
+          📋 النشاط في السجل التجاري
+          <span style="font-size:11px;color:var(--text3);font-weight:400">— مصدر التحقق</span>
+        </div>
+        <input type="text" id="crActivity" placeholder="مثال: بيع منتجات وسلع بالجملة">
+        <div class="field-hint">يُستخدم للكشف عن التعارض مع بنود الفاتورة</div>
+      </div>
+    </div>
+
+    <!-- Invoice input -->
+    <div class="card">
+      <div class="card-label">بيانات الفاتورة / التوريد</div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('text')" id="tabText">📝 وصف نصي</button>
+        <button class="tab" onclick="switchTab('image')" id="tabImg">📎 رفع الفاتورة</button>
+      </div>
+
+      <div id="textPanel">
+        <textarea id="invoiceText" placeholder="مثال: توريد خراطيم وأنابيب HDPE للمشروع&#10;أو: أجهزة كمبيوتر ومعدات مكتبية..."></textarea>
+      </div>
+
+      <div id="imgPanel" style="display:none">
+        <div class="img-drop" onclick="document.getElementById('fileInput').click()" id="dropZone">
+          <div id="dropContent">
+            <div class="drop-icon">📄</div>
+            <div class="drop-text">انقر لرفع صورة الفاتورة</div>
+            <div class="drop-hint">PNG · JPG · WEBP · PDF</div>
+          </div>
+          <img class="img-preview" id="imgPreview" style="display:none">
+        </div>
+        <input type="file" id="fileInput" accept="image/*,application/pdf" onchange="handleImage(event)">
+      </div>
+    </div>
+
+    <!-- Known manufacturer hint -->
+    <div class="alert warning" id="mfrHint">
+      <span>⚠️</span>
+      <div>تم اكتشاف <strong>مصنع معروف</strong> في النص — سيتم التحقق من دور الشركة المُدرجة تلقائياً</div>
+    </div>
+
+    <div id="inputError"></div>
+
+    <button class="btn primary" id="analyzeBtn" onclick="startAnalysis()">
+      <span>🔍</span> تحليل وتصنيف
+    </button>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PHASE 2 — CLARIFY
+  ════════════════════════════════════════════════ -->
+  <div id="phaseClarify" style="display:none">
+    <div id="clarifyContext"></div>
+    <div id="clarifyConflict"></div>
+
+    <div class="clarify-q" id="clarifyQ"></div>
+    <div id="clarifyOpts"></div>
+
+    <div id="clarifyLoading" style="display:none">
+      <div class="loading-bar"></div>
+      <p style="text-align:center;color:var(--text3);font-size:13px">جاري التحليل...</p>
+    </div>
+
+    <button class="btn ghost" onclick="goBack()">← رجوع</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PHASE 3 — RESULT
+  ════════════════════════════════════════════════ -->
+  <div id="phaseResult" style="display:none">
+    <div id="resultHeader"></div>
+    <div id="resultConflict"></div>
+    <div id="resultCards"></div>
+
+    <!-- ANNEX B SECTION -->
+    <div id="annexBSection" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin:20px 0 12px">
+        <div style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">الملحق (ب) — نموذج المحتوى المحلي</div>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div id="annexBCards"></div>
+    </div>
+
+    <!-- DISCUSSION -->
+    <div class="discuss">
+      <div class="discuss-head"><span class="dot"></span> ناقش التصنيف</div>
+      <div class="discuss-chips" id="discussChips">
+        <button class="chip" data-q="لماذا اخترت هذا الكود تحديداً؟">لماذا هذا الكود؟</button>
+        <button class="chip" data-q="هل ينطبق استثناء تدقيق القوائم المالية هنا؟">هل ينطبق استثناء التدقيق؟</button>
+        <button class="chip" data-q="لو كان المورد وكيلاً لشركة أجنبية، هل يتغيّر التصنيف ونسبة المحتوى المحلي؟">لو المورد وكيل أجنبي؟</button>
+        <button class="chip" data-q="ما القاعدة أو المرجع الذي استندت إليه في هذا التصنيف؟">ما المرجع؟</button>
+      </div>
+      <div class="discuss-log" id="discussLog"></div>
+      <div class="discuss-input">
+        <input type="text" id="discussInput" placeholder="اكتب سؤالك عن التصنيف..." onkeydown="if(event.key==='Enter')sendDiscuss()">
+        <button id="discussSend" onclick="sendDiscuss()" title="إرسال">↑</button>
+      </div>
+    </div>
+
+    <div class="audit-note">
+      <span>📋</span>
+      <span>هذه النتائج للاسترشاد في عمل المراجعة. القرار النهائي يستند إلى السجل التجاري الرسمي والفواتير الأصلية وفق معايير هيئة المحتوى المحلي والمشتريات الحكومية.</span>
+    </div>
+    <button class="btn ghost" onclick="resetAll()">+ تصنيف مورد جديد</button>
+  </div>
+
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span>التصنيف الوطني للأنشطة الاقتصادية</span>
+    <span class="footer-source">SSIC · يوليو 2025 · 2,816 نشاط</span>
+  </footer>
+
+</div>
+
+<script>
+// ─── AUTH GUARD ──────────────────────────────────────────────────────────────
+let sb = null, accessToken = '';
+(async () => {
+  try {
+    const cfg = await fetch('/.netlify/functions/app-config').then(r => r.json());
+    sb = supabase.createClient(cfg.url, cfg.key);
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+    accessToken = session.access_token;
+  } catch (e) {
+    window.location.href = 'login.html';
+  }
+})();
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  vendorName: '', crActivity: '', invoice: '',
+  imageData: null, imageType: null,
+  inputMode: 'text',
+  clarifyQuestion: '', clarifyOptions: [], clarifyAnswer: '',
+  detectedRole: null, crConflict: null, results: [],
+  discussion: []
+};
+
+const KNOWN_MFR = [
+  'سابك','sabic','أرامكو','aramco','معادن','maaden','يانسب','yansab',
+  'كيان','kayan','صدف','sadaf','sipchem','سيبكيم','نماء','petrorabigh',
+  'بترورابغ','الجبيل','ينبع','حديد','أسمنت','الوطنية للكيماويات'
+];
+
+const SSIC_SAMPLE = [
+  {b:"ج",bn:"الصناعة التحويلية",q:"20",qn:"صُنع المواد الكيميائية",c:"201310",cn:"صناعة البلاستيك (اللدائن) في أشكالها الأولية"},
+  {b:"ج",bn:"الصناعة التحويلية",q:"20",qn:"صُنع المواد الكيميائية",c:"201350",cn:"صناعة البروبلين"},
+  {b:"ج",bn:"الصناعة التحويلية",q:"20",qn:"صُنع المواد الكيميائية",c:"201360",cn:"صناعة البولي أثيلين"},
+  {b:"ج",bn:"الصناعة التحويلية",q:"20",qn:"صُنع المواد الكيميائية",c:"201210",cn:"صنع الأسمدة والمركبات الأزوتية"},
+  {b:"ج",bn:"الصناعة التحويلية",q:"24",qn:"صنع الفلزات القاعدية",c:"241040",cn:"صناعة صفائح وألواح وقضبان وأسياخ"},
+  {b:"ج",bn:"الصناعة التحويلية",q:"24",qn:"صنع الفلزات القاعدية",c:"241050",cn:"صناعة الأنابيب والمواسير من الحديد والصلب"},
+  {b:"ج",bn:"الصناعة التحويلية",q:"19",qn:"المنتجات النفطية المكررة",c:"192010",cn:"انتاج أنواع الوقود السائلة"},
+  {b:"ج",bn:"الصناعة التحويلية",q:"28",qn:"الآلات والمعدات",c:"281320",cn:"صناعة مضخات للسوائل"},
+  {b:"ج",bn:"الصناعة التحويلية",q:"25",qn:"منتجات المعادن المشكلة",c:"251210",cn:"صناعة الصهاريج والخزانات"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466910",cn:"البيع بالجملة للمواد الكيميائية"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466940",cn:"البيع بالجملة للمواد البلاستيكية الاولية والمطاط"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466120",cn:"البيع بالجملة لأنواع الوقود السائلة"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466921",cn:"البيع بالجملة للأسمدة الكيماوية ومحسنات التربة"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466210",cn:"البيع بالجملة لشرائح ومسحوبات وكتل معدنية"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466220",cn:"البيع بالجملة للأنابيب المعدنية والحديدية"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466331",cn:"البيع بالجملة للاسمنت والجص"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466927",cn:"البيع بالجملة للغازات الطبيعية والصناعية"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"466928",cn:"البيع بالجملة للأسطوانات والخزانات المركزية للغازات"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"465992",cn:"البيع بالجملة للآلات الصناعية"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"465993",cn:"البيع بالجملة لآلات ومعدات التشييد والبناء"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"465940",cn:"البيع بالجملة للأسلاك والمفاتيح الكهربائية"},
+  {b:"ز",bn:"تجارة الجملة والتجزئة",q:"46",qn:"تجارة الجملة",c:"465950",cn:"البيع بالجملة للمولدات والمحولات الكهربائية"},
+  {b:"و",bn:"التشييد",q:"41",qn:"تشييد المباني",c:"410010",cn:"الإنشاءات العامة للمباني السكنية"},
+  {b:"و",bn:"التشييد",q:"42",qn:"الهندسة المدنية",c:"421010",cn:"إنشاء الطرق والشوارع والارصفة"},
+  {b:"و",bn:"التشييد",q:"43",qn:"أنشطة التشييد المتخصصة",c:"432111",cn:"تمديد الاسلاك الكهربائية"},
+  {b:"و",bn:"التشييد",q:"43",qn:"أنشطة التشييد المتخصصة",c:"432251",cn:"تمديدات انابيب الغاز وصيانتها"},
+  {b:"و",bn:"التشييد",q:"43",qn:"أنشطة التشييد المتخصصة",c:"432240",cn:"تركيب انظمة التبريد وتكييف الهواء"},
+  {b:"م",bn:"الأنشطة المهنية",q:"71",qn:"الاختبارات الفنية",c:"712032",cn:"مختبرات المنتجات الكيميائية والبترولية"},
+  {b:"ب",bn:"التعدين واستغلال المحاجر",q:"06",qn:"استخراج النفط والغاز",c:"061000",cn:"استخراج النفط الخام"},
+  {b:"ب",bn:"التعدين واستغلال المحاجر",q:"09",qn:"أنشطة دعم التعدين",c:"091001",cn:"حفر آبار النفط"},
+];
+
+const ROLE_ICONS = { manufacturer:'🏭', distributor:'🏪', contractor:'🔧', importer:'🚢', mixed:'🔄', unknown:'❓' };
+const ROLE_LABELS = { manufacturer:'مُصنِّع / منتج', distributor:'وكيل / موزع', contractor:'مقاول / منفِّذ', importer:'مستورد', mixed:'متعدد الأدوار', unknown:'غير محدد' };
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function switchTab(mode) {
+  state.inputMode = mode;
+  document.getElementById('textPanel').style.display = mode === 'text' ? '' : 'none';
+  document.getElementById('imgPanel').style.display  = mode === 'image' ? '' : 'none';
+  document.getElementById('tabText').classList.toggle('active', mode === 'text');
+  document.getElementById('tabImg').classList.toggle('active',  mode === 'image');
+}
+
+// ─── IMAGE ───────────────────────────────────────────────────────────────────
+function handleImage(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.imageData = ev.target.result.split(',')[1];
+    state.imageType = file.type;
+    // Show preview — PDF shows icon, image shows thumbnail
+    if (file.type === 'application/pdf') {
+      document.getElementById('imgPreview').style.display = 'none';
+      document.getElementById('dropContent').innerHTML = `
+        <div class="drop-icon">📄</div>
+        <div class="drop-text" style="color:var(--accent);font-weight:500">${file.name}</div>
+        <div class="drop-hint">PDF · جاهز للتحليل</div>`;
+      document.getElementById('dropContent').style.display = '';
+    } else {
+      document.getElementById('imgPreview').src = ev.target.result;
+      document.getElementById('imgPreview').style.display = 'block';
+      document.getElementById('dropContent').style.display = 'none';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── KNOWN MFR DETECTION ─────────────────────────────────────────────────────
+document.getElementById('invoiceText').addEventListener('input', function() {
+  const val = this.value.toLowerCase();
+  const vendor = document.getElementById('vendorName').value.toLowerCase();
+  const found = KNOWN_MFR.some(m => val.includes(m.toLowerCase()) || vendor.includes(m.toLowerCase()));
+  document.getElementById('mfrHint').style.display = found ? 'flex' : 'none';
+});
+document.getElementById('vendorName').addEventListener('input', function() {
+  document.getElementById('invoiceText').dispatchEvent(new Event('input'));
+});
+
+// ─── PHASE HELPERS ───────────────────────────────────────────────────────────
+function setPhase(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('ph'+i);
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  });
+  document.getElementById('phaseInput').style.display   = n === 1 ? '' : 'none';
+  document.getElementById('phaseClarify').style.display = n === 2 ? '' : 'none';
+  document.getElementById('phaseResult').style.display  = n === 3 ? '' : 'none';
+}
+
+function showError(msg) {
+  const el = document.getElementById('inputError');
+  el.innerHTML = msg ? `<div class="alert error" style="margin-bottom:12px"><span>✕</span><span>${msg}</span></div>` : '';
+}
+
+let _loadTimer = null;
+function setLoading(loading) {
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = loading;
+  if (_loadTimer) { clearInterval(_loadTimer); _loadTimer = null; }
+  if (loading) {
+    const stages = state.inputMode === 'image'
+      ? ['⏳ جاري قراءة الفاتورة...', '⏳ جاري التصنيف...', '⏳ جاري مطابقة الملحق (ب)...']
+      : ['⏳ جاري التحليل...', '⏳ جاري التصنيف...', '⏳ جاري مطابقة الملحق (ب)...'];
+    let i = 0;
+    btn.innerHTML = `<span>${stages[0]}</span>`;
+    _loadTimer = setInterval(() => {
+      i = Math.min(i + 1, stages.length - 1);
+      btn.innerHTML = `<span>${stages[i]}</span>`;
+    }, 1400);
+  } else {
+    btn.innerHTML = '<span>🔍</span> تحليل وتصنيف';
+  }
+}
+
+// ─── STATIC KNOWLEDGE BLOCK (cached) ─────────────────────────────────────────
+// القواعد + عيّنة SSIC ثابتة → تُخزَّن مؤقتاً فتُقرأ من الكاش في النداءات المتتالية
+const SYSTEM_RULES = `أنت مُدقق محتوى محلي متخصص في التصنيف الوطني للأنشطة الاقتصادية السعودي (SSIC).
+
+عينة من بيانات SSIC (للاسترشاد):
+${JSON.stringify(SSIC_SAMPLE, null, 2)}
+
+القواعد الأساسية:
+1. السجل التجاري هو مصدر الحقيقة — إذا مسجل "تجارة جملة" لا يمكن أن يكون مصنعاً
+2. إذا ذُكر مصنع معروف (سابك، أرامكو، معادن...) مع شركة أخرى → الشركة غالباً موزع وليست مصنعاً
+3. إذا الدور واضح من السجل والفاتورة → أعطِ الإجابة مباشرة (needsClarification: false)
+4. إذا غامض → اسأل سؤالاً واحداً فقط بخيارين أو ثلاثة محددة
+
+قواعد خاصة بالخدمات المهنية (ISIC 69-74):
+5. الاستثناء الوحيد الرسمي من LCGPA: إذا كانت الخدمة تحديداً "تدقيق القوائم المالية" أو "الزكاة" أو "الضريبة" → قطاع 5 دائماً بنسبة 50% حتى لو المورد وكيل لأجنبي. هذا الاستثناء لا يشمل المحاسبة القانونية العامة ولا الفحص النافي للجهالة ولا الاستشارات المالية.
+6. أي خدمة مهنية أخرى في ISIC 69-74 (استشارات، محاسبة، فحص نافي للجهالة، هندسة، قانون، تسويق، due diligence) → اسأل سؤالاً توضيحياً واحداً: "هل المورد شركة سعودية مستقلة أم فرع/وكيل لشركة أجنبية؟" — محلي مستقل = قطاع 5 (50%)، وكيل لأجنبي = قطاع 6 (20%)
+7. إذا كانت شركة أجنبية لها فرع سعودي وتقدم تراخيص → اسأل: "هل هو ترخيص برنامج/تقنية أم خدمة مهنية (استشارة/تدريب)؟" — برنامج/تقنية = قطاع 19 (41%)، خدمة مهنية = قطاع 5 أو 6 حسب استقلالية الفرع`;
+
+// ─── API CALL ─────────────────────────────────────────────────────────────────
+async function callClaude(systemText, messages, { parseJson = true, maxTokens = 1000 } = {}) {
+  const res = await fetch('/.netlify/functions/claude', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + accessToken
+    },
+    body: JSON.stringify({
+      max_tokens: maxTokens,
+      system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
+      messages
+    })
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    if (res.status === 401) { window.location.href = 'login.html'; }
+    const msg = (errData && errData.error) || res.statusText;
+    throw new Error(typeof msg === 'string' ? msg : ('خطأ ' + res.status));
+  }
+  const data = await res.json();
+  const text = (data.content || []).map(b => b.text || '').join('');
+  return parseJson ? JSON.parse(text.replace(/```json|```/g, '').trim()) : text;
+}
+
+// يبني محتوى رسالة المستخدم (نص، أو صورة/PDF + نص)
+function buildUserContent(text, withImage = false) {
+  if (withImage && state.imageData) {
+    const media = state.imageType === 'application/pdf'
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: state.imageData } }
+      : { type: 'image', source: { type: 'base64', media_type: state.imageType, data: state.imageData } };
+    return [media, { type: 'text', text }];
+  }
+  return text;
+}
+
+// ─── PHASE 1 → ANALYSIS ──────────────────────────────────────────────────────
+async function startAnalysis() {
+  state.vendorName  = document.getElementById('vendorName').value.trim();
+  state.crActivity  = document.getElementById('crActivity').value.trim();
+  state.invoice     = state.inputMode === 'text'
+    ? document.getElementById('invoiceText').value.trim()
+    : '';
+
+  if (!state.vendorName && !state.invoice && !state.imageData) {
+    showError('أدخل اسم الشركة أو وصف الفاتورة على الأقل');
+    return;
+  }
+  showError('');
+  setLoading(true);
+
+  const isKnownMfr = KNOWN_MFR.some(m =>
+    state.invoice.toLowerCase().includes(m) ||
+    state.vendorName.toLowerCase().includes(m)
+  );
+
+  const userText = `البيانات:
+- اسم الشركة: "${state.vendorName || 'غير محدد'}"
+- النشاط في السجل التجاري: "${state.crActivity || 'غير محدد'}"
+- وصف الفاتورة/التوريد: "${state.invoice || 'من صورة الفاتورة'}"
+- هل يوجد مصنع معروف في السياق: ${isKnownMfr ? 'نعم' : 'لا'}
+
+صنّف بناءً على القواعد، وأجب بـ JSON فقط:
+{
+  "needsClarification": true|false,
+  "clarifyQuestion": "السؤال إن احتجت" | null,
+  "clarifyOptions": ["خيار 1","خيار 2"] | [],
+  "crConflict": "وصف التعارض" | null,
+  "detectedRole": "manufacturer|distributor|contractor|importer|mixed|unknown",
+  "detectedRoleAr": "الدور بالعربي",
+  "activities": [
+    {
+      "isicCode": "XXXXXX",
+      "isicName": "...",
+      "sectionCode": "XX",
+      "sectionName": "...",
+      "chapterCode": "X",
+      "chapterName": "...",
+      "roleLabel": "مصنع|موزع|مقاول|مستورد",
+      "confidence": "عالي|متوسط|منخفض",
+      "reason": "سبب الاختيار في جملة واحدة"
+    }
+  ]
+}`;
+
+  try {
+    const content = buildUserContent(userText, state.inputMode === 'image');
+    const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content }]);
+    state.crConflict  = parsed.crConflict;
+    state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
+
+    if (parsed.needsClarification && parsed.clarifyQuestion) {
+      state.clarifyQuestion = parsed.clarifyQuestion;
+      state.clarifyOptions  = parsed.clarifyOptions || [];
+      renderClarify();
+      setPhase(2);
+    } else {
+      state.results = parsed.activities || [];
+      renderResult();
+      renderAnnexB(state.results, state.clarifyAnswer);
+      setPhase(3);
+    }
+  } catch(e) {
+    showError('حدث خطأ في الاتصال. تحقق من الاتصال بالإنترنت وحاول مجدداً.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ─── PHASE 2 — CLARIFY ───────────────────────────────────────────────────────
+function renderClarify() {
+  // Context recap
+  let ctx = '';
+  if (state.vendorName || state.crActivity) {
+    ctx = `<div class="context-pill">
+      ${state.vendorName ? `<strong style="color:var(--text)">${state.vendorName}</strong>` : ''}
+      ${state.crActivity ? `<span>·</span><span>${state.crActivity}</span>` : ''}
+    </div>`;
+  }
+  document.getElementById('clarifyContext').innerHTML = ctx;
+
+  // Conflict
+  document.getElementById('clarifyConflict').innerHTML = state.crConflict
+    ? `<div class="conflict-box"><span>⚠️</span><div><strong>تعارض محتمل:</strong> ${state.crConflict}</div></div>`
+    : '';
+
+  // Question
+  document.getElementById('clarifyQ').textContent = state.clarifyQuestion;
+
+  // Options — use data-index to avoid Arabic text breaking inline onclick
+  const optsEl = document.getElementById('clarifyOpts');
+  optsEl.innerHTML = state.clarifyOptions.map((opt, i) =>
+    `<button class="clarify-opt" data-idx="${i}">
+      <span class="clarify-opt-num">0${i+1}</span>
+      <span>${opt}</span>
+    </button>`
+  ).join('');
+
+  optsEl.querySelectorAll('.clarify-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-idx'));
+      answerClarify(state.clarifyOptions[idx]);
+    });
+  });
+}
+
+async function answerClarify(answer) {
+  state.clarifyAnswer = answer;
+  document.querySelectorAll('.clarify-opt').forEach(b => b.disabled = true);
+  document.getElementById('clarifyLoading').style.display = '';
+
+  const userText = `البيانات الكاملة:
+- المورد: "${state.vendorName || 'غير محدد'}"
+- السجل التجاري: "${state.crActivity || 'غير محدد'}"
+- الفاتورة: "${state.invoice || 'من صورة'}"
+- إجابة على السؤال "${state.clarifyQuestion}": "${answer}"
+
+حدد الـ ISIC الصحيح. تذكّر: الاستثناء الوحيد = تدقيق القوائم المالية + الزكاة + الضريبة → قطاع 5 دائماً (50%). كل خدمة مهنية أخرى تعتمد على جنسية المورد.
+
+أجب بـ JSON فقط:
+{
+  "detectedRole": "manufacturer|distributor|contractor|importer",
+  "detectedRoleAr": "...",
+  "crConflict": "..." | null,
+  "activities": [
+    { "isicCode":"XXXXXX","isicName":"...","sectionCode":"XX","sectionName":"...","chapterCode":"X","chapterName":"...","roleLabel":"...","confidence":"عالي|متوسط|منخفض","reason":"..." }
+  ]
+}`;
+
+  try {
+    const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content: userText }]);
+    state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
+    if (parsed.crConflict) state.crConflict = parsed.crConflict;
+    state.results = parsed.activities || [];
+    renderResult();
+    renderAnnexB(state.results, state.clarifyAnswer);
+    setPhase(3);
+  } catch(err) {
+    console.error('answerClarify error:', err);
+    document.getElementById('clarifyLoading').style.display = 'none';
+    document.querySelectorAll('.clarify-opt').forEach(b => b.disabled = false);
+    const errMsg = (err && err.message) ? err.message : 'تحقق من الاتصال وحاول مجدداً';
+    const errEl = document.createElement('div');
+    errEl.className = 'alert error';
+    errEl.style.marginBottom = '12px';
+    errEl.innerHTML = '<span>&#x2715;</span><span>حدث خطأ: ' + errMsg + '</span>';
+    document.getElementById('clarifyOpts').before(errEl);
+  }
+}
+
+// ─── PHASE 3 — RESULT ────────────────────────────────────────────────────────
+function renderResult() {
+  const role = state.detectedRole;
+
+  // Header
+  document.getElementById('resultHeader').innerHTML = `
+    <div class="result-header">
+      <div class="result-role-icon">${ROLE_ICONS[role?.role] || '❓'}</div>
+      <div style="flex:1">
+        <div class="result-vendor">${state.vendorName || 'الشركة'}</div>
+        <div class="result-role-label">
+          الدور المُكتشف: ${role?.label || ROLE_LABELS[role?.role] || '—'}
+          ${state.clarifyAnswer ? `<span style="color:var(--text3);margin-right:6px">· بناءً على إجابتك</span>` : ''}
+        </div>
+      </div>
+      ${state.crConflict ? `<span style="font-size:18px;cursor:help" title="${state.crConflict}">⚠️</span>` : ''}
+    </div>`;
+
+  // Conflict
+  document.getElementById('resultConflict').innerHTML = state.crConflict
+    ? `<div class="conflict-box"><span style="flex-shrink:0">⚠️</span><div><strong>تعارض مع السجل التجاري:</strong> ${state.crConflict}</div></div>`
+    : '';
+
+  // Result cards
+  const cards = state.results.map((r, i) => {
+    const confClass = { عالي:'green', متوسط:'amber', منخفض:'red' }[r.confidence] || 'gray';
+    return `
+      <div class="isic-card ${i===0?'top':''}">
+        ${i===0 ? '<div class="isic-top-badge">✓ الأفضل مطابقة</div>' : ''}
+        <div class="isic-main">
+          <div>
+            <div class="isic-name">${r.isicName}</div>
+            <div class="isic-path">
+              <span>${r.chapterName}</span>
+              <span class="sep">←</span>
+              <span>${r.sectionName}</span>
+            </div>
+          </div>
+          <div class="isic-code-block">
+            <div class="isic-code">${r.isicCode}</div>
+            <div class="isic-meta">ب${r.chapterCode} · ق${r.sectionCode}</div>
+          </div>
+        </div>
+        <div class="isic-footer">
+          <span class="tag gray">${r.roleLabel || ''}</span>
+          <span class="tag ${confClass}">${r.confidence}</span>
+          <span class="isic-reason">${r.reason || ''}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('resultCards').innerHTML = cards;
+
+  // تهيئة لوحة المناقشة على هذه النتيجة
+  initDiscussion();
+}
+
+// ─── DISCUSSION (محصورة بسياق التصنيف) ───────────────────────────────────────
+const DISCUSS_SCOPE = `أنت تناقش نتيجة تصنيف SSIC ومحتوى محلي محددة مع مدقق. مهمتك: شرح التصنيف والإجابة عن أسئلة تتعلق **بهذا التصنيف تحديداً** ونطاق تدقيق SSIC/المحتوى المحلي فقط، مع الاستشهاد بالقاعدة المناسبة. إذا سُئلت عن شيء خارج هذا النطاق، اعتذر بلطف وذكّر أن دورك محصور بمناقشة هذا التصنيف. كن موجزاً وعملياً، وأجب بنص عادي (لا JSON).`;
+
+function classificationContext() {
+  const acts = state.results.map((r, i) =>
+    `${i+1}) ${r.isicCode} — ${r.isicName} (${r.chapterName} ← ${r.sectionName}) | الدور: ${r.roleLabel || '—'} | الثقة: ${r.confidence || '—'} | السبب: ${r.reason || '—'}`
+  ).join('\n');
+  return `سياق التصنيف الحالي:
+- المورد: "${state.vendorName || 'غير محدد'}"
+- النشاط في السجل التجاري: "${state.crActivity || 'غير محدد'}"
+- الفاتورة/التوريد: "${state.invoice || 'من صورة'}"
+- الدور المُكتشف: ${state.detectedRole?.label || '—'}
+${state.crConflict ? '- تعارض مع السجل: ' + state.crConflict + '\n' : ''}- الأكواد المُصنّفة:
+${acts || '—'}`;
+}
+
+function initDiscussion() {
+  state.discussion = [];
+  document.getElementById('discussLog').innerHTML = '';
+  document.getElementById('discussInput').value = '';
+  document.getElementById('discussChips').querySelectorAll('.chip').forEach(c => {
+    c.onclick = () => { document.getElementById('discussInput').value = c.getAttribute('data-q'); sendDiscuss(); };
+  });
+}
+
+function appendDMsg(role, text) {
+  const log = document.getElementById('discussLog');
+  const div = document.createElement('div');
+  div.className = 'dmsg ' + (role === 'user' ? 'user' : 'bot');
+  div.textContent = text;
+  log.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  return div;
+}
+
+async function sendDiscuss() {
+  const input = document.getElementById('discussInput');
+  const q = input.value.trim();
+  if (!q) return;
+  const btn = document.getElementById('discussSend');
+  input.value = '';
+  btn.disabled = true;
+  appendDMsg('user', q);
+
+  // أول سؤال يحمل سياق التصنيف الكامل؛ التالي أسئلة متابعة فقط
+  const content = state.discussion.length === 0
+    ? `${classificationContext()}\n\nالسؤال: ${q}`
+    : q;
+  state.discussion.push({ role: 'user', content });
+
+  const typing = appendDMsg('bot', '');
+  typing.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
+
+  try {
+    const answer = await callClaude(DISCUSS_SCOPE, state.discussion, { parseJson: false, maxTokens: 800 });
+    typing.textContent = answer;
+    state.discussion.push({ role: 'assistant', content: answer });
+  } catch (e) {
+    typing.textContent = 'تعذّر جلب الرد. حاول مجدداً.';
+    state.discussion.pop(); // إزالة سؤال المستخدم غير المُجاب حتى لا يفسد السياق
+  } finally {
+    btn.disabled = false;
+    input.focus();
+  }
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function goBack() { setPhase(1); }
+
+function resetAll() {
+  state = {
+    vendorName:'', crActivity:'', invoice:'',
+    imageData:null, imageType:null, inputMode:'text',
+    clarifyQuestion:'', clarifyOptions:[], clarifyAnswer:'',
+    detectedRole:null, crConflict:null, results:[], discussion:[]
+  };
+  const dlog = document.getElementById('discussLog'); if (dlog) dlog.innerHTML = '';
+  document.getElementById('vendorName').value = '';
+  document.getElementById('crActivity').value = '';
+  document.getElementById('invoiceText').value = '';
+  document.getElementById('imgPreview').style.display = 'none';
+  document.getElementById('dropContent').style.display = '';
+  document.getElementById('dropContent').innerHTML = `
+    <div class="drop-icon">📄</div>
+    <div class="drop-text">انقر لرفع صورة الفاتورة</div>
+    <div class="drop-hint">PNG · JPG · WEBP · PDF</div>`;
+  document.getElementById('mfrHint').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  showError('');
+  switchTab('text');
+  setPhase(1);
+}
+
+
+// ─── ANNEX B DATA ─────────────────────────────────────────────────────────────
+const ANNEX_B_PCT = {
+  "1":0.60,"2":0.40,"3":0.36,"4":0.82,"5":0.50,"6":0.20,"7":0.48,"8":0.40,
+  "9":0.66,"10":0.75,"11":0.38,"12":0.69,"13":0.45,"14":0.30,"15":0.20,
+  "16":0.30,"17":0.35,"18":0.59,"19":0.41,"20":0.35,"21":0.61,"22":0.05,
+  "23":0.00,"24":0.57,"25":0.35,"26":0.61,"27":0.29,"28":0.25,"29":0.40,
+  "30":0.45,"31":0.30,"32":0.50,"33":0.60,"34":0.15,"35":0.30,"36":0.70,
+  "37":0.05,"38":0.00
+};
+
+// ISIC_OVR — exact prefix overrides (checked first, longest prefix wins)
+const ISIC_OVR = [
+  {prefix:"381103", len:6, output:"36_منتجات إعادة التدوير"},
+  {prefix:"49225",  len:5, output:"17_خدمات تأجير السيارات والشاحنات والمعدات"},
+  {prefix:"68102",  len:5, output:"1_خدمات الإسكان وتأجير المنشآت"},
+  {prefix:"25114",  len:5, output:"33_منتجات تصنيع حديد التسليح"},
+  {prefix:"25921",  len:5, output:"3_خدمات صناعية"},
+  {prefix:"811001", len:6, output:"4_خدمات الأمن"},
+  {prefix:"2813",   len:4, output:"31_منتجات معدات ثابتة"},
+  {prefix:"2814",   len:4, output:"29_منتجات المواد الكهربائية"},
+  {prefix:"2394",   len:4, output:"32_منتجات الاسمنت والجبس"},
+  {prefix:"2395",   len:4, output:"32_منتجات الاسمنت والجبس"},
+  {prefix:"2790",   len:4, output:"35_منتجات محلية أخرى"},
+  {prefix:"7911",   len:4, output:"13_خدمات النقل والخدمات اللوجستية"},
+  {prefix:"7730",   len:4, output:"17_خدمات تأجير السيارات والشاشات والمعدات"},
+  {prefix:"383",    len:3, output:"36_منتجات إعادة التدوير"},
+  {prefix:"351",    len:3, output:"21_خدمات المرافق"},
+  {prefix:"352",    len:3, output:"26_منتجات كيميائية والنفط والغاز"},
+  {prefix:"582",    len:3, output:"19_خدمات تقنية المعلومات والاتصالات"},
+  {prefix:"712",    len:3, output:"3_خدمات صناعية"},
+  {prefix:"091",    len:3, output:"14_خدمات الحفر البري|15_خدمات الحفر البحري"},
+  {prefix:"773",    len:3, output:"17_خدمات تأجير السيارات والشاحنات والمعدات"},
+  {prefix:"771",    len:3, output:"17_خدمات تأجير السيارات والشاحنات والمعدات"},
+  {prefix:"772",    len:3, output:"20_خدمات أخرى"},
+  {prefix:"06",     len:2, output:"14_خدمات الحفر البري|15_خدمات الحفر البحري"},
+  {prefix:"20",     len:2, output:"26_منتجات كيميائية والنفط والغاز|27_منتجات كيميائية أخرى"},
+  {prefix:"69",     len:2, output:"5_خدمات مهنية محلية"},
+  {prefix:"70",     len:2, output:"5_خدمات مهنية محلية"},
+  {prefix:"71",     len:2, output:"5_خدمات مهنية محلية"},
+  {prefix:"72",     len:2, output:"5_خدمات مهنية محلية"},
+  {prefix:"73",     len:2, output:"5_خدمات مهنية محلية"},
+  {prefix:"74",     len:2, output:"5_خدمات مهنية محلية"},
+];
+
+// Main mapping table: FromN, ToN, Len, Sector
+const ISIC_RULES = [
+  {from:55,    to:55,    len:2, sector:"1_خدمات الإسكان وتأجير المنشآت"},
+  {from:56,    to:56,    len:2, sector:"2_خدمات تقديم الأغذية والمشروبات"},
+  {from:33,    to:33,    len:2, sector:"3_خدمات صناعية"},
+  {from:35,    to:35,    len:2, sector:"3_خدمات صناعية"},
+  {from:38,    to:38,    len:2, sector:"3_خدمات صناعية"},
+  {from:80,    to:80,    len:2, sector:"4_خدمات الأمن"},
+  {from:68,    to:68,    len:2, sector:"7_خدمات العقارات"},
+  {from:41,    to:43,    len:2, sector:"8_خدمات الإنشاء"},
+  {from:75,    to:75,    len:2, sector:"9_خدمات التعليم"},
+  {from:85,    to:85,    len:2, sector:"9_خدمات التعليم"},
+  {from:64,    to:66,    len:2, sector:"10_خدمات الأنشطة المالية والتأمينية"},
+  {from:86,    to:88,    len:2, sector:"11_خدمات الرعاية الصحية"},
+  {from:84,    to:84,    len:2, sector:"12_خدمات الإدارة العامة"},
+  {from:49,    to:53,    len:2, sector:"13_خدمات النقل والخدمات اللوجستية"},
+  {from:79,    to:79,    len:2, sector:"13_خدمات النقل والخدمات اللوجستية"},
+  {from:6,     to:6,     len:2, sector:"14_خدمات الحفر البري|15_خدمات الحفر البحري"},
+  {from:9,     to:9,     len:1, sector:"16_خدمات التعدين"},
+  {from:78,    to:78,    len:2, sector:"18_خدمات القوى العاملة"},
+  {from:61,    to:63,    len:2, sector:"19_خدمات تقنية المعلومات والاتصالات"},
+  {from:39,    to:39,    len:2, sector:"20_خدمات أخرى"},
+  {from:58,    to:60,    len:2, sector:"20_خدمات أخرى"},
+  {from:90,    to:99,    len:2, sector:"20_خدمات أخرى"},
+  {from:36,    to:37,    len:2, sector:"21_خدمات المرافق"},
+  {from:19,    to:19,    len:2, sector:"26_منتجات كيميائية والنفط والغاز"},
+  {from:22,    to:22,    len:2, sector:"26_منتجات كيميائية والنفط والغاز"},
+  {from:27,    to:27,    len:2, sector:"29_منتجات المواد الكهربائية"},
+  {from:24,    to:25,    len:2, sector:"31_منتجات معدات ثابتة"},
+  {from:28,    to:30,    len:2, sector:"28_منتجات الآلات والمعدات"},
+  {from:265,   to:268,   len:3, sector:"28_منتجات الآلات والمعدات"},
+  {from:261,   to:264,   len:3, sector:"34_منتجات صناعية لتقنية المعلومات والاتصالات"},
+  {from:5,     to:5,     len:2, sector:"30_منتجات التعدين"},
+  {from:7,     to:8,     len:2, sector:"30_منتجات التعدين"},
+  {from:13,    to:18,    len:2, sector:"35_منتجات محلية أخرى"},
+  {from:21,    to:21,    len:2, sector:"35_منتجات محلية أخرى"},
+  {from:23,    to:23,    len:2, sector:"35_منتجات محلية أخرى"},
+  {from:31,    to:32,    len:2, sector:"35_منتجات محلية أخرى"},
+  {from:45,    to:47,    len:2, sector:"37_منتجات وكيل / موزع في المملكة"},
+  {from:45717, to:45717, len:5, sector:"24_منتجات الزراعة والغابات والأسماك"},
+  {from:46001, to:46001, len:5, sector:"25_منتجات الأغذية والمشروبات"},
+];
+
+// ─── MATCH ANNEX B — ACCURATE ────────────────────────────────────────────────
+function matchAnnexB(isicCode) {
+  if (!isicCode) return [];
+  // Extract digits only
+  const digits = isicCode.toString().replace(/[^0-9]/g, '');
+  if (!digits) return [];
+
+  const results = new Set();
+
+  // Step 1: Check ISIC_OVR (longest prefix first — already sorted by len desc)
+  const ovrSorted = [...ISIC_OVR].sort((a,b) => b.len - a.len);
+  for (const ovr of ovrSorted) {
+    if (digits.startsWith(ovr.prefix)) {
+      // Split multiple outputs (pipe-separated)
+      ovr.output.split('|').forEach(o => results.add(o.trim()));
+      break; // First match wins for OVR
+    }
+  }
+
+  // Step 2: If no OVR match, check ISIC_RULES
+  if (results.size === 0) {
+    // Try rules from most specific (longest len) to least
+    const rulesSorted = [...ISIC_RULES].sort((a,b) => b.len - a.len);
+    for (const rule of rulesSorted) {
+      const prefix = parseInt(digits.substring(0, rule.len));
+      if (!isNaN(prefix) && prefix >= rule.from && prefix <= rule.to) {
+        rule.sector.split('|').forEach(s => results.add(s.trim()));
+        // Don't break — could match multiple rules at different lengths
+        // But only take first match per length level
+        break;
+      }
+    }
+  }
+
+  // Convert to array with pct
+  return Array.from(results).map(name => {
+    const num = name.split('_')[0];
+    const pct = ANNEX_B_PCT[num] ?? 0;
+    return { name, pct };
+  });
+}
+
+// ─── RENDER ANNEX B ──────────────────────────────────────────────────────────
+function renderAnnexB(activities, clarifyAnswer) {
+  // If user confirmed foreign agent/representative → override sector 5 to sector 6
+  const isForeignAgent = clarifyAnswer && (
+    clarifyAnswer.includes('وكيل') || clarifyAnswer.includes('أجنبي') ||
+    clarifyAnswer.includes('فرع') || clarifyAnswer.includes('ممثل') ||
+    clarifyAnswer.toLowerCase().includes('foreign') || clarifyAnswer.toLowerCase().includes('agent')
+  );
+  const seen = new Set();
+  const matched = [];
+
+  for (const act of activities) {
+    const sectors = matchAnnexB(act.isicCode);
+    for (const s of sectors) {
+      if (!seen.has(s.name)) {
+        seen.add(s.name);
+        matched.push(s);
+      }
+    }
+  }
+
+  if (matched.length === 0) {
+    document.getElementById('annexBSection').style.display = 'none';
+    return;
+  }
+
+  // Override: if foreign agent, replace sector 5 with sector 6
+  const finalMatched = matched.map(s => {
+    if (isForeignAgent && s.name.startsWith('5_')) {
+      return { name: '6_خدمات ممثل محلي من مورد أجنبي', pct: 0.20 };
+    }
+    return s;
+  });
+
+  const cards = finalMatched.map((s, i) => {
+    const pctDisplay = Math.round(s.pct * 100) + '%';
+    const pctClass = s.pct >= 0.5 ? 'high' : s.pct >= 0.3 ? 'mid' : 'low';
+    const num = s.name.split('_')[0];
+    const label = s.name.includes('_') ? s.name.substring(s.name.indexOf('_')+1) : s.name;
+    return `
+      <div class="annexb-card ${i===0?'top':''}">
+        ${i===0 ? '<div class="isic-top-badge" style="color:var(--green);background:rgba(46,204,138,.1);border-color:rgba(46,204,138,.25)">✓ الأعلى مطابقة</div>' : ''}
+        <div class="annexb-top">
+          <div>
+            <div class="annexb-name">${label}</div>
+          </div>
+          <div class="annexb-num">
+            <div class="annexb-pct ${pctClass}">${pctDisplay}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;text-align:left">نسبة المحتوى</div>
+          </div>
+        </div>
+        <div class="annexb-footer">
+          <span class="annexb-sector-num">قطاع ${num}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('annexBCards').innerHTML = cards;
+  document.getElementById('annexBSection').style.display = '';
+}
+
+
+
+
+
+
+</script>
+</body>
+</html>
