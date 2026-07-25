@@ -1034,7 +1034,19 @@ async function callClaude(systemText, messages, { parseJson = true, maxTokens = 
   }
   const data = await res.json();
   const text = (data.content || []).map(b => b.text || '').join('');
-  return parseJson ? JSON.parse(text.replace(/```json|```/g, '').trim()) : text;
+  if (!parseJson) return text;
+  const cleaned = text.replace(/```json|```/g, '').trim();
+  const s = cleaned.indexOf('{'), e = cleaned.lastIndexOf('}');
+  if (s === -1 || e === -1 || e < s) {
+    console.error('استجابة غير متوقعة من النموذج:', text);
+    throw new Error('لم يصل رد صالح من التصنيف (' + (data.stop_reason || 'غير معروف') + ')');
+  }
+  try {
+    return JSON.parse(cleaned.slice(s, e + 1));
+  } catch (err) {
+    console.error('فشل تحليل JSON:', cleaned);
+    throw new Error('تعذّر قراءة نتيجة التصنيف — حاول مجدداً');
+  }
 }
 
 // يبني محتوى رسالة المستخدم (نص، أو صورة/PDF + نص)
@@ -1099,7 +1111,7 @@ async function startAnalysis() {
 
   try {
     const content = buildUserContent(userText, state.inputMode === 'image');
-    const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content }]);
+    const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content }], { maxTokens: 1500 });
     state.crConflict  = parsed.crConflict;
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
 
@@ -1115,7 +1127,8 @@ async function startAnalysis() {
       setPhase(3);
     }
   } catch(e) {
-    showError('حدث خطأ في الاتصال. تحقق من الاتصال بالإنترنت وحاول مجدداً.');
+    console.error('startAnalysis error:', e);
+    showError('حدث خطأ: ' + (e && e.message ? e.message : 'غير معروف') + ' — حاول مجدداً');
   } finally {
     setLoading(false);
   }
@@ -1182,7 +1195,7 @@ async function answerClarify(answer) {
 }`;
 
   try {
-    const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content: userText }]);
+    const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content: userText }], { maxTokens: 1500 });
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
     if (parsed.crConflict) state.crConflict = parsed.crConflict;
     state.results = parsed.activities || [];
