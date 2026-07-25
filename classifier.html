@@ -1334,7 +1334,7 @@ function renderResult() {
 }
 
 // ─── DISCUSSION (محصورة بسياق التصنيف) ───────────────────────────────────────
-const DISCUSS_SCOPE = `أنت تناقش نتيجة تصنيف SSIC ومحتوى محلي محددة مع مدقق. مهمتك: شرح التصنيف والإجابة عن أسئلة تتعلق **بهذا التصنيف تحديداً** ونطاق تدقيق SSIC/المحتوى المحلي فقط، مع الاستشهاد بالقاعدة المناسبة. إذا سُئلت عن شيء خارج هذا النطاق، اعتذر بلطف وذكّر أن دورك محصور بمناقشة هذا التصنيف. كن موجزاً وعملياً، وأجب بنص عادي (لا JSON).`;
+const DISCUSS_SCOPE = `أنت تناقش نتيجة تصنيف SSIC ومحتوى محلي محددة مع مدقق. مهمتك: شرح التصنيف والإجابة عن أسئلة تتعلق بهذا التصنيف تحديداً ونطاق تدقيق SSIC/المحتوى المحلي فقط، مع الاستشهاد بالقاعدة المناسبة. إذا سُئلت عن شيء خارج هذا النطاق، اعتذر بلطف وذكّر أن دورك محصور بمناقشة هذا التصنيف. كن موجزاً وعملياً. أجب بنص عادي فقط دون أي تنسيق Markdown — ممنوع استخدام النجمتين ** أو # أو _ أو أي رموز تنسيق؛ إن أردت التشديد على كلمة استخدم علامات تنصيص عادية "هكذا" فقط.`;
 
 function classificationContext() {
   const acts = state.results.map((r, i) =>
@@ -1358,11 +1358,20 @@ function initDiscussion() {
   });
 }
 
+// شبكة أمان: تنظيف أي رموز Markdown (**، __، #) قد يفلت النموذج بها رغم تعليمات DISCUSS_SCOPE
+function stripMarkdown(text) {
+  return (text || '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/^#+\s*/gm, '')
+    .replace(/[*_]/g, '');
+}
+
 function appendDMsg(role, text) {
   const log = document.getElementById('discussLog');
   const div = document.createElement('div');
   div.className = 'dmsg ' + (role === 'user' ? 'user' : 'bot');
-  div.textContent = text;
+  div.textContent = stripMarkdown(text);
   log.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   return div;
@@ -1388,7 +1397,7 @@ async function sendDiscuss() {
 
   try {
     const answer = await callClaude(DISCUSS_SCOPE, state.discussion, { parseJson: false, maxTokens: 800 });
-    typing.textContent = answer;
+    typing.textContent = stripMarkdown(answer);
     state.discussion.push({ role: 'assistant', content: answer });
   } catch (e) {
     typing.textContent = 'تعذّر جلب الرد. حاول مجدداً.';
