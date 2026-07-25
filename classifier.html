@@ -1033,24 +1033,32 @@ function showError(msg) {
   el.innerHTML = msg ? `<div class="alert error" style="margin-bottom:12px"><span>✕</span><span>${msg}</span></div>` : '';
 }
 
-let _loadTimer = null;
 function setLoading(loading) {
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = loading;
-  if (_loadTimer) { clearInterval(_loadTimer); _loadTimer = null; }
   if (loading) {
-    const stages = state.inputMode === 'image'
-      ? ['⏳ جاري قراءة الفاتورة...', '⏳ جاري التصنيف...', '⏳ جاري مطابقة الملحق (ب)...']
-      : ['⏳ جاري التحليل...', '⏳ جاري التصنيف...', '⏳ جاري مطابقة الملحق (ب)...'];
-    let i = 0;
-    btn.innerHTML = `<span>${stages[0]}</span>`;
-    _loadTimer = setInterval(() => {
-      i = Math.min(i + 1, stages.length - 1);
-      btn.innerHTML = `<span>${stages[i]}</span>`;
-    }, 1400);
+    btn.innerHTML = state.inputMode === 'image'
+      ? '<span>⏳ جاري قراءة الفاتورة...</span>'
+      : '<span>⏳ جاري التحليل...</span>';
   } else {
     btn.innerHTML = '<span>🔍</span> تحليل وتصنيف';
   }
+}
+
+// يحدّد رسالة المرحلة بناءً على محتوى حقيقي وصل من البث (مو مؤقّت وهمي) — يعكس أي مرحلة JSON وصلها النموذج فعلياً
+function stageMessageFor(textSoFar) {
+  if (textSoFar.includes('"activities"')) return '⏳ جاري تحديد الأنشطة والأكواد...';
+  if (textSoFar.includes('"detectedRole"') || textSoFar.includes('"needsClarification"')) return '⏳ جاري تحديد دور المورد...';
+  return null;
+}
+function updateAnalyzeStage(textSoFar) {
+  const msg = stageMessageFor(textSoFar);
+  if (msg) document.getElementById('analyzeBtn').innerHTML = `<span>${msg}</span>`;
+}
+function updateClarifyStage(textSoFar) {
+  const msg = stageMessageFor(textSoFar);
+  const p = document.querySelector('#clarifyLoading p');
+  if (msg && p) p.textContent = msg;
 }
 
 // ─── STATIC KNOWLEDGE BLOCK (cached) ─────────────────────────────────────────
@@ -1073,6 +1081,22 @@ ${SSIC_DIVISION_INDEX}
 7. إذا كانت شركة أجنبية لها فرع سعودي وتقدم تراخيص → اسأل: "هل هو ترخيص برنامج/تقنية أم خدمة مهنية (استشارة/تدريب)؟" — برنامج/تقنية = قطاع 19 (41%)، خدمة مهنية = قطاع 5 أو 6 حسب استقلالية الفرع`;
 
 // ─── API CALL ─────────────────────────────────────────────────────────────────
+// يستخرج ويحلّل أول كتلة JSON من نص الرد (يشترك فيه المسار العادي والمبثوث)
+function extractJson(text, stopReason) {
+  const cleaned = text.replace(/```json|```/g, '').trim();
+  const s = cleaned.indexOf('{'), e = cleaned.lastIndexOf('}');
+  if (s === -1 || e === -1 || e < s) {
+    console.error('استجابة غير متوقعة من النموذج:', text);
+    throw new Error('لم يصل رد صالح من التصنيف (' + (stopReason || 'غير معروف') + ')');
+  }
+  try {
+    return JSON.parse(cleaned.slice(s, e + 1));
+  } catch (err) {
+    console.error('فشل تحليل JSON:', cleaned);
+    throw new Error('تعذّر قراءة نتيجة التصنيف — حاول مجدداً');
+  }
+}
+
 async function callClaude(systemText, messages, { parseJson = true, maxTokens = 1000 } = {}) {
   const res = await fetch('/.netlify/functions/claude', {
     method: 'POST',
@@ -1095,18 +1119,63 @@ async function callClaude(systemText, messages, { parseJson = true, maxTokens = 
   const data = await res.json();
   const text = (data.content || []).map(b => b.text || '').join('');
   if (!parseJson) return text;
-  const cleaned = text.replace(/```json|```/g, '').trim();
-  const s = cleaned.indexOf('{'), e = cleaned.lastIndexOf('}');
-  if (s === -1 || e === -1 || e < s) {
-    console.error('استجابة غير متوقعة من النموذج:', text);
-    throw new Error('لم يصل رد صالح من التصنيف (' + (data.stop_reason || 'غير معروف') + ')');
+  return extractJson(text, data.stop_reason);
+}
+
+// نسخة مبثوثة (streaming) من نفس النداء — تستدعي onDelta() بالنص المتراكم أول بأول
+// بدل انتظار الرد الكامل، فيحس المستخدم إن التصنيف "يتحرك" مباشرة بدل شاشة انتظار جامدة
+async function callClaudeStream(systemText, messages, { maxTokens = 1000, onDelta } = {}) {
+  const res = await fetch('/.netlify/functions/claude-stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + accessToken
+    },
+    body: JSON.stringify({
+      max_tokens: maxTokens,
+      system: [{ type: 'text', text: systemText, cache_control: { type: 'ephemeral' } }],
+      messages
+    })
+  });
+  if (!res.ok || !res.body) {
+    const errData = await res.json().catch(() => ({}));
+    if (res.status === 401) { window.location.href = 'login.html'; }
+    const msg = (errData && errData.error) || res.statusText;
+    throw new Error(typeof msg === 'string' ? msg : ('خطأ ' + res.status));
   }
-  try {
-    return JSON.parse(cleaned.slice(s, e + 1));
-  } catch (err) {
-    console.error('فشل تحليل JSON:', cleaned);
-    throw new Error('تعذّر قراءة نتيجة التصنيف — حاول مجدداً');
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let fullText = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const events = buffer.split('\n\n');
+    buffer = events.pop() || ''; // آخر جزء بالبفر قد يكون حدثاً غير مكتمل بعد
+
+    for (const evt of events) {
+      let eventType = '', data = '';
+      for (const line of evt.split('\n')) {
+        if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+        else if (line.startsWith('data: ')) data = line.slice(6);
+      }
+      if (!data) continue;
+      let parsed;
+      try { parsed = JSON.parse(data); } catch (e) { continue; }
+
+      if (eventType === 'content_block_delta' && parsed.delta && parsed.delta.type === 'text_delta') {
+        fullText += parsed.delta.text;
+        if (onDelta) onDelta(fullText, parsed.delta.text);
+      } else if (eventType === 'error') {
+        throw new Error((parsed.error && parsed.error.message) || 'خطأ من خدمة التصنيف');
+      }
+    }
   }
+
+  return fullText;
 }
 
 // يبني نص الأكواد المرشّحة من البحث المحلي في القاعدة الرسمية الكاملة
@@ -1188,7 +1257,11 @@ ${candidateBlock}
 }`;
 
     const content = buildUserContent(userText, state.inputMode === 'image');
-    const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content }], { maxTokens: 1500 });
+    const fullText = await callClaudeStream(SYSTEM_RULES, [{ role: 'user', content }], {
+      maxTokens: 1500,
+      onDelta: updateAnalyzeStage
+    });
+    const parsed = extractJson(fullText);
     state.crConflict  = parsed.crConflict;
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
 
@@ -1280,7 +1353,11 @@ ${candidateBlock}
   ]
 }`;
 
-    const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content: userText }], { maxTokens: 1500 });
+    const fullText = await callClaudeStream(SYSTEM_RULES, [{ role: 'user', content: userText }], {
+      maxTokens: 1500,
+      onDelta: updateClarifyStage
+    });
+    const parsed = extractJson(fullText);
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
     if (parsed.crConflict) state.crConflict = parsed.crConflict;
     state.results = (parsed.activities || []).map(act => enrichActivity(act, candidateCodes));
@@ -1447,7 +1524,13 @@ async function sendDiscuss() {
   typing.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
 
   try {
-    const answer = await callClaude(DISCUSS_SCOPE, state.discussion, { parseJson: false, maxTokens: 800 });
+    const answer = await callClaudeStream(DISCUSS_SCOPE, state.discussion, {
+      maxTokens: 800,
+      onDelta: (textSoFar) => {
+        typing.textContent = stripMarkdown(textSoFar);
+        typing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
     typing.textContent = stripMarkdown(answer);
     state.discussion.push({ role: 'assistant', content: answer });
   } catch (e) {
