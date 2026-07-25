@@ -1,8 +1,8 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// نفس مفتاح Supabase العام المستخدم في باقي الدوال (آمن للكشف) — مع تفضيل متغيرات البيئة
-const SURL = process.env.SUPABASE_URL || 'https://ghpjrvnyrlcqsfcjyiuq.supabase.co';
-const SKEY = process.env.SUPABASE_KEY || 'sb_publishable_WkOLENVn0HqysJetM6H6NA_tQe3Cn0n';
+// إعدادات Supabase من متغيرات البيئة فقط (لا قيم ثابتة في الكود)
+const SURL = process.env.SUPABASE_URL;
+const SKEY = process.env.SUPABASE_KEY;
 
 const MODEL = 'claude-haiku-4-5';
 const MAX_TOKENS_CAP = 2000;
@@ -10,6 +10,10 @@ const MAX_TOKENS_CAP = 2000;
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+  }
+
+  if (!SURL || !SKEY) {
+    return { statusCode: 500, body: JSON.stringify({ error: 'SUPABASE_URL / SUPABASE_KEY غير مُعدّة في بيئة Netlify' }) };
   }
 
   // 1) التحقق من هوية المستخدم — حماية المفتاح من الاستهلاك المباشر
