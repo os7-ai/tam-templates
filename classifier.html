@@ -443,13 +443,20 @@
   .isic-card:nth-child(3) { animation-delay: .19s; }
   .isic-card.top { border-color: var(--accent2); }
   .isic-card.unverified { border-color: var(--red); background: rgba(224,80,80,.04); }
-  .verify-badge {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; padding: 2px 8px; border-radius: 4px;
-    display: inline-flex; align-items: center; gap: 4px; margin-bottom: 8px;
+
+  .isic-topline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .rank-chip {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
+    background: var(--bg4); color: var(--text3); border: 1px solid var(--border);
+    flex-shrink: 0;
   }
-  .verify-badge.ok { color: var(--green); background: rgba(46,204,138,.1); border: 1px solid rgba(46,204,138,.25); }
-  .verify-badge.warn { color: var(--red); background: rgba(224,80,80,.1); border: 1px solid rgba(224,80,80,.25); }
+  .rank-chip.first { background: rgba(37,99,235,.12); color: var(--accent2); border-color: rgba(37,99,235,.3); }
+  .verify-dot { width: 8px; height: 8px; border-radius: 50%; cursor: help; flex-shrink: 0; }
+  .verify-dot.candidate  { background: var(--green); }
+  .verify-dot.verified   { background: var(--amber); }
+  .verify-dot.unverified { background: var(--red); }
 
   .isic-top-badge {
     font-family: 'IBM Plex Mono', monospace;
@@ -477,8 +484,9 @@
     line-height: 1.5;
   }
   .isic-path {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text3);
+    opacity: .75;
     margin-top: 3px;
   }
   .isic-path span { color: var(--text3); }
@@ -488,6 +496,7 @@
     text-align: left;
     flex-shrink: 0;
   }
+  .isic-code-row { display: flex; align-items: center; gap: 6px; }
   .isic-code {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 22px;
@@ -496,6 +505,19 @@
     letter-spacing: 2px;
     line-height: 1;
   }
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    line-height: 1.4;
+    transition: color .15s, border-color .15s;
+  }
+  .copy-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+  .copy-btn:disabled { color: var(--green); border-color: var(--green); cursor: default; }
   .isic-meta {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 10px;
@@ -505,12 +527,12 @@
 
   .isic-footer {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 8px;
-    flex-wrap: wrap;
     padding-top: 10px;
     border-top: 1px solid var(--border);
   }
+  .isic-tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .tag {
     font-size: 11px;
     padding: 3px 9px;
@@ -529,7 +551,7 @@
   .isic-reason {
     font-size: 12px;
     color: var(--text3);
-    flex: 1;
+    line-height: 1.5;
   }
 
   /* ─── CONFLICT ─── */
@@ -914,13 +936,16 @@ function searchSSIC(query, topN = 20) {
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, topN).map(x => x.item);
 }
-// تحقّق نهائي: أي كود يرجعه النموذج يُقارَن بالقائمة الرسمية الكاملة؛ عند التطابق تُستبدَل بيانات الاسم/القسم/الباب بالبيانات الرسمية المؤكدة (تمنع أي تناقض بين الكود ووصفه)، وعند عدم وجوده تُعلَّم الحالة كـ"غير موثّق" للمراجعة اليدوية
-function enrichActivity(act) {
-  const rec = SSIC_BY_CODE.get(String(act.isicCode || '').trim());
+// تحقّق نهائي: أي كود يرجعه النموذج يُقارَن بالقائمة الرسمية الكاملة؛ عند التطابق تُستبدَل بيانات الاسم/القسم/الباب بالبيانات الرسمية المؤكدة (تمنع أي تناقض بين الكود ووصفه).
+// verifyTier: candidate = من ضمن الأكواد المرشّحة (أعلى ثقة) | verified = كود حقيقي بس من معرفة النموذج مباشرة | unverified = غير موجود بالقائمة إطلاقاً
+function enrichActivity(act, candidateCodes) {
+  const code = String(act.isicCode || '').trim();
+  const rec = SSIC_BY_CODE.get(code);
   if (rec) {
-    return { ...act, isicCode: rec.c, isicName: rec.n, chapterCode: rec.b, chapterName: rec.bn, sectionCode: rec.q, sectionName: rec.qn, verified: true };
+    const verifyTier = (candidateCodes && candidateCodes.has(code)) ? 'candidate' : 'verified';
+    return { ...act, isicCode: rec.c, isicName: rec.n, chapterCode: rec.b, chapterName: rec.bn, sectionCode: rec.q, sectionName: rec.qn, verifyTier };
   }
-  return { ...act, verified: false };
+  return { ...act, verifyTier: 'unverified' };
 }
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -1085,8 +1110,7 @@ async function callClaude(systemText, messages, { parseJson = true, maxTokens = 
 }
 
 // يبني نص الأكواد المرشّحة من البحث المحلي في القاعدة الرسمية الكاملة
-function buildCandidateBlock(query) {
-  const candidates = searchSSIC(query, 20);
+function buildCandidateText(candidates) {
   if (!candidates.length) {
     return 'لم يتم العثور على أكواد مرشّحة مطابقة نصياً — استخدم معرفتك الكاملة بـ SSIC السعودي واختر كوداً حقيقياً من 6 أرقام.';
   }
@@ -1128,7 +1152,9 @@ async function startAnalysis() {
   try {
     await ssicReady;
     const query = [state.vendorName, state.crActivity, state.inputMode === 'text' ? state.invoice : ''].filter(Boolean).join(' ');
-    const candidateBlock = buildCandidateBlock(query);
+    const candidates = searchSSIC(query, 20);
+    const candidateCodes = new Set(candidates.map(c => c.c));
+    const candidateBlock = buildCandidateText(candidates);
 
     const userText = `البيانات:
 - اسم الشركة: "${state.vendorName || 'غير محدد'}"
@@ -1172,7 +1198,7 @@ ${candidateBlock}
       renderClarify();
       setPhase(2);
     } else {
-      state.results = (parsed.activities || []).map(enrichActivity);
+      state.results = (parsed.activities || []).map(act => enrichActivity(act, candidateCodes));
       renderResult();
       renderAnnexB(state.results, state.clarifyAnswer);
       setPhase(3);
@@ -1230,7 +1256,9 @@ async function answerClarify(answer) {
   try {
     await ssicReady;
     const query = [state.vendorName, state.crActivity, state.invoice, answer].filter(Boolean).join(' ');
-    const candidateBlock = buildCandidateBlock(query);
+    const candidates = searchSSIC(query, 20);
+    const candidateCodes = new Set(candidates.map(c => c.c));
+    const candidateBlock = buildCandidateText(candidates);
 
     const userText = `البيانات الكاملة:
 - المورد: "${state.vendorName || 'غير محدد'}"
@@ -1255,7 +1283,7 @@ ${candidateBlock}
     const parsed = await callClaude(SYSTEM_RULES, [{ role: 'user', content: userText }], { maxTokens: 1500 });
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
     if (parsed.crConflict) state.crConflict = parsed.crConflict;
-    state.results = (parsed.activities || []).map(enrichActivity);
+    state.results = (parsed.activities || []).map(act => enrichActivity(act, candidateCodes));
     renderResult();
     renderAnnexB(state.results, state.clarifyAnswer);
     setPhase(3);
@@ -1296,15 +1324,20 @@ function renderResult() {
     : '';
 
   // Result cards
+  const VERIFY_TOOLTIP = {
+    candidate:  '✓ من الأكواد المرشّحة المطابقة فعلياً لوصف النشاط (أعلى ثقة)',
+    verified:   '✓ كود حقيقي متحقق منه بالقائمة الرسمية (اختاره النموذج من معرفته مباشرة)',
+    unverified: '⚠️ لم يتم العثور على هذا الكود في القائمة الرسمية الكاملة (2,816 نشاط) — يُنصح بالمراجعة اليدوية'
+  };
   const cards = state.results.map((r, i) => {
     const confClass = { عالي:'green', متوسط:'amber', منخفض:'red' }[r.confidence] || 'gray';
-    const verifyBadge = r.verified === false
-      ? '<div class="verify-badge warn">⚠️ كود غير موثّق في القائمة الرسمية — يُنصح بالمراجعة اليدوية</div>'
-      : '<div class="verify-badge ok">✓ مطابق للقائمة الرسمية الكاملة (2,816 نشاط)</div>';
+    const tier = r.verifyTier || 'unverified';
     return `
-      <div class="isic-card ${i===0?'top':''} ${r.verified===false?'unverified':''}">
-        ${i===0 ? '<div class="isic-top-badge">✓ الأفضل مطابقة</div>' : ''}
-        ${verifyBadge}
+      <div class="isic-card ${i===0?'top':''} ${tier==='unverified'?'unverified':''}">
+        <div class="isic-topline">
+          <span class="rank-chip ${i===0?'first':''}">${i+1}</span>
+          <span class="verify-dot ${tier}" title="${VERIFY_TOOLTIP[tier]}"></span>
+        </div>
         <div class="isic-main">
           <div>
             <div class="isic-name">${r.isicName || '(غير متوفر)'}</div>
@@ -1315,19 +1348,27 @@ function renderResult() {
             </div>
           </div>
           <div class="isic-code-block">
-            <div class="isic-code">${r.isicCode}</div>
+            <div class="isic-code-row">
+              <span class="isic-code">${r.isicCode}</span>
+              <button class="copy-btn" data-code="${r.isicCode}" title="نسخ الكود">⧉</button>
+            </div>
             <div class="isic-meta">${r.chapterCode ? 'ب'+r.chapterCode : ''}${r.chapterCode && r.sectionCode ? ' · ' : ''}${r.sectionCode ? 'ق'+r.sectionCode : ''}</div>
           </div>
         </div>
         <div class="isic-footer">
-          <span class="tag gray">${r.roleLabel || ''}</span>
-          <span class="tag ${confClass}">${r.confidence}</span>
-          <span class="isic-reason">${r.reason || ''}</span>
+          <div class="isic-tags">
+            <span class="tag gray">${r.roleLabel || ''}</span>
+            <span class="tag ${confClass}">${r.confidence}</span>
+          </div>
+          <div class="isic-reason">${r.reason || ''}</div>
         </div>
       </div>`;
   }).join('');
 
   document.getElementById('resultCards').innerHTML = cards;
+  document.querySelectorAll('#resultCards .copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => copyCode(btn));
+  });
 
   // تهيئة لوحة المناقشة على هذه النتيجة
   initDiscussion();
@@ -1356,6 +1397,16 @@ function initDiscussion() {
   document.getElementById('discussChips').querySelectorAll('.chip').forEach(c => {
     c.onclick = () => { document.getElementById('discussInput').value = c.getAttribute('data-q'); sendDiscuss(); };
   });
+}
+
+function copyCode(btn) {
+  const code = btn.getAttribute('data-code');
+  navigator.clipboard.writeText(code).then(() => {
+    const original = btn.textContent;
+    btn.textContent = '✓';
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1200);
+  }).catch(() => {});
 }
 
 // شبكة أمان: تنظيف أي رموز Markdown (**، __، #) قد يفلت النموذج بها رغم تعليمات DISCUSS_SCOPE
