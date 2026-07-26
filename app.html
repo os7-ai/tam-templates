@@ -574,15 +574,17 @@ function renderForm(tid){
     if(f.tp==='sep'){const s=document.createElement('div');s.className='fsep';grid.appendChild(s);return;}
     if(f.tp==='invoice-toggle'){
       const w=document.createElement('div');w.className='ff full';
-      const lbl=document.createElement('label');lbl.style.cssText='display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700';
+      const lbl=document.createElement('label');
+      lbl.style.cssText='display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;padding:10px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;align-self:flex-start;transition:border-color .18s';
       const chk=document.createElement('input');chk.type='checkbox';chk.id='f_invoice_toggle';
+      chk.style.cssText='width:18px;height:18px;margin:0;padding:0;flex-shrink:0;accent-color:var(--accent);cursor:pointer;border:1.5px solid var(--border);border-radius:4px;background:#fff';
       const txt=document.createElement('span');txt.textContent=f.lb;
       lbl.appendChild(chk);lbl.appendChild(txt);w.appendChild(lbl);
-      if(f.hint){const h=document.createElement('div');h.className='hint';h.textContent=f.hint;w.appendChild(h);}
+      if(f.hint){const h=document.createElement('div');h.className='hint';h.style.marginTop='6px';h.textContent=f.hint;w.appendChild(h);}
       grid.appendChild(w);
-      invoiceExtra=document.createElement('div');invoiceExtra.id='invoiceExtraFields';invoiceExtra.className='fgrid full';invoiceExtra.style.display='none';
+      invoiceExtra=document.createElement('div');invoiceExtra.id='invoiceExtraFields';invoiceExtra.className='fgrid full';invoiceExtra.style.cssText='display:none;margin-top:14px';
       grid.appendChild(invoiceExtra);
-      chk.addEventListener('change',()=>{invoiceExtra.style.display=chk.checked?'':'none';});
+      chk.addEventListener('change',()=>{invoiceExtra.style.display=chk.checked?'':'none';lbl.style.borderColor=chk.checked?'var(--accent)':'var(--border)';});
       return;
     }
     const w=document.createElement('div');
