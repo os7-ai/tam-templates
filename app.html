@@ -143,7 +143,6 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
   </div>
   <div class="hu">
     <span id="userEmail"></span>
-    <button class="hist-btn" onclick="window.location.href='classifier.html'">مُصنِّف الأنشطة</button>
     <button class="hist-btn" onclick="showHistory()">سجل النشاط</button>
     <button class="btn-lo" onclick="logout()">تسجيل خروج</button>
   </div>
@@ -233,6 +232,21 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
         </div>
         <div class="hcard-footer">
           <span>إنشاء مستند</span>
+          <span>←</span>
+        </div>
+      </div>
+
+      <!-- مُصنِّف الأنشطة (external tool) -->
+      <div class="hcard" onclick="window.location.href='classifier.html'">
+        <div class="hcard-main">
+          <div class="hcard-icon">🏷️</div>
+          <div class="hcard-meta">
+            <h3>مُصنِّف الأنشطة</h3>
+            <p>تصنيف نشاط المورّد حسب SSIC ونسبة المحتوى المحلي</p>
+          </div>
+        </div>
+        <div class="hcard-footer">
+          <span>فتح المصنّف</span>
           <span>←</span>
         </div>
       </div>
