@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مداد | الرئيسية</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='13' height='13' rx='3' fill='%234FCDE8'/><rect x='2' y='17' width='13' height='13' rx='3' fill='%230AAED0'/><rect x='17' y='17' width='13' height='13' rx='3' fill='%230AAED0'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{--navy:#1C2653;--navy2:#2a3875;--accent:#0AAED0;--bg:#F0F4FA;--card:#fff;--border:#D6DEF0;--text:#1C2653;--muted:#6B7A9E}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;direction:rtl}
+.header{background:var(--navy);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 20px rgba(28,38,83,.3)}
+.hl{display:flex;align-items:center;gap:12px}
+.hbrand{color:#fff;font-size:18px;font-weight:900}
+.hd{width:1px;height:28px;background:rgba(255,255,255,.2)}
+.ht{color:rgba(255,255,255,.85);font-size:13px;font-weight:600}
+.hu{display:flex;align-items:center;gap:10px}
+.hu span{color:rgba(255,255,255,.7);font-size:12px}
+.btn-lo{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:6px 14px;border-radius:8px;font-family:'Tajawal',sans-serif;font-size:12px;cursor:pointer}
+.btn-lo:hover{background:rgba(255,255,255,.2)}
+.main{max-width:860px;margin:0 auto;padding:60px 20px}
+.page-hero{text-align:center;margin-bottom:36px}
+.page-hero h2{font-size:24px;font-weight:900;color:var(--text);margin-bottom:8px}
+.page-hero p{font-size:14px;color:var(--muted)}
+.home-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.hcard{background:var(--card);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:all .28s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 10px rgba(28,38,83,.07);cursor:pointer;display:flex;flex-direction:column}
+.hcard:hover{box-shadow:0 8px 28px rgba(28,38,83,.16);border-color:var(--navy);transform:translateY(-3px)}
+.hcard-main{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:36px 24px;flex:1}
+.hcard-icon{width:64px;height:64px;background:var(--bg);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;transition:all .28s}
+.hcard:hover .hcard-icon{background:var(--navy)}
+.hcard-meta h3{font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px}
+.hcard-meta p{font-size:13px;color:var(--muted);line-height:1.6}
+.hcard-footer{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-top:1px solid var(--border);font-size:13px;font-weight:700;color:var(--muted);transition:all .22s}
+.hcard:hover .hcard-footer{color:var(--navy)}
+@media(max-width:600px){.home-cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="hl">
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="13" height="13" rx="3.5" fill="#4FCDE8"/>
+      <rect x="1" y="17" width="13" height="13" rx="3.5" fill="#0AAED0"/>
+      <rect x="17" y="17" width="13" height="13" rx="3.5" fill="#0AAED0"/>
+    </svg>
+    <span class="hbrand">مداد</span>
+    <div class="hd"></div>
+    <span class="ht">Alpha Consulting Group</span>
+  </div>
+  <div class="hu">
+    <span id="userEmail"></span>
+    <button class="btn-lo" onclick="logout()">تسجيل خروج</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-hero">
+    <h2>مرحباً 👋</h2>
+    <p>ما الذي ترغب بإعداده؟</p>
+  </div>
+  <div class="home-cards">
+    <div class="hcard" onclick="window.location.href='app.html'">
+      <div class="hcard-main">
+        <div class="hcard-icon">📄</div>
+        <div class="hcard-meta">
+          <h3>إعداد مستند</h3>
+          <p>عروض فنية ومالية، خطابات ارتباط وإفادة، ونماذج فوترة العملاء</p>
+        </div>
+      </div>
+      <div class="hcard-footer"><span>ابدأ</span><span>←</span></div>
+    </div>
+    <div class="hcard" onclick="window.location.href='classifier.html'">
+      <div class="hcard-main">
+        <div class="hcard-icon">🏷️</div>
+        <div class="hcard-meta">
+          <h3>أداة تصنيف الموردين</h3>
+          <p>تصنيف نشاط المورّد حسب SSIC ونسبة المحتوى المحلي</p>
+        </div>
+      </div>
+      <div class="hcard-footer"><span>ابدأ</span><span>←</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let sb;
+(async()=>{
+  const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
+  sb=supabase.createClient(cfg.url,cfg.key);
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  document.getElementById('userEmail').textContent=session.user.email;
+})();
+function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
+</script>
+</body>
+</html>

@@ -111,7 +111,7 @@ async function login() {
 
 function goHome(s) {
   const role = s?.user?.user_metadata?.role;
-  window.location.href = role==='admin' ? 'admin.html' : 'app.html';
+  window.location.href = role==='admin' ? 'admin.html' : 'home.html';
 }
 
 function setLoad(on) {
