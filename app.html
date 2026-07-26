@@ -431,6 +431,7 @@ const T={
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'السنة_المالية',lb:'السنة المالية',tp:'fiscal'},
+    {id:'أيام_العمل',lb:'أيام العمل',tp:'number',def:15},
     {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
     {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
@@ -441,6 +442,7 @@ const T={
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'measurement_period',lb:'فترة القياس',tp:'period'},
+    {id:'أيام_العمل',lb:'أيام العمل',tp:'number',def:15},
     {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
     {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
@@ -594,6 +596,10 @@ function renderForm(tid){
       const s=document.createElement('select');s.id='f_'+f.id;
       f.opts.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;s.appendChild(op);});
       w.appendChild(s);
+    }else if(f.tp==='number'){
+      const i=document.createElement('input');i.type='number';i.id='f_'+f.id;i.min='1';i.step='1';
+      i.value=f.def!==undefined?f.def:'';
+      w.appendChild(i);
     }else if(f.tp==='fee'){
       const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder='19,000';
       i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9.]/g,'');});
@@ -806,6 +812,7 @@ function validate(tid){
       if(f.id==='commercial_reg'&&el.value.length!==10)return'السجل التجاري يجب أن يكون 10 أرقام بالضبط';
       if(f.id==='mobile_number'&&!/^05\d{8}$/.test(el.value))return'رقم الجوال يجب أن يبدأ بـ 05 ويكون 10 أرقام';
       if(f.id==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value))return'البريد الإلكتروني غير صحيح';
+      if(f.tp==='number'&&(!/^\d+$/.test(el.value)||parseInt(el.value)<=0))return f.lb+' يجب أن تكون رقماً صحيحاً أكبر من صفر';
     }
   }
   const fe=document.getElementById('f_total_fees');
