@@ -276,6 +276,11 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           تحميل الملف
         </button><br><br>
+        <button class="bdl" id="btnDl2" style="display:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          تحميل نموذج طلب الفوترة
+        </button><br><br>
+        <div id="invoiceGenWarn" style="display:none;text-align:right;margin-bottom:12px;font-size:12px;font-weight:600;color:var(--orange)"></div>
         <button class="bnw" onclick="resetApp()">إعداد مستند جديد</button>
       </div>
     </div>
@@ -283,7 +288,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 </div>
 
 <script>
-let sb,curTpl=null,genBlob=null,genName='',logoData=null,logoW=0,logoH=0;
+let sb,curTpl=null,genBlob=null,genName='',genBlob2=null,genName2='',logoData=null,logoW=0,logoH=0;
 
 (async()=>{
   const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
@@ -294,7 +299,7 @@ let sb,curTpl=null,genBlob=null,genName='',logoData=null,logoW=0,logoH=0;
 })();
 function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
 
-async function logActivity(vars){
+async function logActivity(vars,templateName){
   try{
     const{data:{session}}=await sb.auth.getSession();
     if(!session)return;
@@ -302,7 +307,7 @@ async function logActivity(vars){
     const{error}=await sb.from('document_logs').insert({
       user_id:session.user.id,
       user_email:session.user.email,
-      template_name:T[curTpl].name,
+      template_name:templateName||T[curTpl].name,
       entity_name:entityName
     });
     if(error)console.error('log insert error:',error.code,error.message,error.details);
@@ -466,6 +471,17 @@ const T={
     {tp:'sep'},
     {id:'total_fees',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة',full:true},
     {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
+    {tp:'sep'},
+    {tp:'invoice-toggle',lb:'إنشاء نموذج طلب فوترة عميل أيضاً',hint:'سنستخدم اسم الجهة والأرقام والأتعاب تلقائياً من الأعلى — تبقى فقط تفاصيل العنوان المُجزأ وتفاصيل الخدمة المطلوب فوترتها'},
+    {id:'street',lb:'الشارع',tp:'text',ph:'شارع الملك فهد',invoiceOnly:true},
+    {id:'building_number',lb:'رقم المبنى',tp:'text',ph:'1234',invoiceOnly:true},
+    {id:'district',lb:'الحي',tp:'text',ph:'حي العليا',invoiceOnly:true},
+    {id:'additional_number',lb:'الرقم الإضافي',tp:'text',ph:'5678',invoiceOnly:true},
+    {id:'region',lb:'المنطقة',tp:'text',ph:'الرياض',invoiceOnly:true},
+    {id:'city',lb:'المدينة',tp:'text',ph:'الرياض',invoiceOnly:true},
+    {id:'postal_code',lb:'الرمز البريدي',tp:'text',ph:'12345',invoiceOnly:true},
+    {id:'service_location',lb:'موقع تقديم الخدمة',tp:'select',opts:['داخل المملكة','خارج المملكة'],invoiceOnly:true},
+    {lb:'الخدمات المطلوب الفوترة عنها',tp:'service-rows',invoiceOnly:true},
   ]},
   'contract-engagement':{name:'خطاب الارتباط - على مستوى العقد',file:'contract-engagement.docx',ext:'docx',fields:[
     {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
@@ -488,6 +504,17 @@ const T={
     {tp:'sep'},
     {id:'total_fees',lb:'الأتعاب المهنية',tp:'engfee',wn:'⚠️ أدخل المبلغ بدون ضريبة القيمة المضافة',full:true},
     {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
+    {tp:'sep'},
+    {tp:'invoice-toggle',lb:'إنشاء نموذج طلب فوترة عميل أيضاً',hint:'سنستخدم اسم الجهة والأرقام والأتعاب تلقائياً من الأعلى — تبقى فقط تفاصيل العنوان المُجزأ وتفاصيل الخدمة المطلوب فوترتها'},
+    {id:'street',lb:'الشارع',tp:'text',ph:'شارع الملك فهد',invoiceOnly:true},
+    {id:'building_number',lb:'رقم المبنى',tp:'text',ph:'1234',invoiceOnly:true},
+    {id:'district',lb:'الحي',tp:'text',ph:'حي العليا',invoiceOnly:true},
+    {id:'additional_number',lb:'الرقم الإضافي',tp:'text',ph:'5678',invoiceOnly:true},
+    {id:'region',lb:'المنطقة',tp:'text',ph:'الرياض',invoiceOnly:true},
+    {id:'city',lb:'المدينة',tp:'text',ph:'الرياض',invoiceOnly:true},
+    {id:'postal_code',lb:'الرمز البريدي',tp:'text',ph:'12345',invoiceOnly:true},
+    {id:'service_location',lb:'موقع تقديم الخدمة',tp:'select',opts:['داخل المملكة','خارج المملكة'],invoiceOnly:true},
+    {lb:'الخدمات المطلوب الفوترة عنها',tp:'service-rows',invoiceOnly:true},
   ]},
   'confirmation-letter':{name:'خطاب الإفادة',file:'confirmation-letter.docx',ext:'docx',fields:[
     {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
@@ -542,8 +569,22 @@ function renderForm(tid){
   const cont=document.getElementById('formFields');
   cont.innerHTML=''; logoData=null;
   const grid=document.createElement('div');grid.className='fgrid';
+  let invoiceExtra=null; // حاوية الحقول الإضافية لنموذج الفوترة — تظهر/تختفي مع خانة الاختيار
   tmpl.fields.forEach(f=>{
     if(f.tp==='sep'){const s=document.createElement('div');s.className='fsep';grid.appendChild(s);return;}
+    if(f.tp==='invoice-toggle'){
+      const w=document.createElement('div');w.className='ff full';
+      const lbl=document.createElement('label');lbl.style.cssText='display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700';
+      const chk=document.createElement('input');chk.type='checkbox';chk.id='f_invoice_toggle';
+      const txt=document.createElement('span');txt.textContent=f.lb;
+      lbl.appendChild(chk);lbl.appendChild(txt);w.appendChild(lbl);
+      if(f.hint){const h=document.createElement('div');h.className='hint';h.textContent=f.hint;w.appendChild(h);}
+      grid.appendChild(w);
+      invoiceExtra=document.createElement('div');invoiceExtra.id='invoiceExtraFields';invoiceExtra.className='fgrid full';invoiceExtra.style.display='none';
+      grid.appendChild(invoiceExtra);
+      chk.addEventListener('change',()=>{invoiceExtra.style.display=chk.checked?'':'none';});
+      return;
+    }
     const w=document.createElement('div');
     w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'?' full':'');
     if(f.lb){const l=document.createElement('label');l.textContent=f.lb;w.appendChild(l);}
@@ -699,33 +740,61 @@ function renderForm(tid){
       };
       wrap.appendChild(addBtn);w.appendChild(wrap);
     }
-    grid.appendChild(w);
+    (f.invoiceOnly&&invoiceExtra?invoiceExtra:grid).appendChild(w);
   });
   cont.appendChild(grid);
+}
+
+// مشتركة بين نموذج الفوترة المباشر وفوترة خطاب الارتباط — تجميع صفوف الخدمات المطلوب فوترتها
+function collectServiceRowsVars(){
+  const vars={};
+  const DEPT='خدمات المراجعة Audit Services';
+  const rowCount=parseInt(document.getElementById('svcRows')?.dataset.rowCount||'1');
+  for(let i=1;i<=4;i++){
+    const suf=i===1?'':'_'+i;
+    if(i<=rowCount){
+      vars['service_department'+suf]=DEPT;
+      vars['service_subcategory'+suf]=document.getElementById('f_service_subcategory_'+i)?.value||'';
+      vars['service_description'+suf]=document.getElementById('f_service_description_'+i)?.value||'';
+      vars['invoice_amount_before_vat'+suf]=parseFloat(document.getElementById('f_invoice_amount_before_vat_'+i)?.value||'')||0;
+    }else{
+      // hidden rows → send empty so template shows blank
+      vars['service_department'+suf]='';
+      vars['service_subcategory'+suf]='';
+      vars['service_description'+suf]='';
+      vars['invoice_amount_before_vat'+suf]='';
+    }
+  }
+  return vars;
+}
+
+// إن فعّل المستخدم خانة "إنشاء نموذج طلب فوترة أيضاً" بخطاب الارتباط — يبني بيانات نموذج الفوترة
+// بدمج ما يُشتق تلقائياً من حقول خطاب الارتباط (اسم الجهة، الأرقام، الأتعاب) مع الحقول الإضافية المُدخلة يدوياً (العنوان المُجزأ + الخدمات)
+function collectInvoiceVarsFromEngagement(){
+  if(!document.getElementById('f_invoice_toggle')?.checked)return null;
+  const vars={};
+  vars['entity_name']=document.getElementById('f_entity_name')?.value||'';
+  vars['unified_number']=document.getElementById('f_unified_number')?.value||'';
+  vars['vat_registration_number']=document.getElementById('f_tax_number')?.value||'';
+  vars['engagement_letter_number']=document.getElementById('f_letter_number')?.value||'';
+  const dateEl=document.getElementById('f_gregorian_date');
+  vars['engagement_letter_date']=dateEl?fmtDate(dateEl.value):'';
+  vars['contract_value_before_vat']=parseFloat((document.getElementById('f_total_fees')?.value||'').replace(/,/g,''))||0;
+  ['street','building_number','district','additional_number','region','city','postal_code'].forEach(id=>{
+    vars[id]=document.getElementById('f_'+id)?.value||'';
+  });
+  vars['service_location']=document.getElementById('f_service_location')?.value||'';
+  Object.assign(vars,collectServiceRowsVars());
+  return vars;
 }
 
 function collectVars(tid){
   const tmpl=T[tid],vars={};
   tmpl.fields.forEach(f=>{
-    if(f.tp==='sep'||f.tp==='logo')return;
+    if(f.tp==='sep'||f.tp==='logo'||f.tp==='invoice-toggle')return;
+    if(f.invoiceOnly)return; // تُجمَّع عبر collectInvoiceVarsFromEngagement بدلاً من مستند خطاب الارتباط نفسه
     if(f.tp==='service-rows'){
-      const DEPT='خدمات المراجعة Audit Services';
-      const rowCount=parseInt(document.getElementById('svcRows')?.dataset.rowCount||'1');
-      for(let i=1;i<=4;i++){
-        const suf=i===1?'':'_'+i;
-        if(i<=rowCount){
-          vars['service_department'+suf]=DEPT;
-          vars['service_subcategory'+suf]=document.getElementById('f_service_subcategory_'+i)?.value||'';
-          vars['service_description'+suf]=document.getElementById('f_service_description_'+i)?.value||'';
-          vars['invoice_amount_before_vat'+suf]=parseFloat(document.getElementById('f_invoice_amount_before_vat_'+i)?.value||'')||0;
-        }else{
-          // hidden rows → send empty so template shows blank
-          vars['service_department'+suf]='';
-          vars['service_subcategory'+suf]='';
-          vars['service_description'+suf]='';
-          vars['invoice_amount_before_vat'+suf]='';
-        }
-      }
+      Object.assign(vars,collectServiceRowsVars());
       return;
     }
     if(!f.id&&f.tp!=='engfee')return;
@@ -779,7 +848,10 @@ function buildName(tid,vars){
 
 function validate(tid){
   const tmpl=T[tid];
+  const wantsInvoice=document.getElementById('f_invoice_toggle')?.checked;
   for(const f of tmpl.fields){
+    if(f.tp==='invoice-toggle')continue;
+    if(f.invoiceOnly&&!wantsInvoice)continue;
     if(f.tp==='service-rows'){
       const rowCount=parseInt(document.getElementById('svcRows')?.dataset.rowCount||'1');
       for(let i=1;i<=rowCount;i++){
@@ -826,11 +898,15 @@ async function genDoc(){
   if(err){document.getElementById('formErrMsg').textContent=err;document.getElementById('formErr').classList.add('show');return;}
   document.getElementById('formErr').classList.remove('show');
   setLoad(true);
+  genBlob2=null;genName2='';
+  document.getElementById('btnDl2').style.display='none';
+  document.getElementById('invoiceGenWarn').style.display='none';
   try{
     const tmpl=T[curTpl],vars=collectVars(curTpl);
     genName=buildName(curTpl,vars);
     if(tmpl.ext==='xlsx'){
-      await procExcel(vars,tmpl.file);
+      genBlob=await procExcel(vars,tmpl.file);
+      document.getElementById('btnDl').onclick=()=>dlBlob(genBlob,genName);
     }else{
       const{data,error}=await sb.storage.from('templates').download(tmpl.file);
       if(error)throw new Error('فشل تحميل النموذج: '+error.message);
@@ -841,6 +917,23 @@ async function genDoc(){
     setStep(3);
     document.getElementById('sucMsg').textContent=genName;
     logActivity(vars);
+
+    // نموذج فوترة مرتبط (اختياري) — فقط لو المستخدم فعّل الخانة بخطاب الارتباط
+    const invoiceVars=collectInvoiceVarsFromEngagement();
+    if(invoiceVars){
+      try{
+        genBlob2=await procExcel(invoiceVars,'invoice-request.xlsx');
+        genName2=buildName('invoice-request',invoiceVars);
+        const btn2=document.getElementById('btnDl2');
+        btn2.style.display='';
+        btn2.onclick=()=>dlBlob(genBlob2,genName2);
+        logActivity(invoiceVars,T['invoice-request'].name);
+      }catch(e2){
+        const w=document.getElementById('invoiceGenWarn');
+        w.textContent='تم إعداد خطاب الارتباط بنجاح، لكن تعذّر توليد نموذج الفوترة: '+e2.message+' — يمكنك إعداده لاحقاً من نموذج الفوترة المباشر.';
+        w.style.display='';
+      }
+    }
   }catch(e){
     document.getElementById('formErrMsg').textContent='حدث خطأ: '+e.message;
     document.getElementById('formErr').classList.add('show');
@@ -868,8 +961,7 @@ async function procExcel(vars,templateFile){
     body:JSON.stringify({templateFile,vars})
   });
   if(!resp.ok){let e={error:'فشل التوليد'};try{e=await resp.json();}catch(x){}throw new Error(e.error);}
-  const blob=await resp.blob();
-  genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
+  return await resp.blob();
 }
 
 function repVarsPptx(text,vars){
@@ -1062,7 +1154,9 @@ function dlBlob(blob,name){
 }
 
 function resetApp(){
-  curTpl=null;genBlob=null;
+  curTpl=null;genBlob=null;genBlob2=null;genName2='';
+  document.getElementById('btnDl2').style.display='none';
+  document.getElementById('invoiceGenWarn').style.display='none';
   document.querySelectorAll('.hcard').forEach(c=>c.classList.remove('hcard-open'));
   setStep(1);
 }
