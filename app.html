@@ -574,8 +574,9 @@ function renderForm(tid){
     }else if(f.tp==='fiscal'){
       const s=document.createElement('select');s.id='f_'+f.id;
       const yr=new Date().getFullYear();
+      const DEFAULT_FISCAL='2025/12/31'; // الأكثر استخدام حالياً — حدّثها هنا إذا تغيّرت السنة الأكثر شيوعاً
       [(yr-1)+'/12/31',yr+'/12/31',(yr+1)+'/12/31','أخرى'].forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;s.appendChild(op);});
-      s.value=yr+'/12/31';
+      s.value=DEFAULT_FISCAL;
       // Add date picker for custom fiscal year
       const dateWrap=document.createElement('div');dateWrap.id='fiscal_custom_wrap';dateWrap.style.cssText='display:none;margin-top:8px';
       const dateInp=document.createElement('input');dateInp.type='date';dateInp.id='fiscal_custom_date';
