@@ -8,6 +8,7 @@ const ALLOWED_TEMPLATES = new Set([
   'entity-engagement.docx',
   'contract-engagement.docx',
   'confirmation-letter.docx',
+  'confirmation-letter-contract.docx',
 ]);
 
 function escXml(v) {
