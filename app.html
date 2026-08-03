@@ -207,18 +207,24 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
         </div>
       </div>
 
-      <!-- خطاب إفادة (direct) -->
-      <div class="hcard" onclick="selAndGo('confirmation-letter')">
-        <div class="hcard-main">
+      <!-- خطاب إفادة (branched) -->
+      <div class="hcard" id="hc-confirmation">
+        <div class="hcard-main" onclick="toggleCard('confirmation')">
           <div class="hcard-icon">✉️</div>
           <div class="hcard-meta">
             <h3>خطاب إفادة</h3>
             <p>إنشاء خطابات الإفادة عن حالة المراجعة</p>
           </div>
         </div>
-        <div class="hcard-footer">
-          <span>إنشاء مستند</span>
-          <span>←</span>
+        <div class="hcard-footer" onclick="toggleCard('confirmation')">
+          <span>اختر مستوى الخطاب</span>
+          <div class="hcard-chev">▼</div>
+        </div>
+        <div class="hcard-body">
+          <div class="hcard-subs">
+            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('entity-confirmation-letter')">على مستوى المنشأة <span>←</span></button>
+            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('contract-confirmation-letter')">على مستوى العقد <span>←</span></button>
+          </div>
         </div>
       </div>
 
@@ -516,13 +522,23 @@ const T={
     {id:'service_location',lb:'موقع تقديم الخدمة',tp:'select',opts:['داخل المملكة','خارج المملكة'],invoiceOnly:true},
     {lb:'الخدمات المطلوب الفوترة عنها',tp:'service-rows',invoiceOnly:true},
   ]},
-  'confirmation-letter':{name:'خطاب الإفادة',file:'confirmation-letter.docx',ext:'docx',fields:[
+  'entity-confirmation-letter':{name:'خطاب الإفادة - على مستوى المنشأة',file:'confirmation-letter.docx',ext:'docx',fields:[
     {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
+    {id:'fiscal_year',lb:'العام المالي',tp:'fiscal'},
+  ]},
+  'contract-confirmation-letter':{name:'خطاب الإفادة - على مستوى العقد',file:'confirmation-letter-contract.docx',ext:'docx',fields:[
+    {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
+    {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
+    {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
+    {tp:'sep'},
+    {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
+    {id:'Project_Name',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
     {id:'fiscal_year',lb:'العام المالي',tp:'fiscal'},
   ]},
   'invoice-request':{name:'نموذج طلب فوترة عميل',file:'invoice-request.xlsx',ext:'xlsx',fields:[
@@ -842,7 +858,7 @@ function collectVars(tid){
 }
 
 function buildName(tid,vars){
-  const m={'entity-proposal':'العرض الفني والمالي_على مستوى المنشأة','contract-proposal':'العرض الفني والمالي_على مستوى العقد','entity-engagement':'خطاب الارتباط_على مستوى المنشأة','contract-engagement':'خطاب الارتباط_على مستوى العقد','confirmation-letter':'خطاب الإفادة','invoice-request':'نموذج طلب فوترة'};
+  const m={'entity-proposal':'العرض الفني والمالي_على مستوى المنشأة','contract-proposal':'العرض الفني والمالي_على مستوى العقد','entity-engagement':'خطاب الارتباط_على مستوى المنشأة','contract-engagement':'خطاب الارتباط_على مستوى العقد','entity-confirmation-letter':'خطاب الإفادة_على مستوى المنشأة','contract-confirmation-letter':'خطاب الإفادة_على مستوى العقد','invoice-request':'نموذج طلب فوترة'};
   const ext=T[tid].ext;
   const parts=[m[tid],vars['entity_name']||vars['اسم_الجهة']||'',vars['رقم_العرض']||vars['letter_number']||vars['engagement_letter_number']||''].filter(Boolean);
   return parts.join('_')+'.'+ext;
