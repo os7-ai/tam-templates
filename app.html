@@ -287,6 +287,23 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
           تحميل نموذج طلب الفوترة
         </button><br><br>
         <div id="invoiceGenWarn" style="display:none;text-align:right;margin-bottom:12px;font-size:12px;font-weight:600;color:var(--orange)"></div>
+
+        <div id="emailSection" style="display:none;text-align:right;margin:20px 0 24px;padding-top:20px;border-top:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px">📧 رسالة جاهزة للبريد الإلكتروني</div>
+          <div class="fgrid" style="margin-bottom:12px">
+            <div class="ff">
+              <label>اسم العميل (اختياري)</label>
+              <input type="text" id="emailClientName" placeholder="اسم الأستاذ/ة" oninput="updateEmailPreview()">
+            </div>
+            <div class="ff" id="emailProjectWrap" style="display:none">
+              <label>اسم المشروع</label>
+              <input type="text" id="emailProjectName" placeholder="مشروع بحث الحالات الاجتماعية" oninput="updateEmailPreview()">
+            </div>
+          </div>
+          <textarea id="emailPreview" readonly style="width:100%;min-height:220px;padding:14px;border:1.5px solid var(--border);border-radius:10px;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--text);background:var(--bg);resize:vertical;line-height:1.8;white-space:pre-wrap"></textarea>
+          <button class="bnw" style="margin-top:10px" id="btnCopyEmail" onclick="copyEmailText()">نسخ الرسالة</button>
+        </div>
+
         <button class="bnw" onclick="resetApp()">إعداد مستند جديد</button>
       </div>
     </div>
@@ -918,6 +935,9 @@ async function genDoc(){
   genBlob2=null;genName2='';
   document.getElementById('btnDl2').style.display='none';
   document.getElementById('invoiceGenWarn').style.display='none';
+  document.getElementById('emailSection').style.display='none';
+  document.getElementById('emailClientName').value='';
+  document.getElementById('emailProjectName').value='';
   try{
     const tmpl=T[curTpl],vars=collectVars(curTpl);
     genName=buildName(curTpl,vars);
@@ -934,6 +954,13 @@ async function genDoc(){
     setStep(3);
     document.getElementById('sucMsg').textContent=genName;
     logActivity(vars);
+
+    // رسالة إيميل جاهزة — فقط لعروض الفني والمالي (مستقلة تماماً عن بيانات المستند المولَّد)
+    if(curTpl==='entity-proposal'||curTpl==='contract-proposal'){
+      document.getElementById('emailProjectWrap').style.display=curTpl==='contract-proposal'?'':'none';
+      document.getElementById('emailSection').style.display='';
+      updateEmailPreview();
+    }
 
     // نموذج فوترة مرتبط (اختياري) — فقط لو المستخدم فعّل الخانة بخطاب الارتباط
     const invoiceVars=collectInvoiceVarsFromEngagement();
@@ -1170,10 +1197,47 @@ function dlBlob(blob,name){
   document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
+// يبني نص رسالة البريد الجاهزة للعرض الفني والمالي — يختلف بفقرة الخدمة (منشأة/عقد) وسطر "عناية الأستاذ" الاختياري
+function buildProposalEmailText(tid, entityName, clientName, projectName){
+  const attnLine = clientName ? `عناية الأستاذ / ${clientName}                                             وفقه الله\n` : '';
+  const serviceLine = tid==='contract-proposal'
+    ? `نرفق لكم العرض الفني والمالي الخاص بخدمات التحقق من نسبة المحتوى المحلي على مستوى العقد لمشروع (${projectName || 'اسم المشروع'}).`
+    : `نرفق لكم العرض الفني والمالي الخاص بخدمات التحقق من نسبة المحتوى المحلي على مستوى المنشأة.`;
+  return `السادة / ${entityName || 'اسم الجهة'}                          سلمهم الله
+${attnLine}
+السلام عليكم ورحمة الله وبركاته،،
+
+نأمل أن تكونوا بخير وعافية، ويسعدنا أن نعرب عن شكرنا وتقديرنا لتواصلكم الكريم وثقتكم بمجموعة ألفا الاستشارية.
+
+${serviceLine}
+
+نؤكد أن مدة صلاحية هذا العرض هي أسبوعان من تاريخ هذا العرض، ويسعدنا تزويدكم بأي إيضاحات أو معلومات إضافية قد تحتاجونها.
+
+وتفضلوا بقبول فائق الاحترام والتقدير،،`;
+}
+
+function updateEmailPreview(){
+  const entityName=document.getElementById('f_اسم_الجهة')?.value||'';
+  const clientName=document.getElementById('emailClientName')?.value.trim()||'';
+  const projectName=document.getElementById('emailProjectName')?.value.trim()||'';
+  document.getElementById('emailPreview').value=buildProposalEmailText(curTpl,entityName,clientName,projectName);
+}
+
+function copyEmailText(){
+  const btn=document.getElementById('btnCopyEmail');
+  navigator.clipboard.writeText(document.getElementById('emailPreview').value).then(()=>{
+    const original=btn.textContent;
+    btn.textContent='✓ تم النسخ';
+    btn.disabled=true;
+    setTimeout(()=>{btn.textContent=original;btn.disabled=false;},1500);
+  }).catch(()=>{});
+}
+
 function resetApp(){
   curTpl=null;genBlob=null;genBlob2=null;genName2='';
   document.getElementById('btnDl2').style.display='none';
   document.getElementById('invoiceGenWarn').style.display='none';
+  document.getElementById('emailSection').style.display='none';
   document.querySelectorAll('.hcard').forEach(c=>c.classList.remove('hcard-open'));
   setStep(1);
 }
