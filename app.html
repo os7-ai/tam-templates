@@ -1201,7 +1201,9 @@ function dlBlob(blob,name){
 function buildProposalEmailText(tid, entityName, clientName, projectName){
   const attnLine = clientName ? `عناية الأستاذ / ${clientName}                                             وفقه الله\n` : '';
   const serviceLine = tid==='contract-proposal'
-    ? `نرفق لكم العرض الفني والمالي الخاص بخدمات التحقق من نسبة المحتوى المحلي على مستوى العقد لمشروع (${projectName || 'اسم المشروع'}).`
+    ? (projectName
+        ? `نرفق لكم العرض الفني والمالي الخاص بخدمات التحقق من نسبة المحتوى المحلي على مستوى العقد لمشروع (${projectName}).`
+        : `نرفق لكم العرض الفني والمالي الخاص بخدمات التحقق من نسبة المحتوى المحلي على مستوى العقد.`)
     : `نرفق لكم العرض الفني والمالي الخاص بخدمات التحقق من نسبة المحتوى المحلي على مستوى المنشأة.`;
   return `السادة / ${entityName || 'اسم الجهة'}                          سلمهم الله
 ${attnLine}
