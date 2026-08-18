@@ -355,37 +355,80 @@ function extractJson(text){
   catch(err){throw new Error('تعذّر قراءة نتيجة التحليل ('+err.message+') — قد يكون الرد انقطع قبل اكتماله. آخر 200 حرف: '+cleaned.slice(-200));}
 }
 
-const SYSTEM_PROMPT=`أنت محلل مالي متخصص في تدقيق المحتوى المحلي وفق منهجية هيئة المحتوى المحلي والمشتريات الحكومية السعودية.
-ستُعطى: (1) صورة قائمة الدخل لمنشأة، (2) مصفوفة صفوف من ميزان المراجعة (Excel).
+// ملاحظة معمارية: نقسّم التحليل لطلبين منفصلين بدل طلب واحد ضخم. الحسابات في ميزان
+// المراجعة قد تكون عشرات أو مئات، وتوليد تصنيف لكل حساب في رد واحد طويل قد يتجاوز
+// مهلة تنفيذ الدالة على Netlify قبل ما يوصل أي بايت للمتصفح (يظهر كـ"رد فارغ" رغم
+// نجاح الطلب) — فنقسّم حسابات الميزان لدفعات صغيرة، كل دفعة طلب منفصل سريع.
+const LANG_NOTE='ملاحظة لغوية مهمة: قد تكون قائمة الدخل بلغة وميزان المراجعة بلغة أخرى (عربي/إنجليزي أو مزيج). اربط واستدل حسب المعنى والمحتوى المالي الفعلي وليس تطابق النص حرفياً — مثلاً "Salaries and Wages" تقابل "رواتب وأجور". لا تترجم النصوص المستخرجة نفسها، أخرجها كما وردت في مصدرها الأصلي.';
 
-ملاحظة لغوية مهمة: قد تكون قائمة الدخل بالعربية وميزان المراجعة بالإنجليزية (أو العكس، أو مزيج). اربط البنود بالحسابات حسب المعنى والمحتوى المالي الفعلي وليس تطابق النص حرفياً — مثلاً "Salaries and Wages" في الميزان تقابل "رواتب وأجور" في قائمة الدخل. عند إخراج subItem استخدم النص كما ورد فعلياً في صورة قائمة الدخل بلغتها الأصلية، وعند إخراج name للحساب استخدم النص كما ورد فعلياً في ميزان المراجعة بلغته الأصلية — لا تترجم النصوص نفسها، فقط استخدم الفهم الدلالي للربط والتصنيف.
+const NOTES_SYSTEM_PROMPT=`أنت محلل مالي متخصص في تدقيق المحتوى المحلي وفق منهجية هيئة المحتوى المحلي والمشتريات الحكومية السعودية.
+ستُعطى صورة قائمة الدخل لمنشأة فقط (بدون ميزان المراجعة في هذه الخطوة).
+${LANG_NOTE}
 
-مهمتك بالضبط:
-1. من صورة قائمة الدخل، استخرج البنود الفرعية (الإيضاحات) لمصاريف قائمة الدخل فقط — توقف عند بند الزكاة ولا تُدرجه ولا أي بند بعده (الزكاة تُصنَّف لاحقاً على مستوى الحسابات فقط، وليست ضمن هذه البنود). لا تُدرج بنود الإيرادات/المبيعات إطلاقاً — هذا الجدول لمصاريف قائمة الدخل فقط. لكل بند فرعي حدد: اسمه كما ورد، البند الرئيسي الذي ينتمي له (اختر كوداً واحداً فقط من: CS=تكلفة المبيعات، GE=مصاريف عمومية وإدارية، SE=مصاريف بيعية وتسويقية، FIN=تكاليف تمويل، DEP=اهلاك، LOS=خسائر، PROV=مخصصات، OTH=أمور أخرى)، الإجمالي كرقم، وتصنيف المحتوى المحلي (اختر قيمة واحدة فقط من هذه القائمة بالضبط: ${JSON.stringify(LOCAL_CONTENT_NOTES)}).
-2. من مصفوفة ميزان المراجعة، استخرج فقط حسابات المصاريف التي لها صلة ببنود قائمة الدخل التي استخرجتها في الخطوة 1: رقم الحساب (إن وجد)، اسم الحساب، الإجمالي كرقم. تجاهل تماماً: حسابات الإيرادات/المبيعات/الدخل الآخر، وحسابات المركز المالي (الأصول، الخصوم/الالتزامات، حقوق الملكية)، والحسابات ذات الرصيد صفر. الميزان غالباً يحتوي على بنود كثيرة خارج نطاق هذا التحليل — لا تُدرج إلا حسابات المصاريف فعلياً.
-3. اربط (Link) كل حساب من الميزان بأحد بنود قائمة الدخل التي استخرجتها في الخطوة 1، عبر "linkIndex" وهو الفهرس (0-based) لذلك البند داخل مصفوفة notes التي أنشأتها.
-4. صنّف كل حساب بشكل مستقل حسب طبيعته الفعلية (لا تنسخ تصنيف البند تلقائياً) ضمن قائمة تصنيف المحتوى المحلي التالية بالضبط (تشمل قيمة إضافية للتكاليف غير المسموح بها): ${JSON.stringify(LOCAL_CONTENT_ACCOUNTS)}.
-5. مهم: إذا كان ملف ميزان المراجعة نفسه يحتوي على عمود/أعمدة فيها تصنيف العميل الخاص للحساب (مثل "التصنيف الرئيسي" أو "البند" أو ما شابه على مستوى البند الرئيسي، وعمود آخر على مستوى بند فرعي/تفصيلي)، انسخ قيمة هذين العمودين كما وردت حرفياً في الملف لكل حساب إلى الحقلين mainClassInFile و subClassInFile — لا تخترع قيمة ولا تحاول تصنيفها بنفسك، فقط انقلها كما هي إن وُجدت، واتركها فارغة "" إن لم يوجد عمود مماثل في الملف.
+استخرج البنود الفرعية (الإيضاحات) لمصاريف قائمة الدخل فقط — توقف عند بند الزكاة ولا تُدرجه ولا أي بند بعده (الزكاة تُصنَّف لاحقاً على مستوى الحسابات في خطوة أخرى). لا تُدرج بنود الإيرادات/المبيعات إطلاقاً. لكل بند فرعي حدد: subItem (اسمه كما ورد بلغته الأصلية)، mainCode (كود واحد فقط من: CS=تكلفة المبيعات، GE=مصاريف عمومية وإدارية، SE=مصاريف بيعية وتسويقية، FIN=تكاليف تمويل، DEP=اهلاك، LOS=خسائر، PROV=مخصصات، OTH=أمور أخرى)، total (رقم)، localContent (قيمة واحدة فقط من هذه القائمة بالضبط: ${JSON.stringify(LOCAL_CONTENT_NOTES)}).
 
 أخرج JSON فقط بدون أي نص إضافي وبدون Markdown، بالشكل التالي بالضبط:
-{"notes":[{"subItem":"نص","mainCode":"GE","total":12345.6,"localContent":"نص من القائمة"}],"accounts":[{"number":"نص أو فارغ","name":"نص","total":12345.6,"mainClassInFile":"نص كما ورد في الملف أو فارغ","subClassInFile":"نص كما ورد في الملف أو فارغ","linkIndex":0,"localContent":"نص من القائمة"}]}`;
+{"notes":[{"subItem":"نص","mainCode":"GE","total":12345.6,"localContent":"نص من القائمة"}]}`;
+
+function buildAccountsSystemPrompt(notes){
+  return `أنت محلل مالي متخصص في تدقيق المحتوى المحلي وفق منهجية هيئة المحتوى المحلي والمشتريات الحكومية السعودية.
+${LANG_NOTE}
+
+بنود قائمة الدخل التالية استُخرجت مسبقاً من قائمة الدخل (استخدمها فقط للربط، فهرستها 0-based):
+${JSON.stringify(notes.map(n=>({subItem:n.subItem,mainCode:n.mainCode})))}
+
+سأعطيك الآن دفعة من صفوف ميزان المراجعة (قد تكون جزءاً من ملف أكبر مُقسَّم لدفعات، بعض الصفوف الأولى قد تكون عناوين/سياق عام كرره الملف الأصلي). لكل حساب مصروف فعلي فيها:
+1. تجاهل تماماً: حسابات الإيرادات/المبيعات/الدخل الآخر، وحسابات المركز المالي (الأصول، الخصوم/الالتزامات، حقوق الملكية)، والحسابات ذات الرصيد صفر، وأي صف عناوين/فارغ.
+2. استخرج: number (رقم الحساب إن وجد)، name (اسم الحساب كما ورد بلغته الأصلية)، total (رقم).
+3. إذا كان الملف نفسه يحتوي على عمود/أعمدة فيها تصنيف العميل الخاص للحساب (مثال أعمدة مثل "FS Mapping"/"البند الرئيسي" على مستوى البند الرئيسي، و"G&A Mapping"/"البند الفرعي" على مستوى أدق)، انسخ قيمتهما حرفياً كما وردتا إلى mainClassInFile و subClassInFile — لا تخترع قيمة، اتركها "" إن لم يوجد عمود مماثل.
+4. اربط الحساب بأحد البنود أعلاه عبر linkIndex (فهرس 0-based ضمن القائمة المعطاة لك أعلاه فقط).
+5. صنّف الحساب بشكل مستقل حسب طبيعته الفعلية (لا تنسخ تصنيف البند تلقائياً) ضمن قائمة تصنيف المحتوى المحلي التالية بالضبط: ${JSON.stringify(LOCAL_CONTENT_ACCOUNTS)}.
+
+أخرج JSON فقط بدون أي نص إضافي وبدون Markdown، بالشكل التالي بالضبط:
+{"accounts":[{"number":"نص أو فارغ","name":"نص","total":12345.6,"mainClassInFile":"نص أو فارغ","subClassInFile":"نص أو فارغ","linkIndex":0,"localContent":"نص من القائمة"}]}`;
+}
+
+// دفعات صغيرة — كل طلب يُنجَز خلال ثوانٍ بدل انتظار رد واحد ضخم قد يتجاوز مهلة الدالة
+const ACCOUNTS_BATCH_SIZE=35;
+
+function detectHeaderIdx(grid){
+  const i=grid.findIndex(row=>row.some(c=>typeof c==='string'&&/account|حساب/i.test(c)));
+  return i===-1?0:i;
+}
 
 async function analyze(){
   document.getElementById('uploadErr').classList.remove('show');
   document.getElementById('step1').classList.add('hidden');
   document.getElementById('analyzing').classList.remove('hidden');
   try{
-    const userContent=[
-      {type:'text',text:'ميزان المراجعة (مصفوفة صفوف مستخرجة من ملف Excel، أول صف غالباً عناوين):\n'+JSON.stringify(tbGrid)},
+    document.getElementById('analyzingTxt').textContent='جاري تحليل صورة قائمة الدخل…';
+    const notesContent=[
+      {type:'text',text:'صورة قائمة الدخل مرفقة.'},
       {type:'image',source:{type:'base64',media_type:isImage.mediaType,data:isImage.base64}}
     ];
-    const fullText=await callIncomeStream(SYSTEM_PROMPT,[{role:'user',content:userContent}],{
-      maxTokens:14000,
-      onDelta:(txt)=>{document.getElementById('analyzingTxt').textContent='جاري تحليل الصورة وربط الحسابات… ('+txt.length+' حرف مستلم)';}
-    });
-    const parsed=extractJson(fullText);
-    state.notes=(parsed.notes||[]).map(n=>({subItem:n.subItem||'',mainCode:n.mainCode||'GE',total:n.total??'',localContent:n.localContent||LOCAL_CONTENT_NOTES[0]}));
-    state.accounts=(parsed.accounts||[]).map(a=>({number:a.number||'',name:a.name||'',total:a.total??'',mainClassInFile:a.mainClassInFile||'',subClassInFile:a.subClassInFile||'',linkIndex:Number.isInteger(a.linkIndex)?a.linkIndex:0,localContent:a.localContent||LOCAL_CONTENT_ACCOUNTS[0]}));
+    const notesText=await callIncomeStream(NOTES_SYSTEM_PROMPT,[{role:'user',content:notesContent}],{maxTokens:3000});
+    const notesParsed=extractJson(notesText);
+    state.notes=(notesParsed.notes||[]).map(n=>({subItem:n.subItem||'',mainCode:n.mainCode||'GE',total:n.total??'',localContent:n.localContent||LOCAL_CONTENT_NOTES[0]}));
+    if(state.notes.length===0)throw new Error('لم يتم التعرف على أي بند في صورة قائمة الدخل — تأكد إن الصورة واضحة وتشمل البنود');
+
+    const headerIdx=detectHeaderIdx(tbGrid);
+    const context=tbGrid.slice(0,headerIdx+1);
+    const dataRows=tbGrid.slice(headerIdx+1);
+    const batches=[];
+    for(let i=0;i<dataRows.length;i+=ACCOUNTS_BATCH_SIZE)batches.push(dataRows.slice(i,i+ACCOUNTS_BATCH_SIZE));
+    if(batches.length===0)batches.push([]);
+
+    const accountsSystem=buildAccountsSystemPrompt(state.notes);
+    state.accounts=[];
+    for(let b=0;b<batches.length;b++){
+      document.getElementById('analyzingTxt').textContent='جاري تصنيف الحسابات… دفعة '+(b+1)+' من '+batches.length;
+      const batchContent=[{type:'text',text:JSON.stringify(context.concat(batches[b]))}];
+      const accText=await callIncomeStream(accountsSystem,[{role:'user',content:batchContent}],{maxTokens:6000});
+      const accParsed=extractJson(accText);
+      const rows=(accParsed.accounts||[]).map(a=>({number:a.number||'',name:a.name||'',total:a.total??'',mainClassInFile:a.mainClassInFile||'',subClassInFile:a.subClassInFile||'',linkIndex:Number.isInteger(a.linkIndex)&&a.linkIndex<state.notes.length?a.linkIndex:0,localContent:a.localContent||LOCAL_CONTENT_ACCOUNTS[0]}));
+      state.accounts=state.accounts.concat(rows);
+    }
+
     document.getElementById('analyzing').classList.add('hidden');
     document.getElementById('step2').classList.remove('hidden');
     renderNotesTable();
