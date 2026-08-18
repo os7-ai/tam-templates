@@ -99,23 +99,32 @@ function readColumnValues(sheetXml, col, firstRow, lastRow) {
  * populateTemplate
  * @param {string} sheetXml - نص XML الحالي لورقة "تصنيف الميزان" كما هو في القالب/آخر تشغيل.
  * @param {object} layer1 - مخرجات Layer 1 كاملة { mainLines: [...] }.
- * @param {object} layer2 - مخرجات Layer 2 كاملة { trialBalanceAccounts: [...] }.
- * @param {object} layer3 - مخرجات Layer 3 كاملة { classifiedAccounts: [...] }.
+ * @param {object} layer2 - مخرجات Layer 2 (أو layer2_reviewed) { trialBalanceAccounts: [...] }.
+ * @param {object} layer3 - مخرجات Layer 3 (أو layer3_reviewed) { classifiedAccounts: [...] }.
+ * @param {object} [reviewerDecisions] - قرارات مراجع اختيارية لهذا الـEngagement فقط
+ *        { mainLineCodeDecisions: { [mainLineName]: {status,chosenCode} } }. لا تُعدَّل
+ *        MAIN_LINE_CODE_MAP العام أبداً بسبب هذا المدخل — فقط يُستهلك مباشرة هنا.
  * @returns {{ sheetXml: string, unmappedMainLines: string[], truncatedNotes: number,
  *             truncatedAccounts: number, notesRowsUsed: number, accountsRowsUsed: number }}
  */
-function populateTemplate(sheetXml, layer1, layer2, layer3) {
+function populateTemplate(sheetXml, layer1, layer2, layer3, reviewerDecisions) {
   const writesByRow = new Map();
-  const unmappedMainLines = [];
+  const unmappedMainLines = []; // mainLines بلا كود محسوم (لا من MAIN_LINE_CODE_MAP ولا من قرار مراجع) — تُكتب جزئياً، لا تُحذف
 
   // ---------- المرحلة 1: تخصيص الأكواد الرئيسية + تجميع G7:G14 ----------
+  // الأولوية: قرار مراجع محسوم لهذا الـmainLine (خاص بهذا الـEngagement) ← MAIN_LINE_CODE_MAP
+  // العام. عدم الحسم في كلا المصدرين لا يعني تخطي البند، بل كتابته بلا كود (G فارغ).
+  const codeDecisions = (reviewerDecisions && reviewerDecisions.mainLineCodeDecisions) || {};
   const codeTotals = {}; // code -> sum(totalPerIncomeStatement)
-  const mainLineCode = new Map(); // mainLineName -> code
+  const mainLineCode = new Map(); // mainLineName -> code | null (null = معروف لكن غير محسوم)
 
   for (const ml of layer1.mainLines) {
-    const code = MAIN_LINE_CODE_MAP[ml.mainLineName];
-    if (!code) { unmappedMainLines.push(ml.mainLineName); continue; }
+    const decision = codeDecisions[ml.mainLineName];
+    const code = (decision && decision.status === 'Resolved' && decision.chosenCode)
+      ? decision.chosenCode
+      : (MAIN_LINE_CODE_MAP[ml.mainLineName] || null);
     mainLineCode.set(ml.mainLineName, code);
+    if (!code) { unmappedMainLines.push(ml.mainLineName); continue; }
     codeTotals[code] = (codeTotals[code] || 0) + Number(ml.totalPerIncomeStatement || 0);
   }
   for (const [code, total] of Object.entries(codeTotals)) {
@@ -139,16 +148,16 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
   let truncatedNotes = 0;
 
   for (const ml of layer1.mainLines) {
-    const code = mainLineCode.get(ml.mainLineName);
-    if (!code) continue; // mainLine غير مُخصَّص لكود — لا يُكتب، ظهر في unmappedMainLines
+    // code قد تكون null (mainLine معروف لكن كوده غير محسوم بعد) — يُكتب البند كاملاً
+    // إلا عمود G نفسه (وفق قرارك: لا اختراع كود، لا حذف بيانات حقيقية). dKey يتعامل
+    // مع code=null بإنتاج نفس نص الفاصل الذي تُنتجه صيغة القالب عند ترك G فارغاً.
+    const code = mainLineCode.get(ml.mainLineName); // string | null (كلا الحالتين تُكتب)
 
     if (Array.isArray(ml.subLines) && ml.subLines.length > 0) {
       for (const sl of ml.subLines) {
         if (notesRow > NOTES_FIRST_ROW + NOTES_MAX_ROWS - 1) { truncatedNotes++; continue; }
-        const w = [
-          { col: 'F', type: 'str', value: sl.subLineName },
-          { col: 'G', type: 'str', value: code },
-        ];
+        const w = [{ col: 'F', type: 'str', value: sl.subLineName }];
+        if (code) w.push({ col: 'G', type: 'str', value: code }); // بلا كتابة إن لم يُحسم — G يبقى فارغاً فعلياً
         if (sl.amount !== undefined && sl.amount !== null) {
           w.push({ col: 'H', type: 'n', value: roundForDisplay(sl.amount) });
         }
@@ -165,10 +174,8 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
       // يحمل بيانات Layer 1 نفسها (اسم البند + إجماليه) فقط لإتاحة الربط بعمود S،
       // وليس اختراعاً لإيضاح غير موجود (K تبقى فارغة عمداً).
       if (notesRow > NOTES_FIRST_ROW + NOTES_MAX_ROWS - 1) { truncatedNotes++; continue; }
-      const w = [
-        { col: 'F', type: 'str', value: ml.mainLineName },
-        { col: 'G', type: 'str', value: code },
-      ];
+      const w = [{ col: 'F', type: 'str', value: ml.mainLineName }];
+      if (code) w.push({ col: 'G', type: 'str', value: code });
       if (ml.totalPerIncomeStatement !== undefined && ml.totalPerIncomeStatement !== null) {
         w.push({ col: 'H', type: 'n', value: roundForDisplay(ml.totalPerIncomeStatement) });
       }
@@ -219,13 +226,25 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
     // subLine حقيقي أو mainLine بلا إيضاح). حسابات Unmapped (ميزانية عمومية/إيراد/
     // بعد الزكاة) لا تُكتب في جدول الحسابات إطلاقاً — تبقى فقط في مخرجات Layer 2/4
     // كسجل تدقيق داخلي (Audit Trail)، دون أي صف مقابل لها في القالب النهائي.
+    // ثلاث حالات ضمن النطاق (تُكتب دائماً)، وحالة رابعة خارج النطاق (لا تُكتب):
+    //  (أ) subLine محسوم → S = قيمة D المطابقة.
+    //  (ب) mainLine بلا subLines فعلية (mainOnly) → S = قيمة D الخاصة بالصف التمثيلي.
+    //  (ج) mainLine معروف ويملك subLines فعلية، لكن subLine هذا الحساب غير محسوم
+    //      (Review Required — تعدد احتمالات أو لم يُبتّ فيه المراجع بعد) → S تبقى
+    //      فارغة تماماً (لا اختراع subLine)؛ الحساب يظهر بكامل بياناته الأخرى ولا
+    //      يدخل في أي SUMIFS على مستوى subLine.
+    //  (د) لا mainLine على الإطلاق (خارج نطاق قائمة الدخل) → لا يُكتب إطلاقاً.
     let sValue = null;
+    let writeAnyway = false;
     if (acc.mappedSubLineId && subLineRowKey.has(acc.mappedSubLineId)) {
       sValue = subLineRowKey.get(acc.mappedSubLineId);
     } else if (acc.mappedMainLineName && mainOnlyRowKey.has(acc.mappedMainLineName)) {
       sValue = mainOnlyRowKey.get(acc.mappedMainLineName);
+    } else if (acc.mappedMainLineName) {
+      sValue = null; // حالة (ج): S تبقى فارغة عمداً
+      writeAnyway = true;
     } else {
-      continue; // خارج نطاق قائمة الدخل — لا يُكتب.
+      continue; // حالة (د): خارج نطاق قائمة الدخل — لا يُكتب.
     }
 
     if (accountsRowsUsed >= ACCOUNTS_MAX_ROWS && !accountRowByNumber.has(norm(acc.accountNumber))) {
