@@ -306,63 +306,28 @@ function showUploadErr(msg){
   document.getElementById('uploadErr').classList.add('show');
 }
 
-// ── نداء الذكاء الاصطناعي (streaming) — نفس نمط المصنّف لكن عبر income-stream (Sonnet) ──
-async function callIncomeStream(systemText,messages,{maxTokens=12000,onDelta}={}){
-  const res=await fetch('/.netlify/functions/income-stream',{
+// ── نداء الذكاء الاصطناعي (Sonnet، غير مبثوث) ──
+// نداء غير مبثوث (non-streaming) عبر income-call — ننتظر الرد الكامل بدل قراءته
+// كـ SSE. تحوّلنا لهذا النمط لأن الرد المبثوث كان ينقطع فعلياً بعد بداية كتلة
+// "thinking" الداخلية للموديل قبل وصول أي نص للمتصفح (رغم اكتمال الطلب بنجاح من
+// طرف الخادم في كل مرة) — على الأغلب بسبب طبقة وسيطة/CDN لا تُمرر هذا النوع من
+// المحتوى المبثوث بشكل صحيح. الرد هنا كامل دفعة واحدة فلا حاجة لأي منطق أحداث.
+async function callIncome(systemText,messages,maxTokens=6000){
+  const res=await fetch('/.netlify/functions/income-call',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},
     body:JSON.stringify({max_tokens:maxTokens,system:[{type:'text',text:systemText}],messages})
   });
-  if(!res.ok||!res.body){
-    const errData=await res.json().catch(()=>({}));
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){
     if(res.status===401){window.location.href='login.html';}
-    const msg=(errData&&errData.error)||res.statusText;
+    const msg=(data&&data.error)||res.statusText;
     throw new Error(typeof msg==='string'?msg:('خطأ '+res.status));
   }
-  const reader=res.body.getReader();
-  const decoder=new TextDecoder();
-  let buffer='',fullText='',rawTail='';
-  // تشخيص احترازي: نتتبع كل أنواع الأحداث وأنواع الـ delta المستلمة، وسبب التوقف — لو
-  // رجع رد بدون نص فعلي، هذي المعلومات توضح السبب الحقيقي (مثلاً توقف مبكر، أو نوع محتوى
-  // غير متوقع) بدل ما نخمّن
-  const eventCounts={}, deltaTypes={};
-  let stopReason='';
-  while(true){
-    const{done,value}=await reader.read();
-    if(done)break;
-    const chunk=decoder.decode(value,{stream:true});
-    rawTail=(rawTail+chunk).slice(-500);
-    buffer+=chunk;
-    const events=buffer.split('\n\n');
-    buffer=events.pop()||'';
-    for(const evt of events){
-      let eventType='',data='';
-      for(const line of evt.split('\n')){
-        if(line.startsWith('event: '))eventType=line.slice(7).trim();
-        else if(line.startsWith('data: '))data=line.slice(6);
-      }
-      if(!eventType&&!data)continue;
-      eventCounts[eventType||'(بدون نوع)']=(eventCounts[eventType||'(بدون نوع)']||0)+1;
-      if(!data)continue;
-      let parsed;try{parsed=JSON.parse(data);}catch(e){continue;}
-      if(eventType==='content_block_delta'&&parsed.delta){
-        const dt=parsed.delta.type||'?';
-        deltaTypes[dt]=(deltaTypes[dt]||0)+1;
-        if(dt==='text_delta'){
-          fullText+=parsed.delta.text;
-          if(onDelta)onDelta(fullText);
-        }
-      }else if(eventType==='message_delta'&&parsed.delta&&parsed.delta.stop_reason){
-        stopReason=parsed.delta.stop_reason;
-      }else if(eventType==='error'){
-        throw new Error((parsed.error&&parsed.error.message)||'خطأ من خدمة التحليل');
-      }
-    }
+  if(!data.text||!data.text.trim()){
+    throw new Error('لم يصل نص فعلي من النموذج. سبب التوقف: '+(data.stop_reason||'غير معروف')+' — جرّب مرة أخرى، ولو تكرر قلّل حجم الدفعة');
   }
-  if(!fullText){
-    throw new Error('لم يصل نص فعلي رغم اكتمال الاتصال بنجاح. تفاصيل تشخيصية — أنواع الأحداث: '+JSON.stringify(eventCounts)+' | أنواع delta: '+JSON.stringify(deltaTypes)+' | سبب التوقف: '+(stopReason||'غير معروف')+' | آخر جزء مستلم: '+rawTail.slice(-200));
-  }
-  return fullText;
+  return data.text;
 }
 function extractJson(text){
   if(!text||!text.trim())throw new Error('لم يصل أي رد من نموذج التحليل — غالباً انقطع الاتصال بسبب حجم البيانات المرسلة (صورة كبيرة أو ميزان مراجعة طويل). جرّب صورة أصغر/أوضح أو ميزان أقل عدد صفوف، أو أعد المحاولة');
@@ -424,7 +389,7 @@ async function analyze(){
       {type:'text',text:'صورة قائمة الدخل مرفقة.'},
       {type:'image',source:{type:'base64',media_type:isImage.mediaType,data:isImage.base64}}
     ];
-    const notesText=await callIncomeStream(NOTES_SYSTEM_PROMPT,[{role:'user',content:notesContent}],{maxTokens:3000});
+    const notesText=await callIncome(NOTES_SYSTEM_PROMPT,[{role:'user',content:notesContent}],4000);
     const notesParsed=extractJson(notesText);
     state.notes=(notesParsed.notes||[]).map(n=>({subItem:n.subItem||'',mainCode:n.mainCode||'GE',total:n.total??'',localContent:n.localContent||LOCAL_CONTENT_NOTES[0]}));
     if(state.notes.length===0)throw new Error('لم يتم التعرف على أي بند في صورة قائمة الدخل — تأكد إن الصورة واضحة وتشمل البنود');
@@ -441,7 +406,7 @@ async function analyze(){
     for(let b=0;b<batches.length;b++){
       document.getElementById('analyzingTxt').textContent='جاري تصنيف الحسابات… دفعة '+(b+1)+' من '+batches.length;
       const batchContent=[{type:'text',text:JSON.stringify(context.concat(batches[b]))}];
-      const accText=await callIncomeStream(accountsSystem,[{role:'user',content:batchContent}],{maxTokens:6000});
+      const accText=await callIncome(accountsSystem,[{role:'user',content:batchContent}],8000);
       const accParsed=extractJson(accText);
       const rows=(accParsed.accounts||[]).map(a=>({number:a.number||'',name:a.name||'',total:a.total??'',mainClassInFile:a.mainClassInFile||'',subClassInFile:a.subClassInFile||'',linkIndex:Number.isInteger(a.linkIndex)&&a.linkIndex<state.notes.length?a.linkIndex:0,localContent:a.localContent||LOCAL_CONTENT_ACCOUNTS[0]}));
       state.accounts=state.accounts.concat(rows);
