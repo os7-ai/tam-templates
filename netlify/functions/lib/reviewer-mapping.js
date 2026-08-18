@@ -228,6 +228,42 @@ function diffAgainstBaseline(reconciliationNew, layer4Baseline) {
   return changed;
 }
 
+// يجمع Review Flags من الطبقات الثلاث: Layer 2 (Review Required في الربط)، Layer 3
+// (reviewRequired في التصنيف)، وLayer 4 (Material Variance على مستوى subLine — أو
+// mainLine فقط إن لم يفسّرها أي subLine بمفرده، لتفادي تكرار نفس السبب الجذري).
+function buildReviewFlags(layer2, layer3, reconciliation) {
+  const flags = [];
+  for (const a of layer2.trialBalanceAccounts) {
+    if (a.mappingStatus === 'Review Required') {
+      flags.push({ sourceLayer: 'Layer 2', level: 'TrialBalanceAccount', referenceName: `${a.accountNumber} - ${a.accountName}`, reviewReason: a.mappingReason });
+    }
+  }
+  for (const a of layer3.classifiedAccounts) {
+    if (a.reviewRequired) {
+      flags.push({ sourceLayer: 'Layer 3', level: 'TrialBalanceAccount', referenceName: `${a.accountNumber} - ${a.accountName}`, reviewReason: a.reviewReason });
+    }
+  }
+  for (const m of reconciliation.mainLines) {
+    const subMaterial = m.subLines.filter(s => s.reconciliationStatus === 'Material Variance');
+    if (subMaterial.length) {
+      for (const s of subMaterial) {
+        flags.push({
+          sourceLayer: 'Layer 4', level: 'SubLine',
+          referenceName: `${m.mainLineName} / ${s.subLineName} (${s.subLineId})`,
+          reviewReason: `Material Variance = ${s.variance} بين مبلغ الإيضاح (${s.amountPerNote}) ومبلغ الميزان المرتبط (${s.trialBalanceLinkedAmount}).`,
+        });
+      }
+    } else {
+      for (const [key, label] of [['incomeStatementVsNotes', 'IS vs Notes'], ['notesVsTrialBalance', 'Notes vs TB'], ['incomeStatementVsTrialBalance', 'IS vs TB']]) {
+        if (m[key].reconciliationStatus === 'Material Variance') {
+          flags.push({ sourceLayer: 'Layer 4', level: 'MainLine', referenceName: `${m.mainLineName} (${label})`, reviewReason: `Material Variance = ${m[key].variance}؛ لا subLine واحد يفسّرها منفردًا.` });
+        }
+      }
+    }
+  }
+  return flags;
+}
+
 module.exports = {
   buildSubLineReviewQueue,
   buildMainLineCodeReviewQueue,
@@ -236,4 +272,5 @@ module.exports = {
   mergeLayer3Reevaluation,
   computeReconciliation,
   diffAgainstBaseline,
+  buildReviewFlags,
 };
