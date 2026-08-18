@@ -54,7 +54,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .awarn.show{display:flex}
 .hidden{display:none!important}
 .tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
-table.edit{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+table.edit{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
 table.edit th{background:var(--navy);color:#fff;padding:9px 10px;text-align:right;font-weight:700;font-size:11.5px;white-space:nowrap}
 table.edit td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
 table.edit tbody tr:hover td{background:var(--bg)}
@@ -163,12 +163,12 @@ table.edit input:focus,table.edit select:focus{outline:none;border-color:var(--a
       <div class="tbl-title">
         <div>
           <div class="sec-title">حسابات ميزان المراجعة</div>
-          <div class="sec-sub">تأكد من ربط كل حساب بالبند الصحيح وتصنيف المحتوى المحلي الخاص به</div>
+          <div class="sec-sub">تصنيف البند الرئيسي/الفرعي منقول كما هو من ملف الميزان إن وُجد — راجع الربط بقائمة الدخل وتصنيف المحتوى المحلي</div>
         </div>
         <span class="tbl-count" id="accountsCount"></span>
       </div>
       <div class="tblwrap"><table class="edit" id="accountsTable">
-        <thead><tr><th>#</th><th>رقم الحساب</th><th>اسم الحساب</th><th>الإجمالي</th><th>البند المرتبط (الربط بقائمة الدخل)</th><th>تصنيف المحتوى المحلي</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>رقم الحساب</th><th>اسم الحساب</th><th>الإجمالي</th><th>تصنيف البند الرئيسي (من الميزان)</th><th>تصنيف البند الفرعي (من الميزان)</th><th>البند المرتبط (الربط بقائمة الدخل)</th><th>تصنيف المحتوى المحلي</th><th></th></tr></thead>
         <tbody id="accountsBody"></tbody>
       </table></div>
       <button class="addrow-btn" onclick="addAccountRow()">+ إضافة حساب</button>
@@ -348,9 +348,10 @@ const SYSTEM_PROMPT=`أنت محلل مالي متخصص في تدقيق الم�
 2. من مصفوفة ميزان المراجعة، استخرج كل حساب مصروف له صلة بقائمة الدخل: رقم الحساب (إن وجد)، اسم الحساب، الإجمالي كرقم. تجاهل حسابات الأصول/الخصوم/حقوق الملكية والحسابات ذات الرصيد صفر.
 3. اربط (Link) كل حساب من الميزان بأحد بنود قائمة الدخل التي استخرجتها في الخطوة 1، عبر "linkIndex" وهو الفهرس (0-based) لذلك البند داخل مصفوفة notes التي أنشأتها.
 4. صنّف كل حساب بشكل مستقل حسب طبيعته الفعلية (لا تنسخ تصنيف البند تلقائياً) ضمن قائمة تصنيف المحتوى المحلي التالية بالضبط (تشمل قيمة إضافية للتكاليف غير المسموح بها): ${JSON.stringify(LOCAL_CONTENT_ACCOUNTS)}.
+5. مهم: إذا كان ملف ميزان المراجعة نفسه يحتوي على عمود/أعمدة فيها تصنيف العميل الخاص للحساب (مثل "التصنيف الرئيسي" أو "البند" أو ما شابه على مستوى البند الرئيسي، وعمود آخر على مستوى بند فرعي/تفصيلي)، انسخ قيمة هذين العمودين كما وردت حرفياً في الملف لكل حساب إلى الحقلين mainClassInFile و subClassInFile — لا تخترع قيمة ولا تحاول تصنيفها بنفسك، فقط انقلها كما هي إن وُجدت، واتركها فارغة "" إن لم يوجد عمود مماثل في الملف.
 
 أخرج JSON فقط بدون أي نص إضافي وبدون Markdown، بالشكل التالي بالضبط:
-{"notes":[{"subItem":"نص","mainCode":"GE","total":12345.6,"localContent":"نص من القائمة"}],"accounts":[{"number":"نص أو فارغ","name":"نص","total":12345.6,"linkIndex":0,"localContent":"نص من القائمة"}]}`;
+{"notes":[{"subItem":"نص","mainCode":"GE","total":12345.6,"localContent":"نص من القائمة"}],"accounts":[{"number":"نص أو فارغ","name":"نص","total":12345.6,"mainClassInFile":"نص كما ورد في الملف أو فارغ","subClassInFile":"نص كما ورد في الملف أو فارغ","linkIndex":0,"localContent":"نص من القائمة"}]}`;
 
 async function analyze(){
   document.getElementById('uploadErr').classList.remove('show');
@@ -367,7 +368,7 @@ async function analyze(){
     });
     const parsed=extractJson(fullText);
     state.notes=(parsed.notes||[]).map(n=>({subItem:n.subItem||'',mainCode:n.mainCode||'GE',total:n.total??'',localContent:n.localContent||LOCAL_CONTENT_NOTES[0]}));
-    state.accounts=(parsed.accounts||[]).map(a=>({number:a.number||'',name:a.name||'',total:a.total??'',linkIndex:Number.isInteger(a.linkIndex)?a.linkIndex:0,localContent:a.localContent||LOCAL_CONTENT_ACCOUNTS[0]}));
+    state.accounts=(parsed.accounts||[]).map(a=>({number:a.number||'',name:a.name||'',total:a.total??'',mainClassInFile:a.mainClassInFile||'',subClassInFile:a.subClassInFile||'',linkIndex:Number.isInteger(a.linkIndex)?a.linkIndex:0,localContent:a.localContent||LOCAL_CONTENT_ACCOUNTS[0]}));
     document.getElementById('analyzing').classList.add('hidden');
     document.getElementById('step2').classList.remove('hidden');
     renderNotesTable();
@@ -411,6 +412,8 @@ function renderAccountsTable(){
       <td><input type="text" value="${escAttr(a.number)}" onchange="state.accounts[${i}].number=this.value"></td>
       <td><input type="text" value="${escAttr(a.name)}" onchange="state.accounts[${i}].name=this.value"></td>
       <td><input type="number" step="0.01" value="${a.total}" onchange="state.accounts[${i}].total=this.value"></td>
+      <td><input type="text" value="${escAttr(a.mainClassInFile)}" onchange="state.accounts[${i}].mainClassInFile=this.value"></td>
+      <td><input type="text" value="${escAttr(a.subClassInFile)}" onchange="state.accounts[${i}].subClassInFile=this.value"></td>
       <td><select class="linksel" data-i="${i}" onchange="state.accounts[${i}].linkIndex=parseInt(this.value)"></select></td>
       <td><select onchange="state.accounts[${i}].localContent=this.value">${LOCAL_CONTENT_ACCOUNTS.map(c=>`<option ${c===a.localContent?'selected':''}>${c}</option>`).join('')}</select></td>
       <td><button class="rmbtn" onclick="removeAccountRow(${i})">✕</button></td>`;
@@ -426,7 +429,7 @@ function renderAccountsLinkOptions(){
     sel.innerHTML=state.notes.map((n,ni)=>`<option value="${ni}" ${ni===cur?'selected':''}>${escAttr(n.subItem||'(بدون اسم)')} — ${MAIN_ITEMS.find(m=>m.code===n.mainCode)?.label||n.mainCode}</option>`).join('');
   });
 }
-function addAccountRow(){state.accounts.push({number:'',name:'',total:'',linkIndex:0,localContent:LOCAL_CONTENT_ACCOUNTS[0]});renderAccountsTable();}
+function addAccountRow(){state.accounts.push({number:'',name:'',total:'',mainClassInFile:'',subClassInFile:'',linkIndex:0,localContent:LOCAL_CONTENT_ACCOUNTS[0]});renderAccountsTable();}
 function removeAccountRow(i){state.accounts.splice(i,1);renderAccountsTable();}
 function escAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 
@@ -440,7 +443,7 @@ async function genFile(){
     const notesPayload=state.notes.map(n=>({subItem:n.subItem,mainCode:n.mainCode,total:n.total,localContent:n.localContent}));
     const accountsPayload=state.accounts.map(a=>{
       const note=state.notes[a.linkIndex]||{};
-      return{number:a.number,name:a.name,total:a.total,linkSubItem:note.subItem||'',linkMainCode:note.mainCode||'',localContent:a.localContent};
+      return{number:a.number,name:a.name,total:a.total,mainClassInFile:a.mainClassInFile,subClassInFile:a.subClassInFile,linkSubItem:note.subItem||'',linkMainCode:note.mainCode||'',localContent:a.localContent};
     });
     const resp=await fetch('/.netlify/functions/generate-income-analysis',{
       method:'POST',

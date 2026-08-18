@@ -112,6 +112,12 @@ exports.handler = async (event) => {
       if (a.total !== undefined && a.total !== null && a.total !== '') {
         writes.push({ col: 'P', type: 'n', value: a.total });
       }
+      // تصنيف الحساب على البنود الرئيسة/الفرعية "كما في الميزان" — منقول حرفياً من ملف
+      // ميزان المراجعة نفسه (لا قائمة تحقق مقيّدة له في القالب)، وليس تصنيفاً من الذكاء الاصطناعي
+      const mainClassInFile = String(a.mainClassInFile || '').trim();
+      if (mainClassInFile) writes.push({ col: 'Q', type: 'str', value: mainClassInFile });
+      const subClassInFile = String(a.subClassInFile || '').trim();
+      if (subClassInFile) writes.push({ col: 'R', type: 'str', value: subClassInFile });
       const linkSubItem = String(a.linkSubItem || '').trim();
       const linkMainCode = String(a.linkMainCode || '').trim();
       if (linkSubItem && MAIN_CODES.has(linkMainCode)) {
