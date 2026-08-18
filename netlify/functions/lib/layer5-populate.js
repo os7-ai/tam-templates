@@ -42,6 +42,14 @@ const CLASSIFICATION_AR = {
 const NOTES_FIRST_ROW = 18, NOTES_MAX_ROWS = 100;        // صفوف 18–117 (118 محجوز ثابتًا)
 const ACCOUNTS_FIRST_ROW = 18, ACCOUNTS_MAX_ROWS = 1000; // صفوف 18–1017
 
+// مرحلة عرض بحتة (Presentation Layer) تُطبَّق فقط عند الكتابة إلى القالب: إشارة
+// موجبة + تقريب لأقرب ريال (Math.round، وليس تقريباً عشرياً أو نسبياً). القيم
+// الأصلية الكاملة الدقة في Layer 1-4 (JSON) لا تتأثر إطلاقاً — هذه الدالة لا
+// تُستدعى إلا هنا عند بناء قيم G/H/P، ولا تُعاد كتابتها لأي مصدر بيانات.
+function roundForDisplay(x) {
+  return Math.round(Math.abs(Number(x)));
+}
+
 function norm(s) {
   return String(s == null ? '' : s).replace(/ /g, ' ').trim();
 }
@@ -118,7 +126,7 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
     // في Layer 1 تبقى سالبة كما هي، هذا تطبيع عرض داخل Layer 5 فقط. الصيغ القائمة
     // (H7=SUMIFS(...)، I7=G7-H7، I3=H3-G2) تبقى متوافقة لأنها تفترض أصلاً مصروفات
     // موجبة لحساب صافي الربح = الإيرادات - المصروفات.
-    w.push({ col: 'G', type: 'n', value: Math.abs(total) });
+    w.push({ col: 'G', type: 'n', value: roundForDisplay(total) });
     writesByRow.set(row, w);
   }
 
@@ -142,7 +150,7 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
           { col: 'G', type: 'str', value: code },
         ];
         if (sl.amount !== undefined && sl.amount !== null) {
-          w.push({ col: 'H', type: 'n', value: Math.abs(Number(sl.amount)) });
+          w.push({ col: 'H', type: 'n', value: roundForDisplay(sl.amount) });
         }
         const arClass = sl.preliminaryLocalContentClassification
           ? CLASSIFICATION_AR[sl.preliminaryLocalContentClassification]
@@ -162,7 +170,7 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
         { col: 'G', type: 'str', value: code },
       ];
       if (ml.totalPerIncomeStatement !== undefined && ml.totalPerIncomeStatement !== null) {
-        w.push({ col: 'H', type: 'n', value: Math.abs(Number(ml.totalPerIncomeStatement)) });
+        w.push({ col: 'H', type: 'n', value: roundForDisplay(ml.totalPerIncomeStatement) });
       }
       writesByRow.set(notesRow, w);
       mainOnlyRowKey.set(ml.mainLineName, dKey(ml.mainLineName, code));
@@ -241,7 +249,7 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
       // G/H أعلاه) — القيمة الأصلية في Layer 2/3 تبقى كما هي، هذا تطبيع عرض داخل
       // Layer 5 فقط. بما أن كل حساب هنا مرتبط فعلياً ببند مصروف (وإلا لكان تخطّاه
       // الشرط أعلاه)، لا حاجة لأي شرط إضافي على نوع الحساب.
-      w.push({ col: 'P', type: 'n', value: Math.abs(Number(acc.amount)) });
+      w.push({ col: 'P', type: 'n', value: roundForDisplay(acc.amount) });
     }
     if (acc.clientMainClassification) w.push({ col: 'Q', type: 'str', value: acc.clientMainClassification });
     if (acc.clientSubClassification) w.push({ col: 'R', type: 'str', value: acc.clientSubClassification });
