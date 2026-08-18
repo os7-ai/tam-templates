@@ -321,11 +321,18 @@ async function callIncomeStream(systemText,messages,{maxTokens=12000,onDelta}={}
   }
   const reader=res.body.getReader();
   const decoder=new TextDecoder();
-  let buffer='',fullText='';
+  let buffer='',fullText='',rawTail='';
+  // تشخيص احترازي: نتتبع كل أنواع الأحداث وأنواع الـ delta المستلمة، وسبب التوقف — لو
+  // رجع رد بدون نص فعلي، هذي المعلومات توضح السبب الحقيقي (مثلاً توقف مبكر، أو نوع محتوى
+  // غير متوقع) بدل ما نخمّن
+  const eventCounts={}, deltaTypes={};
+  let stopReason='';
   while(true){
     const{done,value}=await reader.read();
     if(done)break;
-    buffer+=decoder.decode(value,{stream:true});
+    const chunk=decoder.decode(value,{stream:true});
+    rawTail=(rawTail+chunk).slice(-500);
+    buffer+=chunk;
     const events=buffer.split('\n\n');
     buffer=events.pop()||'';
     for(const evt of events){
@@ -334,15 +341,26 @@ async function callIncomeStream(systemText,messages,{maxTokens=12000,onDelta}={}
         if(line.startsWith('event: '))eventType=line.slice(7).trim();
         else if(line.startsWith('data: '))data=line.slice(6);
       }
+      if(!eventType&&!data)continue;
+      eventCounts[eventType||'(بدون نوع)']=(eventCounts[eventType||'(بدون نوع)']||0)+1;
       if(!data)continue;
       let parsed;try{parsed=JSON.parse(data);}catch(e){continue;}
-      if(eventType==='content_block_delta'&&parsed.delta&&parsed.delta.type==='text_delta'){
-        fullText+=parsed.delta.text;
-        if(onDelta)onDelta(fullText);
+      if(eventType==='content_block_delta'&&parsed.delta){
+        const dt=parsed.delta.type||'?';
+        deltaTypes[dt]=(deltaTypes[dt]||0)+1;
+        if(dt==='text_delta'){
+          fullText+=parsed.delta.text;
+          if(onDelta)onDelta(fullText);
+        }
+      }else if(eventType==='message_delta'&&parsed.delta&&parsed.delta.stop_reason){
+        stopReason=parsed.delta.stop_reason;
       }else if(eventType==='error'){
         throw new Error((parsed.error&&parsed.error.message)||'خطأ من خدمة التحليل');
       }
     }
+  }
+  if(!fullText){
+    throw new Error('لم يصل نص فعلي رغم اكتمال الاتصال بنجاح. تفاصيل تشخيصية — أنواع الأحداث: '+JSON.stringify(eventCounts)+' | أنواع delta: '+JSON.stringify(deltaTypes)+' | سبب التوقف: '+(stopReason||'غير معروف')+' | آخر جزء مستلم: '+rawTail.slice(-200));
   }
   return fullText;
 }
