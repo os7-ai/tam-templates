@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مداد | تحليل مصاريف قائمة الدخل (الإصدار الجديد)</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='13' height='13' rx='3' fill='%234FCDE8'/><rect x='2' y='17' width='13' height='13' rx='3' fill='%230AAED0'/><rect x='17' y='17' width='13' height='13' rx='3' fill='%230AAED0'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--navy:#1C2653;--navy2:#2a3875;--accent:#0AAED0;--bg:#F0F4FA;--card:#fff;--border:#D6DEF0;--text:#1C2653;--muted:#6B7A9E;--green:#16a34a;--orange:#d97706;--red:#b91c1c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;direction:rtl}
+.header{background:var(--navy);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 20px rgba(28,38,83,.3)}
+.hl{display:flex;align-items:center;gap:12px}
+.hbrand{color:#fff;font-size:18px;font-weight:900}
+.hd{width:1px;height:28px;background:rgba(255,255,255,.2)}
+.ht{color:rgba(255,255,255,.85);font-size:13px;font-weight:600}
+.beta-tag{background:rgba(255,255,255,.15);color:#fff;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px}
+.hu{display:flex;align-items:center;gap:10px}
+.hu span{color:rgba(255,255,255,.7);font-size:12px}
+.btn-lo{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:6px 14px;border-radius:8px;font-family:'Tajawal',sans-serif;font-size:12px;cursor:pointer}
+.btn-lo:hover{background:rgba(255,255,255,.2)}
+.main{max-width:1150px;margin:0 auto;padding:32px 20px 80px}
+.page-hero{text-align:center;margin-bottom:22px}
+.page-hero h2{font-size:21px;font-weight:900;color:var(--text);margin-bottom:6px}
+.page-hero p{font-size:13px;color:var(--muted)}
+.steps{display:flex;justify-content:center;gap:6px;margin-bottom:24px;flex-wrap:wrap}
+.step-pill{display:flex;align-items:center;gap:6px;padding:6px 13px;border-radius:20px;font-size:12px;font-weight:700;background:#fff;border:1.5px solid var(--border);color:var(--muted)}
+.step-pill.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.step-pill.done{background:#f0fdf4;color:var(--green);border-color:#bbf7d0}
+.fcard{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:26px;box-shadow:0 4px 20px rgba(28,38,83,.08);margin-bottom:18px}
+.sec-title{font-size:15.5px;font-weight:900;color:var(--text);margin-bottom:4px}
+.sec-sub{font-size:12.5px;color:var(--muted);margin-bottom:16px}
+.hidden{display:none!important}
+.upgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.upgrid{grid-template-columns:1fr}}
+.lu{border:2px dashed var(--border);border-radius:12px;padding:20px 16px;text-align:center;cursor:pointer;background:var(--bg);transition:all .18s;min-height:110px;display:flex;flex-direction:column;justify-content:center}
+.lu:hover{border-color:var(--accent);background:#f0f7ff}
+.lu.has{border-color:var(--green);border-style:solid;background:#f0fdf4}
+.lu p{font-size:12.5px;color:var(--muted);margin-top:6px;font-weight:600}
+.lu .sub{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;justify-content:center}
+.thumbs img{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:6px}
+.field .hint{font-size:11px;color:var(--muted);font-weight:400;margin-top:4px}
+.field input[type=text],.field input[type=number],.field select{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:9px;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--text);background:#fff}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.radiorow{display:flex;gap:16px}
+.radiorow label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer}
+.colmapgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:10px}
+@media(max-width:900px){.colmapgrid{grid-template-columns:repeat(2,1fr)}}
+.tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;margin-top:10px}
+table.prev{width:100%;border-collapse:collapse;font-size:11.5px;min-width:600px}
+table.prev th{background:var(--bg);color:var(--muted);padding:6px 8px;text-align:right;font-weight:700;white-space:nowrap;border-bottom:1px solid var(--border)}
+table.prev td{padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+.brow{display:flex;gap:12px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
+.bbk{background:transparent;border:1.5px solid var(--border);color:var(--muted);padding:11px 22px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer}
+.bbk:hover{border-color:var(--navy);color:var(--navy)}
+.bpr{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border:none;padding:11px 26px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 18px rgba(28,38,83,.28)}
+.bpr:disabled{opacity:.5;cursor:not-allowed}
+.bsec{background:var(--bg);border:1.5px solid var(--border);color:var(--navy);padding:10px 20px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.spin{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .65s linear infinite;display:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.aerr{display:none;align-items:flex-start;gap:8px;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;background:#fef2f2;border:1px solid #fecaca;color:var(--red)}
+.aerr.show{display:flex}
+.awarn{display:none;align-items:flex-start;gap:8px;padding:11px 14px;border-radius:10px;font-size:12.5px;margin-bottom:16px;background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.awarn.show{display:flex}
+.aok{display:none;align-items:flex-start;gap:8px;padding:11px 14px;border-radius:10px;font-size:12.5px;margin-bottom:16px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+.aok.show{display:flex}
+.progress-list{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.pitem{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:var(--bg);font-size:13px;font-weight:600;color:var(--muted)}
+.pitem.active{background:#eef2ff;color:var(--navy)}
+.pitem.done{background:#f0fdf4;color:var(--green)}
+.pitem.err{background:#fef2f2;color:var(--red)}
+.picon{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;background:var(--border);color:#fff}
+.pitem.active .picon{background:var(--navy)}
+.pitem.done .picon{background:var(--green)}
+.pitem.err .picon{background:var(--red)}
+.spin-sm{width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .65s linear infinite}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.b-match{background:#f0fdf4;color:var(--green)}
+.b-minor{background:#fffbeb;color:var(--orange)}
+.b-material{background:#fef2f2;color:var(--red)}
+.b-na{background:var(--bg);color:var(--muted)}
+table.rc{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
+table.rc th{background:var(--navy);color:#fff;padding:8px 9px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap}
+table.rc td{padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.rc tr.mainrow td{font-weight:800;background:#f7f9fd}
+.flag-item{padding:9px 12px;border-radius:9px;background:#fff7ed;border:1px solid #fed7aa;font-size:12px;margin-bottom:6px;color:#92400e}
+.flag-item .fl-src{font-weight:800;font-size:10.5px;color:var(--navy);margin-left:6px}
+table.rv{width:100%;border-collapse:collapse;font-size:12.5px;min-width:800px}
+table.rv th{background:var(--bg);color:var(--muted);padding:8px 9px;text-align:right;font-weight:700;font-size:11.5px;white-space:nowrap;border-bottom:1.5px solid var(--border)}
+table.rv td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.rv select{width:100%;min-width:180px;padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Tajawal',sans-serif;font-size:12px;color:var(--text);background:#fff}
+.savebtn{background:var(--navy);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-family:'Tajawal',sans-serif;font-size:11.5px;font-weight:700;cursor:pointer}
+.savebtn:disabled{opacity:.5;cursor:not-allowed}
+.dec-status{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:14px}
+.ds-resolved{background:#f0fdf4;color:var(--green)}
+.ds-notresolved{background:#f1f5f9;color:var(--muted)}
+.ds-contextchanged{background:#fef2f2;color:var(--red)}
+.sw{text-align:center;padding:32px 20px}
+.si{width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px}
+.bdl{background:linear-gradient(135deg,var(--green),#15803d);color:#fff;border:none;padding:12px 26px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 18px rgba(22,163,74,.3);margin-bottom:10px}
+.eid{font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px;font-family:monospace}
+.rmbtn{background:#fef2f2;color:var(--red);border:1px solid #fecaca;border-radius:7px;padding:2px 8px;cursor:pointer;font-size:11px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="hl">
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="13" height="13" rx="3.5" fill="#4FCDE8"/>
+      <rect x="1" y="17" width="13" height="13" rx="3.5" fill="#0AAED0"/>
+      <rect x="17" y="17" width="13" height="13" rx="3.5" fill="#0AAED0"/>
+    </svg>
+    <span class="hbrand">مداد</span>
+    <div class="hd"></div>
+    <span class="ht">تحليل مصاريف قائمة الدخل</span>
+    <span class="beta-tag">إصدار جديد — تجريبي</span>
+  </div>
+  <div class="hu">
+    <span id="userEmail"></span>
+    <button class="btn-lo" onclick="window.location.href='home.html'">الرئيسية</button>
+    <button class="btn-lo" onclick="logout()">تسجيل خروج</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-hero">
+    <h2>تحليل مصاريف قائمة الدخل — الإصدار الجديد 🧪</h2>
+    <p>سير عمل كامل: استخراج (Layer 1) ← ربط الميزان (Layer 2) ← تصنيف الطبيعة (Layer 3) ← مطابقة (Layer 4) ← مراجعة بشرية (Reviewer Mapping) ← ملف نهائي</p>
+  </div>
+  <div class="eid" id="eidLine"></div>
+
+  <div class="steps" id="stepsBar"></div>
+
+  <!-- ============ Step: Upload ============ -->
+  <div id="stepUpload">
+    <div class="aerr" id="uploadErr"><span id="uploadErrMsg"></span></div>
+    <div class="fcard">
+      <div class="sec-title">1) صور قائمة الدخل والإيضاحات</div>
+      <div class="sec-sub">ارفع صورة/صور قائمة الدخل وصفحات الإيضاحات ذات الصلة (يمكن رفع أكثر من صورة بالترتيب)</div>
+      <div class="lu" id="isDrop" onclick="document.getElementById('isInp').click()">
+        <p id="isDropTxt">اضغط لرفع صورة/صور</p>
+        <p class="sub">JPG / PNG — يمكن اختيار أكثر من ملف</p>
+        <div class="thumbs" id="isThumbs"></div>
+      </div>
+      <input type="file" id="isInp" accept="image/*" multiple style="display:none">
+    </div>
+
+    <div class="fcard">
+      <div class="sec-title">2) ميزان المراجعة</div>
+      <div class="sec-sub">ارفع ملف الإكسل، اختر الورقة الصحيحة، ثم حدّد الأعمدة والصف الذي تبدأ منه بيانات الحسابات الفعلية</div>
+      <div class="lu" id="tbDrop" onclick="document.getElementById('tbInp').click()">
+        <p id="tbDropTxt">اضغط لرفع ملف الميزان</p>
+        <p class="sub">Excel (xlsx/xls)</p>
+      </div>
+      <input type="file" id="tbInp" accept=".xlsx,.xls" style="display:none">
+
+      <div id="tbConfig" class="hidden" style="margin-top:16px">
+        <div class="field">
+          <label>الورقة (Sheet)</label>
+          <select id="sheetSel" onchange="onSheetChange()"></select>
+        </div>
+        <div class="colmapgrid">
+          <div class="field"><label>عمود رقم الحساب</label><select id="colAccNum"></select></div>
+          <div class="field"><label>عمود اسم الحساب</label><select id="colAccName"></select></div>
+          <div class="field"><label>عمود الرصيد (المبلغ)</label><select id="colAmount"></select></div>
+          <div class="field"><label>عمود تصنيف رئيسي بالميزان (اختياري)</label><select id="colMainClass"></select></div>
+          <div class="field"><label>عمود تصنيف فرعي بالميزان (اختياري)</label><select id="colSubClass"></select></div>
+        </div>
+        <div class="field">
+          <label>أول صف بيانات فعلي (تجاوز صفوف العنوان/الترويسة)</label>
+          <input type="number" id="dataStartRow" min="1" value="2" onchange="renderTbPreview()">
+          <p class="hint">اختر الصف الذي يبدأ منه أول حساب فعلي (Excel row number) — أي صف قبله (عنوان التقرير، رأس الأعمدة) لن يُرسَل كحساب</p>
+        </div>
+        <div class="tblwrap"><table class="prev" id="tbPreviewTable"></table></div>
+      </div>
+    </div>
+
+    <div class="fcard">
+      <div class="sec-title">3) نطاق ميزان المراجعة</div>
+      <div class="sec-sub">هل الملف المرفوع يشمل كل الحسابات (ميزانية + قائمة دخل) أم بنود قائمة الدخل فقط؟ — يُسجَّل هذا الاختيار في سجل التدقيق ولا يُخمَّن آلياً</div>
+      <div class="radiorow">
+        <label><input type="radio" name="tbScope" value="full" checked> الميزان الكامل (يشمل المركز المالي)</label>
+        <label><input type="radio" name="tbScope" value="incomeStatementOnly"> بنود قائمة الدخل فقط</label>
+      </div>
+    </div>
+
+    <div class="fcard">
+      <div class="sec-title">4) عتبة المطابقة (Reconciliation Threshold)</div>
+      <div class="sec-sub">قيمة فرق يُعتبر أي مبلغ أقل منها أو يساويها "فرق تقريب بسيط" وليس "فرق جوهري" — تُدخَل صراحة من قِبلك، لا يُخترع افتراضياً</div>
+      <div class="field">
+        <input type="number" id="threshold" step="0.01" placeholder="مثال: 1">
+      </div>
+    </div>
+
+    <div class="brow">
+      <button class="bpr" id="btnStart" onclick="startPipeline()" disabled>
+        <div class="spin" id="startSpin"></div>
+        <span id="startTxt">بدء التحليل</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ Step: Progress ============ -->
+  <div id="stepProgress" class="hidden">
+    <div class="fcard">
+      <div class="sec-title">جاري التحليل…</div>
+      <div class="progress-list" id="progressList"></div>
+    </div>
+  </div>
+
+  <!-- ============ Step: Results ============ -->
+  <div id="stepResults" class="hidden">
+    <div class="fcard">
+      <div class="sec-title">نتيجة المطابقة (Layer 4)</div>
+      <div class="sec-sub">مستوى البند الرئيسي — راجع الفروقات قبل الانتقال لمراجعة الربط</div>
+      <div class="tblwrap"><table class="rc" id="rcTable"></table></div>
+    </div>
+    <div class="fcard">
+      <div class="sec-title">أعلام المراجعة (Review Flags)</div>
+      <div class="sec-sub" id="flagsCount"></div>
+      <div id="flagsList"></div>
+    </div>
+    <div class="brow">
+      <button class="bbk" onclick="goToUpload()">← تحليل جديد</button>
+      <button class="bsec" onclick="loadReviewerQueue()">الانتقال لمراجعة الربط (Reviewer Mapping)</button>
+      <button class="bpr" onclick="goToFinal()">تخطي المراجعة وإصدار الملف مباشرة</button>
+    </div>
+  </div>
+
+  <!-- ============ Step: Reviewer Mapping ============ -->
+  <div id="stepReviewer" class="hidden">
+    <div class="aerr" id="rvErr"><span id="rvErrMsg"></span></div>
+    <div class="aok" id="rvOk"><span id="rvOkMsg"></span></div>
+
+    <div class="fcard">
+      <div class="sec-title">قائمة مراجعة ربط الحسابات (SubLine Mapping)</div>
+      <div class="sec-sub" id="subQueueSub">حسابات تعدّد فيها أكثر من بند فرعي محتمل — اختر البند الصحيح أو "غير محسوم" إن لم يتضح</div>
+      <div class="tblwrap"><table class="rv" id="subQueueTable"></table></div>
+    </div>
+
+    <div class="fcard">
+      <div class="sec-title">قائمة مراجعة كود البند الرئيسي (Main Line Code)</div>
+      <div class="sec-sub" id="mainQueueSub">بنود رئيسية بلا كود معتمد مسبقاً — اختر الكود الصحيح من الثمانية الثابتة أو "غير محسوم"</div>
+      <div class="tblwrap"><table class="rv" id="mainQueueTable"></table></div>
+    </div>
+
+    <div class="brow">
+      <button class="bbk" onclick="goToResultsFromReviewer()">← رجوع للنتائج</button>
+      <button class="bsec" onclick="loadReviewerQueue()">تحديث القائمة</button>
+      <button class="bpr" onclick="goToFinal()">الانتقال لإصدار الملف النهائي</button>
+    </div>
+  </div>
+
+  <!-- ============ Step: Final ============ -->
+  <div id="stepFinal" class="hidden">
+    <div class="aerr" id="finalErr"><span id="finalErrMsg"></span></div>
+    <div class="awarn" id="finalWarn"><span id="finalWarnMsg"></span></div>
+    <div class="fcard">
+      <div class="sw" id="finalPre">
+        <div class="si">📄</div>
+        <p style="color:var(--muted);font-size:13.5px;margin-bottom:20px">سيُبنى الملف من آخر مخرجات Layer 2/3 المتاحة — بعد قرارات المراجع إن وُجدت، وإلا Baseline كما هو</p>
+        <button class="bpr" id="btnFinal" onclick="generateFinal()" style="margin:0 auto">
+          <div class="spin" id="finalSpin"></div>
+          <span id="finalTxt">إصدار ملف الإكسل النهائي</span>
+        </button>
+      </div>
+      <div class="sw hidden" id="finalDone">
+        <div class="si">✅</div>
+        <h2 style="font-size:19px;font-weight:900;color:var(--text);margin-bottom:8px">تم إعداد الملف بنجاح!</h2>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:20px">راجع الملف داخل الإكسل قبل اعتماده النهائي</p>
+        <button class="bdl" id="btnDl">⬇ تحميل الملف</button>
+      </div>
+    </div>
+    <div class="brow">
+      <button class="bbk" onclick="loadReviewerQueue()">← رجوع لمراجعة الربط</button>
+      <button class="bbk" onclick="goToUpload()">تحليل جديد</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let sb, accessToken='';
+let engagementId = (crypto.randomUUID ? crypto.randomUUID() : ('eng-'+Date.now()+'-'+Math.random().toString(16).slice(2)));
+document.getElementById('eidLine').textContent = 'Engagement: ' + engagementId;
+
+(async()=>{
+  const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
+  sb=supabase.createClient(cfg.url,cfg.key);
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  accessToken=session.access_token;
+  document.getElementById('userEmail').textContent=session.user.email;
+})();
+function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
+
+const STEPS=[
+  {id:'stepUpload',label:'الرفع'},
+  {id:'stepProgress',label:'التحليل'},
+  {id:'stepResults',label:'النتائج'},
+  {id:'stepReviewer',label:'مراجعة الربط'},
+  {id:'stepFinal',label:'الملف النهائي'},
+];
+let currentStepIdx=0;
+function renderStepsBar(){
+  const bar=document.getElementById('stepsBar');
+  bar.innerHTML=STEPS.map((s,i)=>{
+    const cls=i===currentStepIdx?'active':(i<currentStepIdx?'done':'');
+    return `<span class="step-pill ${cls}">${i+1}. ${s.label}</span>`;
+  }).join('');
+}
+function showStep(id){
+  STEPS.forEach(s=>document.getElementById(s.id).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  currentStepIdx=STEPS.findIndex(s=>s.id===id);
+  renderStepsBar();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+renderStepsBar();
+
+function escAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function colLetter(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;}
+
+// ---------- رفع صور قائمة الدخل/الإيضاحات (متعددة، بترتيب الرفع) ----------
+let isImages=[]; // [{base64,mediaType,previewUrl}]
+document.getElementById('isInp').onchange=e=>{
+  const files=Array.from(e.target.files||[]);
+  let pending=files.length;
+  if(!pending)return;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        const MAXD=1800;
+        let w=img.naturalWidth,h=img.naturalHeight;
+        if(w>MAXD||h>MAXD){const s=MAXD/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        const dataUrl=c.toDataURL('image/jpeg',0.87);
+        isImages.push({base64:dataUrl.split(',')[1],mediaType:'image/jpeg',previewUrl:dataUrl});
+        renderIsThumbs();
+        checkReady();
+      };
+      img.src=ev.target.result;
+    };
+    r.readAsDataURL(f);
+  });
+};
+function renderIsThumbs(){
+  const d=document.getElementById('isDrop');
+  const t=document.getElementById('isThumbs');
+  if(isImages.length){
+    d.classList.add('has');
+    document.getElementById('isDropTxt').textContent='✅ '+isImages.length+' صورة مرفوعة — اضغط لإضافة المزيد';
+  } else {
+    d.classList.remove('has');
+    document.getElementById('isDropTxt').textContent='اضغط لرفع صورة/صور';
+  }
+  t.innerHTML=isImages.map((im,i)=>`<img src="${im.previewUrl}" title="اضغط لحذف" onclick="event.stopPropagation();removeIsImage(${i})">`).join('');
+}
+function removeIsImage(i){isImages.splice(i,1);renderIsThumbs();checkReady();}
+
+// ---------- رفع ميزان المراجعة ----------
+let tbWorkbook=null, tbGrid=[];
+document.getElementById('tbInp').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      tbWorkbook=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      const sel=document.getElementById('sheetSel');
+      sel.innerHTML='';
+      tbWorkbook.SheetNames.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+      document.getElementById('tbDrop').classList.add('has');
+      document.getElementById('tbDropTxt').textContent='✅ تم رفع: '+f.name;
+      document.getElementById('tbConfig').classList.remove('hidden');
+      onSheetChange();
+    }catch(err){ showUploadErr('تعذّر قراءة ملف الإكسل: '+err.message); }
+  };
+  r.readAsArrayBuffer(f);
+};
+function onSheetChange(){
+  if(!tbWorkbook)return;
+  const name=document.getElementById('sheetSel').value;
+  const ws=tbWorkbook.Sheets[name];
+  tbGrid=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+  const maxCols=tbGrid.reduce((m,row)=>Math.max(m,row.length),0);
+  const opts=(sel,extra)=>{
+    let html=extra?'<option value="-1">— بلا —</option>':'';
+    for(let c=0;c<maxCols;c++){
+      const sample=(tbGrid[0]&&tbGrid[0][c]!=null&&tbGrid[0][c]!=='')?String(tbGrid[0][c]).slice(0,18):(tbGrid[1]&&tbGrid[1][c]!=null?String(tbGrid[1][c]).slice(0,18):'');
+      html+=`<option value="${c}">${colLetter(c)} — ${escAttr(sample)}</option>`;
+    }
+    sel.innerHTML=html;
+  };
+  opts(document.getElementById('colAccNum'),false);
+  opts(document.getElementById('colAccName'),false);
+  opts(document.getElementById('colAmount'),false);
+  opts(document.getElementById('colMainClass'),true);
+  opts(document.getElementById('colSubClass'),true);
+  document.getElementById('colAccName').selectedIndex=Math.min(1,maxCols-1);
+  document.getElementById('colAmount').selectedIndex=Math.max(0,maxCols-1);
+  renderTbPreview();
+  checkReady();
+}
+document.getElementById('colAccNum').onchange=renderTbPreview;
+document.getElementById('colAccName').onchange=renderTbPreview;
+document.getElementById('colAmount').onchange=renderTbPreview;
+document.getElementById('colMainClass').onchange=renderTbPreview;
+document.getElementById('colSubClass').onchange=renderTbPreview;
+
+function currentColMap(){
+  return {
+    accNum:parseInt(document.getElementById('colAccNum').value),
+    accName:parseInt(document.getElementById('colAccName').value),
+    amount:parseInt(document.getElementById('colAmount').value),
+    mainClass:parseInt(document.getElementById('colMainClass').value),
+    subClass:parseInt(document.getElementById('colSubClass').value),
+  };
+}
+function buildTbRows(){
+  const map=currentColMap();
+  const startRow=Math.max(1,parseInt(document.getElementById('dataStartRow').value)||1);
+  const rows=[];
+  for(let i=startRow-1;i<tbGrid.length;i++){
+    const row=tbGrid[i];
+    if(!row||!row.some(c=>c!==''&&c!=null))continue;
+    const accountName=map.accName>=0?row[map.accName]:'';
+    if(accountName==null||String(accountName).trim()==='')continue;
+    rows.push({
+      accountNumber:map.accNum>=0?(row[map.accNum]??null):null,
+      accountName:String(accountName).trim(),
+      amount:map.amount>=0?(Number(row[map.amount])||0):0,
+      clientMainClassification:map.mainClass>=0?(row[map.mainClass]||null):null,
+      clientSubClassification:map.subClass>=0?(row[map.subClass]||null):null,
+    });
+  }
+  return rows;
+}
+function renderTbPreview(){
+  if(!tbGrid.length)return;
+  const rows=buildTbRows().slice(0,8);
+  const tbl=document.getElementById('tbPreviewTable');
+  tbl.innerHTML='<thead><tr><th>رقم الحساب</th><th>اسم الحساب</th><th>الرصيد</th><th>تصنيف رئيسي</th><th>تصنيف فرعي</th></tr></thead>'+
+    '<tbody>'+rows.map(r=>`<tr><td>${escAttr(r.accountNumber)}</td><td>${escAttr(r.accountName)}</td><td>${r.amount}</td><td>${escAttr(r.clientMainClassification)}</td><td>${escAttr(r.clientSubClassification)}</td></tr>`).join('')+'</tbody>';
+  checkReady();
+}
+
+function checkReady(){
+  const threshold=document.getElementById('threshold').value;
+  document.getElementById('btnStart').disabled=!(isImages.length>0 && tbGrid.length>0 && threshold!=='' && !isNaN(Number(threshold)));
+}
+document.getElementById('threshold').addEventListener('input',checkReady);
+function showUploadErr(msg){
+  document.getElementById('uploadErrMsg').textContent=msg;
+  document.getElementById('uploadErr').classList.add('show');
+}
+
+// ---------- نداءات الخادم ----------
+async function apiPost(fn,body){
+  const res=await fetch('/.netlify/functions/'+fn,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},
+    body:JSON.stringify(body),
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){
+    if(res.status===401){window.location.href='login.html';}
+    throw new Error((data&&data.error)||('خطأ '+res.status));
+  }
+  return data;
+}
+
+let latestLayer4=null;
+let reconciliationThresholdUsed=null;
+
+function setProgressState(idx,state,extraTxt){
+  const items=document.querySelectorAll('#progressList .pitem');
+  const it=items[idx];
+  if(!it)return;
+  it.classList.remove('active','done','err');
+  it.classList.add(state);
+  const icon=it.querySelector('.picon');
+  icon.innerHTML = state==='active' ? '<div class="spin-sm"></div>' : state==='done' ? '✓' : state==='err' ? '✕' : '';
+  if(extraTxt) it.querySelector('.ptxt').textContent=extraTxt;
+}
+function renderProgressList(labels){
+  document.getElementById('progressList').innerHTML=labels.map(l=>`<div class="pitem"><span class="picon"></span><span class="ptxt">${l}</span></div>`).join('');
+}
+
+async function startPipeline(){
+  document.getElementById('uploadErr').classList.remove('show');
+  const threshold=Number(document.getElementById('threshold').value);
+  const tbScope=document.querySelector('input[name=tbScope]:checked').value;
+  const tbRows=buildTbRows();
+  if(tbRows.length===0){ showUploadErr('لم يتم التعرف على أي صف بيانات — تحقق من اختيار الأعمدة وصف البداية'); return; }
+
+  showStep('stepProgress');
+  renderProgressList(['Layer 1 — استخراج قائمة الدخل والإيضاحات','Layer 2 — ربط ميزان المراجعة','Layer 3 — تصنيف طبيعة المصروف','Layer 4 — المطابقة']);
+
+  try{
+    setProgressState(0,'active');
+    await apiPost('layer1-extract',{engagementId, images:isImages.map(im=>({mediaType:im.mediaType,base64:im.base64}))});
+    setProgressState(0,'done');
+
+    setProgressState(1,'active');
+    const l2res=await apiPost('layer2-map',{engagementId, tbRows, tbScope});
+    setProgressState(1,'done',`Layer 2 — ربط ميزان المراجعة (${l2res.zeroBalanceExcluded} حساب صفري مُستثنى من ${l2res.totalRows})`);
+
+    setProgressState(2,'active');
+    await apiPost('layer3-classify',{engagementId, mode:'full'});
+    setProgressState(2,'done');
+
+    setProgressState(3,'active');
+    const l4=await apiPost('layer4-reconcile',{engagementId, reconciliationThreshold:threshold});
+    setProgressState(3,'done');
+    latestLayer4=l4;
+    reconciliationThresholdUsed=threshold;
+
+    renderResults(l4);
+    showStep('stepResults');
+  }catch(e){
+    const items=document.querySelectorAll('#progressList .pitem');
+    const activeIdx=Array.from(items).findIndex(it=>it.classList.contains('active'));
+    if(activeIdx>=0) setProgressState(activeIdx,'err');
+    showStep('stepUpload');
+    showUploadErr('حدث خطأ أثناء التحليل: '+e.message);
+  }
+}
+
+function badgeFor(status){
+  if(status==='Matched')return '<span class="badge b-match">مطابق</span>';
+  if(status==='Minor Rounding Difference')return '<span class="badge b-minor">فرق تقريب بسيط</span>';
+  if(status==='Material Variance')return '<span class="badge b-material">فرق جوهري</span>';
+  return '<span class="badge b-na">—</span>';
+}
+function renderResults(l4){
+  const rc=l4.reconciliation;
+  const tbl=document.getElementById('rcTable');
+  let html='<thead><tr><th>البند الرئيسي</th><th>قائمة الدخل</th><th>إجمالي الإيضاحات</th><th>إجمالي الميزان</th><th>IS↔Notes</th><th>Notes↔TB</th><th>IS↔TB</th></tr></thead><tbody>';
+  rc.mainLines.forEach(m=>{
+    html+=`<tr class="mainrow"><td>${escAttr(m.mainLineName)}</td><td>${m.totalPerIncomeStatement}</td><td>${m.subLinesTotal??'—'}</td><td>${m.trialBalanceTotal??'—'}</td>`+
+      `<td>${badgeFor(m.incomeStatementVsNotes.reconciliationStatus)}</td><td>${badgeFor(m.notesVsTrialBalance.reconciliationStatus)}</td><td>${badgeFor(m.incomeStatementVsTrialBalance.reconciliationStatus)}</td></tr>`;
+    (m.subLines||[]).forEach(s=>{
+      html+=`<tr><td style="padding-right:22px;color:var(--muted)">↳ ${escAttr(s.subLineName)}</td><td>—</td><td>${s.amountPerNote}</td><td>${s.trialBalanceLinkedAmount??'—'}</td><td colspan="2">${badgeFor(s.reconciliationStatus)}</td><td style="font-size:11px;color:var(--muted)">${s.varianceClassification||''}</td></tr>`;
+    });
+  });
+  html+='</tbody>';
+  tbl.innerHTML=html;
+
+  const flags=l4.reviewFlags||[];
+  document.getElementById('flagsCount').textContent=flags.length+' علم مراجعة';
+  document.getElementById('flagsList').innerHTML=flags.map(f=>
+    `<div class="flag-item"><span class="fl-src">${f.sourceLayer}</span>${escAttr(f.referenceName)} — ${escAttr(f.reviewReason)}</div>`
+  ).join('') || '<p style="color:var(--muted);font-size:13px">لا توجد أعلام مراجعة 🎉</p>';
+}
+function goToUpload(){ showStep('stepUpload'); }
+function goToResultsFromReviewer(){ showStep('stepResults'); }
+
+// ---------- Reviewer Mapping ----------
+const FIXED_MAIN_CODES=[
+  {code:'CS',label:'تكلفة المبيعات (CS)'},{code:'GE',label:'المصروفات العمومية والإدارية (GE)'},
+  {code:'SE',label:'المصروفات البيعية والتسويقية (SE)'},{code:'FIN',label:'تكلفة التمويل (FIN)'},
+  {code:'DEP',label:'إهلاك (DEP)'},{code:'LOS',label:'خسائر (LOS)'},
+  {code:'PROV',label:'مخصصات (PROV)'},{code:'OTH',label:'المصروفات الأخرى (OTH)'},
+];
+
+async function loadReviewerQueue(){
+  document.getElementById('rvErr').classList.remove('show');
+  document.getElementById('rvOk').classList.remove('show');
+  showStep('stepReviewer');
+  try{
+    const q=await apiPost('reviewer-queue',{engagementId});
+    renderSubQueue(q.subLineQueue, q.checkedDecisions.subLineDecisions);
+    renderMainQueue(q.mainLineCodeQueue, q.checkedDecisions.mainLineCodeDecisions);
+  }catch(e){
+    document.getElementById('rvErrMsg').textContent='تعذّر تحميل قائمة المراجعة: '+e.message;
+    document.getElementById('rvErr').classList.add('show');
+  }
+}
+function decStatusBadge(status){
+  if(status==='Resolved')return '<span class="dec-status ds-resolved">محسوم</span>';
+  if(status==='NotResolved')return '<span class="dec-status ds-notresolved">غير محسوم</span>';
+  if(status==='ContextChanged')return '<span class="dec-status ds-contextchanged">تغيّر السياق — راجع من جديد</span>';
+  if(status==='Orphaned')return '<span class="dec-status ds-contextchanged">لم يعد قائماً</span>';
+  return '';
+}
+function renderSubQueue(queue, decisions){
+  const sub=document.getElementById('subQueueSub');
+  sub.textContent = queue.length ? (queue.length+' حساب بحاجة لتحديد البند الفرعي') : 'لا توجد حسابات بحاجة لمراجعة الربط 🎉';
+  const tbl=document.getElementById('subQueueTable');
+  if(!queue.length){ tbl.innerHTML=''; return; }
+  let html='<thead><tr><th>الحساب</th><th>البند الرئيسي</th><th>المبلغ</th><th>سبب المراجعة</th><th>البند الفرعي المختار</th><th>الحالة</th><th></th></tr></thead><tbody>';
+  queue.forEach((item,i)=>{
+    const d=decisions[String(item.accountNumber)];
+    const curVal=d&&d.chosenSubLineId?d.chosenSubLineId:'';
+    html+=`<tr>
+      <td>${escAttr(item.accountNumber)} — ${escAttr(item.accountName)}</td>
+      <td>${escAttr(item.mainLineName)}</td>
+      <td>${item.amount}</td>
+      <td style="font-size:11px;color:var(--muted)">${escAttr(item.reasonForReview||'')}</td>
+      <td><select id="sub-sel-${i}">
+        <option value="">— غير محسوم —</option>
+        ${item.aiCandidateSubLines.map(c=>`<option value="${escAttr(c.subLineId)}" ${c.subLineId===curVal?'selected':''}>${escAttr(c.subLineName)}</option>`).join('')}
+      </select></td>
+      <td>${d?decStatusBadge(d.contextStatus):''}</td>
+      <td><button class="savebtn" onclick="saveSubDecision(${i},'${escAttr(item.accountNumber)}')">حفظ</button></td>
+    </tr>`;
+  });
+  html+='</tbody>';
+  tbl.innerHTML=html;
+  window.__subQueue=queue;
+}
+function renderMainQueue(queue, decisions){
+  const sub=document.getElementById('mainQueueSub');
+  sub.textContent = queue.length ? (queue.length+' بند رئيسي بحاجة لتحديد الكود') : 'لا توجد بنود رئيسية بحاجة لمراجعة الكود 🎉';
+  const tbl=document.getElementById('mainQueueTable');
+  if(!queue.length){ tbl.innerHTML=''; return; }
+  let html='<thead><tr><th>البند الرئيسي</th><th>الإجمالي بقائمة الدخل</th><th>الكود المختار</th><th>الحالة</th><th></th></tr></thead><tbody>';
+  queue.forEach((item,i)=>{
+    const d=decisions[item.mainLineName];
+    const curVal=d&&d.chosenCode?d.chosenCode:'';
+    html+=`<tr>
+      <td>${escAttr(item.mainLineName)}</td>
+      <td>${item.totalPerIncomeStatement}</td>
+      <td><select id="main-sel-${i}">
+        <option value="">— غير محسوم —</option>
+        ${FIXED_MAIN_CODES.map(c=>`<option value="${c.code}" ${c.code===curVal?'selected':''}>${c.label}</option>`).join('')}
+      </select></td>
+      <td>${d?decStatusBadge(d.contextStatus):''}</td>
+      <td><button class="savebtn" onclick="saveMainDecision(${i},'${escAttr(item.mainLineName)}')">حفظ</button></td>
+    </tr>`;
+  });
+  html+='</tbody>';
+  tbl.innerHTML=html;
+  window.__mainQueue=queue;
+}
+async function saveSubDecision(i,accountNumber){
+  document.getElementById('rvErr').classList.remove('show');
+  const sel=document.getElementById('sub-sel-'+i);
+  const chosenSubLineId=sel.value||null;
+  try{
+    const res=await apiPost('reviewer-decide',{engagementId, decisionType:'subLine', accountNumber, chosenSubLineId});
+    latestLayer4={reconciliation:res.layer4Reviewed.reconciliation, reviewFlags:res.layer4Reviewed.reviewFlags};
+    document.getElementById('rvOkMsg').textContent='تم حفظ القرار. حسابات أُعيد تصنيفها فعلياً: '+res.changedAccounts.length;
+    document.getElementById('rvOk').classList.add('show');
+    await loadReviewerQueue();
+  }catch(e){
+    document.getElementById('rvErrMsg').textContent='تعذّر حفظ القرار: '+e.message;
+    document.getElementById('rvErr').classList.add('show');
+  }
+}
+async function saveMainDecision(i,mainLineName){
+  document.getElementById('rvErr').classList.remove('show');
+  const sel=document.getElementById('main-sel-'+i);
+  const chosenCode=sel.value||null;
+  try{
+    const res=await apiPost('reviewer-decide',{engagementId, decisionType:'mainLineCode', mainLineName, chosenCode});
+    document.getElementById('rvOkMsg').textContent='تم حفظ قرار كود البند الرئيسي.';
+    document.getElementById('rvOk').classList.add('show');
+    await loadReviewerQueue();
+  }catch(e){
+    document.getElementById('rvErrMsg').textContent='تعذّر حفظ القرار: '+e.message;
+    document.getElementById('rvErr').classList.add('show');
+  }
+}
+
+// ---------- الملف النهائي ----------
+function goToFinal(){
+  document.getElementById('finalDone').classList.add('hidden');
+  document.getElementById('finalPre').classList.remove('hidden');
+  document.getElementById('finalErr').classList.remove('show');
+  document.getElementById('finalWarn').classList.remove('show');
+  showStep('stepFinal');
+}
+async function generateFinal(){
+  document.getElementById('finalErr').classList.remove('show');
+  document.getElementById('finalWarn').classList.remove('show');
+  const btn=document.getElementById('btnFinal');
+  btn.disabled=true; document.getElementById('finalSpin').style.display='inline-block'; document.getElementById('finalTxt').textContent='جاري التوليد…';
+  try{
+    const result=await apiPost('generate-final-excel',{engagementId, templateFile:'income-statement-analysis.xlsx'});
+    if(result.unmappedMainLines && result.unmappedMainLines.length){
+      document.getElementById('finalWarnMsg').textContent='تنبيه: بنود رئيسية بلا كود محسوم: '+result.unmappedMainLines.join('، ');
+      document.getElementById('finalWarn').classList.add('show');
+    }
+    const fileResp=await fetch(result.url);
+    const blob=await fileResp.blob();
+    const genName='تحليل مصاريف قائمة الدخل - '+new Date().toISOString().slice(0,10)+'.xlsx';
+    document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
+    document.getElementById('finalPre').classList.add('hidden');
+    document.getElementById('finalDone').classList.remove('hidden');
+  }catch(e){
+    document.getElementById('finalErrMsg').textContent='حدث خطأ: '+e.message;
+    document.getElementById('finalErr').classList.add('show');
+  }
+  btn.disabled=false; document.getElementById('finalSpin').style.display='none'; document.getElementById('finalTxt').textContent='إصدار ملف الإكسل النهائي';
+}
+function dlBlob(blob,name){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+}
+</script>
+</body>
+</html>
