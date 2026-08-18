@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مداد | تحليل مصاريف قائمة الدخل</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='13' height='13' rx='3' fill='%234FCDE8'/><rect x='2' y='17' width='13' height='13' rx='3' fill='%230AAED0'/><rect x='17' y='17' width='13' height='13' rx='3' fill='%230AAED0'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--navy:#1C2653;--navy2:#2a3875;--accent:#0AAED0;--bg:#F0F4FA;--card:#fff;--border:#D6DEF0;--text:#1C2653;--muted:#6B7A9E;--green:#16a34a;--orange:#d97706;--red:#b91c1c}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;direction:rtl}
+.header{background:var(--navy);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 20px rgba(28,38,83,.3)}
+.hl{display:flex;align-items:center;gap:12px}
+.hbrand{color:#fff;font-size:18px;font-weight:900}
+.hd{width:1px;height:28px;background:rgba(255,255,255,.2)}
+.ht{color:rgba(255,255,255,.85);font-size:13px;font-weight:600}
+.hu{display:flex;align-items:center;gap:10px}
+.hu span{color:rgba(255,255,255,.7);font-size:12px}
+.hist-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:6px 14px;border-radius:8px;font-family:'Tajawal',sans-serif;font-size:12px;cursor:pointer}
+.hist-btn:hover{background:rgba(255,255,255,.2)}
+.btn-lo{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);padding:6px 14px;border-radius:8px;font-family:'Tajawal',sans-serif;font-size:12px;cursor:pointer}
+.btn-lo:hover{background:rgba(255,255,255,.2)}
+.main{max-width:1080px;margin:0 auto;padding:36px 20px}
+.page-hero{text-align:center;margin-bottom:28px}
+.page-hero h2{font-size:22px;font-weight:900;color:var(--text);margin-bottom:6px}
+.page-hero p{font-size:13px;color:var(--muted)}
+.fcard{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;box-shadow:0 4px 20px rgba(28,38,83,.08);margin-bottom:20px}
+.sec-title{font-size:16px;font-weight:900;color:var(--text);margin-bottom:4px}
+.sec-sub{font-size:12.5px;color:var(--muted);margin-bottom:18px}
+.upgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.lu{border:2px dashed var(--border);border-radius:12px;padding:26px 18px;text-align:center;cursor:pointer;background:var(--bg);transition:all .18s}
+.lu:hover{border-color:var(--accent);background:#f0f7ff}
+.lu.has{border-color:var(--green);border-style:solid;background:#f0fdf4}
+.lu p{font-size:12.5px;color:var(--muted);margin-top:8px;font-weight:600}
+.lu .sub{font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+.lu img.prev{max-height:110px;max-width:100%;border-radius:8px;display:block;margin:0 auto}
+.sheetpick{margin-top:10px;display:none}
+.sheetpick select{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Tajawal',sans-serif;font-size:12.5px;color:var(--text);background:#fff}
+@media(max-width:680px){.upgrid{grid-template-columns:1fr}}
+.brow{display:flex;gap:12px;justify-content:flex-end;margin-top:24px}
+.bbk{background:transparent;border:1.5px solid var(--border);color:var(--muted);padding:11px 22px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer}
+.bbk:hover{border-color:var(--navy);color:var(--navy)}
+.bpr{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border:none;padding:11px 28px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 18px rgba(28,38,83,.28);transition:all .18s}
+.bpr:hover:not(:disabled){transform:translateY(-1px)}
+.bpr:disabled{opacity:.5;cursor:not-allowed}
+.spin{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .65s linear infinite;display:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.aerr{display:none;align-items:center;gap:8px;padding:11px 14px;border-radius:10px;font-size:13px;margin-bottom:16px;background:#fef2f2;border:1px solid #fecaca;color:var(--red)}
+.aerr.show{display:flex}
+.awarn{display:none;align-items:flex-start;gap:8px;padding:11px 14px;border-radius:10px;font-size:12.5px;margin-bottom:16px;background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.awarn.show{display:flex}
+.hidden{display:none!important}
+.tblwrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table.edit{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+table.edit th{background:var(--navy);color:#fff;padding:9px 10px;text-align:right;font-weight:700;font-size:11.5px;white-space:nowrap}
+table.edit td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.edit tbody tr:hover td{background:var(--bg)}
+table.edit input,table.edit select{width:100%;padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Tajawal',sans-serif;font-size:12px;color:var(--text);background:#fff}
+table.edit input:focus,table.edit select:focus{outline:none;border-color:var(--accent)}
+.rmbtn{background:#fef2f2;color:var(--red);border:1px solid #fecaca;border-radius:7px;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1}
+.addrow-btn{margin-top:10px;background:var(--bg);border:1.5px dashed var(--border);color:var(--navy);padding:8px 16px;border-radius:9px;font-family:'Tajawal',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer}
+.tbl-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.tbl-count{font-size:11.5px;color:var(--muted);font-weight:600}
+.sw{text-align:center;padding:40px 20px}
+.si{width:72px;height:72px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:32px}
+.sw h2{font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px}
+.sw p{font-size:13.5px;color:var(--muted);margin-bottom:24px}
+.bdl{background:linear-gradient(135deg,var(--green),#15803d);color:#fff;border:none;padding:13px 28px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 18px rgba(22,163,74,.3);margin-bottom:12px}
+.bnw{background:transparent;border:1.5px solid var(--border);color:var(--navy);padding:11px 22px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;cursor:pointer}
+.analyzing{text-align:center;padding:36px 20px}
+.analyzing p{font-size:13px;color:var(--muted);margin-top:14px}
+.spin-lg{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="hl">
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="13" height="13" rx="3.5" fill="#4FCDE8"/>
+      <rect x="1" y="17" width="13" height="13" rx="3.5" fill="#0AAED0"/>
+      <rect x="17" y="17" width="13" height="13" rx="3.5" fill="#0AAED0"/>
+    </svg>
+    <span class="hbrand">مداد</span>
+    <div class="hd"></div>
+    <span class="ht">تحليل مصاريف قائمة الدخل</span>
+  </div>
+  <div class="hu">
+    <span id="userEmail"></span>
+    <button class="hist-btn" onclick="window.location.href='home.html'">الرئيسية</button>
+    <button class="btn-lo" onclick="logout()">تسجيل خروج</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <div id="step1">
+    <div class="page-hero">
+      <h2>تحليل مصاريف قائمة الدخل 📊</h2>
+      <p>ارفع صورة قائمة الدخل وملف ميزان المراجعة، وسيقوم الذكاء الاصطناعي بربط الحسابات بالبنود وتصنيفها حسب المحتوى المحلي</p>
+    </div>
+    <div class="fcard">
+      <div class="aerr" id="uploadErr"><span id="uploadErrMsg"></span></div>
+      <div class="upgrid">
+        <div>
+          <div class="lu" id="isDrop" onclick="document.getElementById('isInp').click()">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p>اضغط لرفع صورة قائمة الدخل</p>
+            <p class="sub">JPG / PNG — صورة واضحة تشمل كل البنود</p>
+          </div>
+          <input type="file" id="isInp" accept="image/*" style="display:none">
+        </div>
+        <div>
+          <div class="lu" id="tbDrop" onclick="document.getElementById('tbInp').click()">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+            <p>اضغط لرفع ملف ميزان المراجعة</p>
+            <p class="sub">Excel (xlsx/xls)</p>
+          </div>
+          <input type="file" id="tbInp" accept=".xlsx,.xls" style="display:none">
+          <div class="sheetpick" id="sheetPick">
+            <select id="sheetSel" onchange="onSheetChange()"></select>
+          </div>
+        </div>
+      </div>
+      <div class="brow">
+        <button class="bpr" id="btnAnalyze" onclick="analyze()" disabled>
+          <div class="spin" id="anSpin"></div>
+          <span id="anTxt">تحليل بالذكاء الاصطناعي</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="analyzing" class="hidden">
+    <div class="fcard analyzing">
+      <div class="spin-lg"></div>
+      <p id="analyzingTxt">جاري تحليل الصورة وربط الحسابات… قد يستغرق هذا دقيقة أو أكثر حسب عدد الحسابات</p>
+    </div>
+  </div>
+
+  <div id="step2" class="hidden">
+    <div class="aerr" id="genErr"><span id="genErrMsg"></span></div>
+    <div class="awarn" id="genWarn"><span id="genWarnMsg"></span></div>
+
+    <div class="fcard">
+      <div class="tbl-title">
+        <div>
+          <div class="sec-title">بنود قائمة الدخل (الإيضاحات)</div>
+          <div class="sec-sub">راجع البند الفرعي، البند الرئيسي، الإجمالي، وتصنيف المحتوى المحلي — حتى بند الزكاة (غير شاملها)</div>
+        </div>
+        <span class="tbl-count" id="notesCount"></span>
+      </div>
+      <div class="tblwrap"><table class="edit" id="notesTable">
+        <thead><tr><th>#</th><th>البند الفرعي</th><th>البند الرئيسي</th><th>الإجمالي</th><th>تصنيف المحتوى المحلي</th><th></th></tr></thead>
+        <tbody id="notesBody"></tbody>
+      </table></div>
+      <button class="addrow-btn" onclick="addNoteRow()">+ إضافة بند</button>
+    </div>
+
+    <div class="fcard">
+      <div class="tbl-title">
+        <div>
+          <div class="sec-title">حسابات ميزان المراجعة</div>
+          <div class="sec-sub">تأكد من ربط كل حساب بالبند الصحيح وتصنيف المحتوى المحلي الخاص به</div>
+        </div>
+        <span class="tbl-count" id="accountsCount"></span>
+      </div>
+      <div class="tblwrap"><table class="edit" id="accountsTable">
+        <thead><tr><th>#</th><th>رقم الحساب</th><th>اسم الحساب</th><th>الإجمالي</th><th>البند المرتبط (الربط بقائمة الدخل)</th><th>تصنيف المحتوى المحلي</th><th></th></tr></thead>
+        <tbody id="accountsBody"></tbody>
+      </table></div>
+      <button class="addrow-btn" onclick="addAccountRow()">+ إضافة حساب</button>
+    </div>
+
+    <div class="brow">
+      <button class="bbk" onclick="resetAll()">← تحليل جديد</button>
+      <button class="bpr" id="btnGen" onclick="genFile()">
+        <div class="spin" id="genSpin"></div>
+        <span id="genTxt">توليد ملف الإكسل</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="step3" class="hidden">
+    <div class="fcard">
+      <div class="sw">
+        <div class="si">✅</div>
+        <h2>تم إعداد ملف التحليل بنجاح!</h2>
+        <p>راجع التصنيف داخل الإكسل قبل اعتماده — الأعمدة الأخرى في الملف محسوبة تلقائياً بصيغ الملف الأصلي</p>
+        <button class="bdl" id="btnDl">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          تحميل الملف
+        </button><br><br>
+        <button class="bnw" onclick="resetAll()">تحليل جديد</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let sb,accessToken='';
+(async()=>{
+  const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
+  sb=supabase.createClient(cfg.url,cfg.key);
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  accessToken=session.access_token;
+  document.getElementById('userEmail').textContent=session.user.email;
+})();
+function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
+
+// ── البنود الرئيسية الثمانية لقائمة الدخل (كما في القالب الرسمي) ──
+const MAIN_ITEMS=[
+  {code:'CS',label:'تكلفة المبيعات'},
+  {code:'GE',label:'مصاريف عمومية وإدارية'},
+  {code:'SE',label:'مصاريف بيعية وتسويقية'},
+  {code:'FIN',label:'تكاليف تمويل'},
+  {code:'DEP',label:'اهلاك'},
+  {code:'LOS',label:'خسائر'},
+  {code:'PROV',label:'مخصصات'},
+  {code:'OTH',label:'أمور أخرى'},
+];
+const LOCAL_CONTENT_NOTES=['القوى العاملة','السلع والخدمات','تطوير القدرات','الإستهلاك والإطفاء','مصاريف حكومية','الزكاة وضريبة الدخل','مخصصات والمعاملات الغير نقدية','مصاريف جمركية','خسائر تحويل العملة أو أي خسائر أخرى','ملحق أ - 1','ملحق أ - 2','ملحق أ - 3','ملحق أ - 4'];
+const LOCAL_CONTENT_ACCOUNTS=[...LOCAL_CONTENT_NOTES,'تكاليف غير مسموح بها'];
+
+let isImage=null; // {base64, mediaType}
+let tbWorkbook=null, tbGrid=[];
+let state={notes:[],accounts:[]};
+
+// ── رفع صورة قائمة الدخل (مع ضغط/تصغير للصور الكبيرة) ──
+document.getElementById('isInp').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAXD=1800;
+      let w=img.naturalWidth,h=img.naturalHeight;
+      if(w>MAXD||h>MAXD){const s=MAXD/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      const dataUrl=c.toDataURL('image/jpeg',0.87);
+      isImage={base64:dataUrl.split(',')[1],mediaType:'image/jpeg'};
+      const d=document.getElementById('isDrop');
+      d.classList.add('has');
+      d.innerHTML='<img src="'+dataUrl+'" class="prev"><p>✅ تم رفع صورة قائمة الدخل</p>';
+      checkReady();
+    };
+    img.src=ev.target.result;
+  };
+  r.readAsDataURL(f);
+};
+
+// ── رفع ملف ميزان المراجعة (xlsx) وتحويله لمصفوفة صفوف ──
+document.getElementById('tbInp').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      tbWorkbook=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      const sel=document.getElementById('sheetSel');
+      sel.innerHTML='';
+      tbWorkbook.SheetNames.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+      document.getElementById('sheetPick').style.display='block';
+      onSheetChange();
+      const d=document.getElementById('tbDrop');
+      d.classList.add('has');
+      d.innerHTML='<p>✅ تم رفع الملف: '+f.name+'</p>';
+      checkReady();
+    }catch(err){
+      showUploadErr('تعذّر قراءة ملف الإكسل: '+err.message);
+    }
+  };
+  r.readAsArrayBuffer(f);
+};
+function onSheetChange(){
+  if(!tbWorkbook)return;
+  const name=document.getElementById('sheetSel').value;
+  const ws=tbWorkbook.Sheets[name];
+  tbGrid=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+  // سقف احترازي لعدد الصفوف المُرسلة للنموذج
+  if(tbGrid.length>1200)tbGrid=tbGrid.slice(0,1200);
+}
+function checkReady(){
+  document.getElementById('btnAnalyze').disabled=!(isImage&&tbGrid.length>0);
+}
+function showUploadErr(msg){
+  document.getElementById('uploadErrMsg').textContent=msg;
+  document.getElementById('uploadErr').classList.add('show');
+}
+
+// ── نداء الذكاء الاصطناعي (streaming) — نفس نمط المصنّف لكن عبر income-stream (Sonnet) ──
+async function callIncomeStream(systemText,messages,{maxTokens=12000,onDelta}={}){
+  const res=await fetch('/.netlify/functions/income-stream',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},
+    body:JSON.stringify({max_tokens:maxTokens,system:[{type:'text',text:systemText}],messages})
+  });
+  if(!res.ok||!res.body){
+    const errData=await res.json().catch(()=>({}));
+    if(res.status===401){window.location.href='login.html';}
+    const msg=(errData&&errData.error)||res.statusText;
+    throw new Error(typeof msg==='string'?msg:('خطأ '+res.status));
+  }
+  const reader=res.body.getReader();
+  const decoder=new TextDecoder();
+  let buffer='',fullText='';
+  while(true){
+    const{done,value}=await reader.read();
+    if(done)break;
+    buffer+=decoder.decode(value,{stream:true});
+    const events=buffer.split('\n\n');
+    buffer=events.pop()||'';
+    for(const evt of events){
+      let eventType='',data='';
+      for(const line of evt.split('\n')){
+        if(line.startsWith('event: '))eventType=line.slice(7).trim();
+        else if(line.startsWith('data: '))data=line.slice(6);
+      }
+      if(!data)continue;
+      let parsed;try{parsed=JSON.parse(data);}catch(e){continue;}
+      if(eventType==='content_block_delta'&&parsed.delta&&parsed.delta.type==='text_delta'){
+        fullText+=parsed.delta.text;
+        if(onDelta)onDelta(fullText);
+      }else if(eventType==='error'){
+        throw new Error((parsed.error&&parsed.error.message)||'خطأ من خدمة التحليل');
+      }
+    }
+  }
+  return fullText;
+}
+function extractJson(text){
+  const cleaned=text.replace(/```json|```/g,'').trim();
+  const s=cleaned.indexOf('{'),e=cleaned.lastIndexOf('}');
+  if(s===-1||e===-1||e<s)throw new Error('لم يصل رد صالح من التحليل');
+  try{return JSON.parse(cleaned.slice(s,e+1));}
+  catch(err){throw new Error('تعذّر قراءة نتيجة التحليل — حاول مجدداً');}
+}
+
+const SYSTEM_PROMPT=`أنت محلل مالي متخصص في تدقيق المحتوى المحلي وفق منهجية هيئة المحتوى المحلي والمشتريات الحكومية السعودية.
+ستُعطى: (1) صورة قائمة الدخل لمنشأة، (2) مصفوفة صفوف من ميزان المراجعة (Excel).
+
+مهمتك بالضبط:
+1. من صورة قائمة الدخل، استخرج البنود الفرعية (الإيضاحات) لمصاريف قائمة الدخل فقط — توقف عند بند الزكاة ولا تُدرجه ولا أي بند بعده (الزكاة تُصنَّف لاحقاً على مستوى الحسابات فقط، وليست ضمن هذه البنود). لكل بند فرعي حدد: اسمه كما ورد، البند الرئيسي الذي ينتمي له (اختر كوداً واحداً فقط من: CS=تكلفة المبيعات، GE=مصاريف عمومية وإدارية، SE=مصاريف بيعية وتسويقية، FIN=تكاليف تمويل، DEP=اهلاك، LOS=خسائر، PROV=مخصصات، OTH=أمور أخرى)، الإجمالي كرقم، وتصنيف المحتوى المحلي (اختر قيمة واحدة فقط من هذه القائمة بالضبط: ${JSON.stringify(LOCAL_CONTENT_NOTES)}).
+2. من مصفوفة ميزان المراجعة، استخرج كل حساب مصروف له صلة بقائمة الدخل: رقم الحساب (إن وجد)، اسم الحساب، الإجمالي كرقم. تجاهل حسابات الأصول/الخصوم/حقوق الملكية والحسابات ذات الرصيد صفر.
+3. اربط (Link) كل حساب من الميزان بأحد بنود قائمة الدخل التي استخرجتها في الخطوة 1، عبر "linkIndex" وهو الفهرس (0-based) لذلك البند داخل مصفوفة notes التي أنشأتها.
+4. صنّف كل حساب بشكل مستقل حسب طبيعته الفعلية (لا تنسخ تصنيف البند تلقائياً) ضمن قائمة تصنيف المحتوى المحلي التالية بالضبط (تشمل قيمة إضافية للتكاليف غير المسموح بها): ${JSON.stringify(LOCAL_CONTENT_ACCOUNTS)}.
+
+أخرج JSON فقط بدون أي نص إضافي وبدون Markdown، بالشكل التالي بالضبط:
+{"notes":[{"subItem":"نص","mainCode":"GE","total":12345.6,"localContent":"نص من القائمة"}],"accounts":[{"number":"نص أو فارغ","name":"نص","total":12345.6,"linkIndex":0,"localContent":"نص من القائمة"}]}`;
+
+async function analyze(){
+  document.getElementById('uploadErr').classList.remove('show');
+  document.getElementById('step1').classList.add('hidden');
+  document.getElementById('analyzing').classList.remove('hidden');
+  try{
+    const userContent=[
+      {type:'text',text:'ميزان المراجعة (مصفوفة صفوف مستخرجة من ملف Excel، أول صف غالباً عناوين):\n'+JSON.stringify(tbGrid)},
+      {type:'image',source:{type:'base64',media_type:isImage.mediaType,data:isImage.base64}}
+    ];
+    const fullText=await callIncomeStream(SYSTEM_PROMPT,[{role:'user',content:userContent}],{
+      maxTokens:14000,
+      onDelta:(txt)=>{document.getElementById('analyzingTxt').textContent='جاري تحليل الصورة وربط الحسابات… ('+txt.length+' حرف مستلم)';}
+    });
+    const parsed=extractJson(fullText);
+    state.notes=(parsed.notes||[]).map(n=>({subItem:n.subItem||'',mainCode:n.mainCode||'GE',total:n.total??'',localContent:n.localContent||LOCAL_CONTENT_NOTES[0]}));
+    state.accounts=(parsed.accounts||[]).map(a=>({number:a.number||'',name:a.name||'',total:a.total??'',linkIndex:Number.isInteger(a.linkIndex)?a.linkIndex:0,localContent:a.localContent||LOCAL_CONTENT_ACCOUNTS[0]}));
+    document.getElementById('analyzing').classList.add('hidden');
+    document.getElementById('step2').classList.remove('hidden');
+    renderNotesTable();
+    renderAccountsTable();
+  }catch(e){
+    document.getElementById('analyzing').classList.add('hidden');
+    document.getElementById('step1').classList.remove('hidden');
+    showUploadErr('حدث خطأ أثناء التحليل: '+e.message);
+  }
+}
+
+// ── جدول بنود قائمة الدخل ──
+function renderNotesTable(){
+  const tbody=document.getElementById('notesBody');
+  tbody.innerHTML='';
+  state.notes.forEach((n,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td><input type="text" value="${escAttr(n.subItem)}" onchange="state.notes[${i}].subItem=this.value;renderAccountsLinkOptions()"></td>
+      <td><select onchange="state.notes[${i}].mainCode=this.value">${MAIN_ITEMS.map(m=>`<option value="${m.code}" ${m.code===n.mainCode?'selected':''}>${m.label}</option>`).join('')}</select></td>
+      <td><input type="number" step="0.01" value="${n.total}" onchange="state.notes[${i}].total=this.value"></td>
+      <td><select onchange="state.notes[${i}].localContent=this.value">${LOCAL_CONTENT_NOTES.map(c=>`<option ${c===n.localContent?'selected':''}>${c}</option>`).join('')}</select></td>
+      <td><button class="rmbtn" onclick="removeNoteRow(${i})">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('notesCount').textContent=state.notes.length+' بند';
+  renderAccountsLinkOptions();
+}
+function addNoteRow(){state.notes.push({subItem:'',mainCode:'GE',total:'',localContent:LOCAL_CONTENT_NOTES[0]});renderNotesTable();}
+function removeNoteRow(i){state.notes.splice(i,1);state.accounts.forEach(a=>{if(a.linkIndex>=state.notes.length)a.linkIndex=0;});renderNotesTable();renderAccountsTable();}
+
+// ── جدول حسابات الميزان ──
+function renderAccountsTable(){
+  const tbody=document.getElementById('accountsBody');
+  tbody.innerHTML='';
+  state.accounts.forEach((a,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td><input type="text" value="${escAttr(a.number)}" onchange="state.accounts[${i}].number=this.value"></td>
+      <td><input type="text" value="${escAttr(a.name)}" onchange="state.accounts[${i}].name=this.value"></td>
+      <td><input type="number" step="0.01" value="${a.total}" onchange="state.accounts[${i}].total=this.value"></td>
+      <td><select class="linksel" data-i="${i}" onchange="state.accounts[${i}].linkIndex=parseInt(this.value)"></select></td>
+      <td><select onchange="state.accounts[${i}].localContent=this.value">${LOCAL_CONTENT_ACCOUNTS.map(c=>`<option ${c===a.localContent?'selected':''}>${c}</option>`).join('')}</select></td>
+      <td><button class="rmbtn" onclick="removeAccountRow(${i})">✕</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('accountsCount').textContent=state.accounts.length+' حساب';
+  renderAccountsLinkOptions();
+}
+function renderAccountsLinkOptions(){
+  document.querySelectorAll('.linksel').forEach(sel=>{
+    const i=parseInt(sel.dataset.i);
+    const cur=state.accounts[i]?state.accounts[i].linkIndex:0;
+    sel.innerHTML=state.notes.map((n,ni)=>`<option value="${ni}" ${ni===cur?'selected':''}>${escAttr(n.subItem||'(بدون اسم)')} — ${MAIN_ITEMS.find(m=>m.code===n.mainCode)?.label||n.mainCode}</option>`).join('');
+  });
+}
+function addAccountRow(){state.accounts.push({number:'',name:'',total:'',linkIndex:0,localContent:LOCAL_CONTENT_ACCOUNTS[0]});renderAccountsTable();}
+function removeAccountRow(i){state.accounts.splice(i,1);renderAccountsTable();}
+function escAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+// ── توليد الملف النهائي ──
+async function genFile(){
+  document.getElementById('genErr').classList.remove('show');
+  document.getElementById('genWarn').classList.remove('show');
+  const btn=document.getElementById('btnGen');
+  btn.disabled=true;document.getElementById('genSpin').style.display='inline-block';document.getElementById('genTxt').textContent='جاري التوليد…';
+  try{
+    const notesPayload=state.notes.map(n=>({subItem:n.subItem,mainCode:n.mainCode,total:n.total,localContent:n.localContent}));
+    const accountsPayload=state.accounts.map(a=>{
+      const note=state.notes[a.linkIndex]||{};
+      return{number:a.number,name:a.name,total:a.total,linkSubItem:note.subItem||'',linkMainCode:note.mainCode||'',localContent:a.localContent};
+    });
+    const resp=await fetch('/.netlify/functions/generate-income-analysis',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},
+      body:JSON.stringify({templateFile:'income-statement-analysis.xlsx',notes:notesPayload,accounts:accountsPayload})
+    });
+    if(!resp.ok){let e={error:'فشل التوليد'};try{e=await resp.json();}catch(x){}throw new Error(e.error);}
+    const result=await resp.json();
+    if(result.truncatedNotes||result.truncatedAccounts||result.skippedNotes||result.skippedAccounts){
+      const parts=[];
+      if(result.truncatedNotes)parts.push(result.truncatedNotes+' بند تجاوز السعة ولم يُدرج');
+      if(result.truncatedAccounts)parts.push(result.truncatedAccounts+' حساب تجاوز السعة ولم يُدرج');
+      if(result.skippedNotes)parts.push(result.skippedNotes+' بند تم تجاهله لبيانات ناقصة');
+      if(result.skippedAccounts)parts.push(result.skippedAccounts+' حساب تم تجاهله لبيانات ناقصة');
+      document.getElementById('genWarnMsg').textContent='تنبيه: '+parts.join(' / ');
+      document.getElementById('genWarn').classList.add('show');
+    }
+    const fileResp=await fetch(result.url);
+    const blob=await fileResp.blob();
+    const genName='تحليل مصاريف قائمة الدخل - '+new Date().toISOString().slice(0,10)+'.xlsx';
+    document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
+    logActivity();
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step3').classList.remove('hidden');
+  }catch(e){
+    document.getElementById('genErrMsg').textContent='حدث خطأ: '+e.message;
+    document.getElementById('genErr').classList.add('show');
+  }
+  btn.disabled=false;document.getElementById('genSpin').style.display='none';document.getElementById('genTxt').textContent='توليد ملف الإكسل';
+}
+function dlBlob(blob,name){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+}
+async function logActivity(){
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    if(!session)return;
+    await sb.from('document_logs').insert({user_id:session.user.id,user_email:session.user.email,template_name:'تحليل مصاريف قائمة الدخل',entity_name:''});
+  }catch(e){console.error('log error',e.message);}
+}
+
+function resetAll(){
+  isImage=null;tbWorkbook=null;tbGrid=[];state={notes:[],accounts:[]};
+  document.getElementById('isDrop').className='lu';
+  document.getElementById('isDrop').innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p>اضغط لرفع صورة قائمة الدخل</p><p class="sub">JPG / PNG — صورة واضحة تشمل كل البنود</p>';
+  document.getElementById('tbDrop').className='lu';
+  document.getElementById('tbDrop').innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg><p>اضغط لرفع ملف ميزان المراجعة</p><p class="sub">Excel (xlsx/xls)</p>';
+  document.getElementById('isInp').value='';document.getElementById('tbInp').value='';
+  document.getElementById('sheetPick').style.display='none';
+  document.getElementById('btnAnalyze').disabled=true;
+  document.getElementById('step2').classList.add('hidden');
+  document.getElementById('step3').classList.add('hidden');
+  document.getElementById('step1').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
