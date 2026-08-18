@@ -121,6 +121,7 @@ table.edit input:focus,table.edit select:focus{outline:none;border-color:var(--a
           <input type="file" id="tbInp" accept=".xlsx,.xls" style="display:none">
           <div class="sheetpick" id="sheetPick">
             <select id="sheetSel" onchange="onSheetChange()"></select>
+            <p class="sub" id="tbNote" style="display:none;color:var(--orange)">تنبيه: الملف كبير — تم إرسال أول 600 صف غير فارغ فقط للتحليل</p>
           </div>
         </div>
       </div>
@@ -227,7 +228,7 @@ const LOCAL_CONTENT_NOTES=['القوى العاملة','السلع والخدم�
 const LOCAL_CONTENT_ACCOUNTS=[...LOCAL_CONTENT_NOTES,'تكاليف غير مسموح بها'];
 
 let isImage=null; // {base64, mediaType}
-let tbWorkbook=null, tbGrid=[];
+let tbWorkbook=null, tbGrid=[], tbTruncated=false;
 let state={notes:[],accounts:[]};
 
 // ── رفع صورة قائمة الدخل (مع ضغط/تصغير للصور الكبيرة) ──
@@ -264,11 +265,11 @@ document.getElementById('tbInp').onchange=e=>{
       const sel=document.getElementById('sheetSel');
       sel.innerHTML='';
       tbWorkbook.SheetNames.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
-      document.getElementById('sheetPick').style.display='block';
-      onSheetChange();
       const d=document.getElementById('tbDrop');
       d.classList.add('has');
       d.innerHTML='<p>✅ تم رفع الملف: '+f.name+'</p>';
+      document.getElementById('sheetPick').style.display='block';
+      onSheetChange();
       checkReady();
     }catch(err){
       showUploadErr('تعذّر قراءة ملف الإكسل: '+err.message);
@@ -280,9 +281,22 @@ function onSheetChange(){
   if(!tbWorkbook)return;
   const name=document.getElementById('sheetSel').value;
   const ws=tbWorkbook.Sheets[name];
-  tbGrid=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+  let grid=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+  // إسقاط الصفوف الفارغة تمامًا وتقليم كل خلية — يقلّص حجم النص المرسل للنموذج
+  // بشكل كبير (ملفات الميزان الحقيقية فيها غالباً صفوف/أعمدة فارغة كثيرة) ويقلل
+  // احتمال انقطاع الاتصال قبل وصول أول استجابة
+  grid=grid
+    .map(row=>row.map(c=>typeof c==='string'?c.trim():c))
+    .filter(row=>row.some(c=>c!==''&&c!=null));
   // سقف احترازي لعدد الصفوف المُرسلة للنموذج
-  if(tbGrid.length>1200)tbGrid=tbGrid.slice(0,1200);
+  const CAP=600;
+  tbTruncated=grid.length>CAP;
+  tbGrid=grid.slice(0,CAP);
+  refreshTbNote();
+}
+function refreshTbNote(){
+  const note=document.getElementById('tbNote');
+  if(note)note.style.display=tbTruncated?'block':'none';
 }
 function checkReady(){
   document.getElementById('btnAnalyze').disabled=!(isImage&&tbGrid.length>0);
@@ -333,19 +347,22 @@ async function callIncomeStream(systemText,messages,{maxTokens=12000,onDelta}={}
   return fullText;
 }
 function extractJson(text){
+  if(!text||!text.trim())throw new Error('لم يصل أي رد من نموذج التحليل — غالباً انقطع الاتصال بسبب حجم البيانات المرسلة (صورة كبيرة أو ميزان مراجعة طويل). جرّب صورة أصغر/أوضح أو ميزان أقل عدد صفوف، أو أعد المحاولة');
   const cleaned=text.replace(/```json|```/g,'').trim();
   const s=cleaned.indexOf('{'),e=cleaned.lastIndexOf('}');
-  if(s===-1||e===-1||e<s)throw new Error('لم يصل رد صالح من التحليل');
+  if(s===-1||e===-1||e<s)throw new Error('رد النموذج لم يتضمن JSON صالحاً. أول 300 حرف من الرد: '+cleaned.slice(0,300));
   try{return JSON.parse(cleaned.slice(s,e+1));}
-  catch(err){throw new Error('تعذّر قراءة نتيجة التحليل — حاول مجدداً');}
+  catch(err){throw new Error('تعذّر قراءة نتيجة التحليل ('+err.message+') — قد يكون الرد انقطع قبل اكتماله. آخر 200 حرف: '+cleaned.slice(-200));}
 }
 
 const SYSTEM_PROMPT=`أنت محلل مالي متخصص في تدقيق المحتوى المحلي وفق منهجية هيئة المحتوى المحلي والمشتريات الحكومية السعودية.
 ستُعطى: (1) صورة قائمة الدخل لمنشأة، (2) مصفوفة صفوف من ميزان المراجعة (Excel).
 
+ملاحظة لغوية مهمة: قد تكون قائمة الدخل بالعربية وميزان المراجعة بالإنجليزية (أو العكس، أو مزيج). اربط البنود بالحسابات حسب المعنى والمحتوى المالي الفعلي وليس تطابق النص حرفياً — مثلاً "Salaries and Wages" في الميزان تقابل "رواتب وأجور" في قائمة الدخل. عند إخراج subItem استخدم النص كما ورد فعلياً في صورة قائمة الدخل بلغتها الأصلية، وعند إخراج name للحساب استخدم النص كما ورد فعلياً في ميزان المراجعة بلغته الأصلية — لا تترجم النصوص نفسها، فقط استخدم الفهم الدلالي للربط والتصنيف.
+
 مهمتك بالضبط:
-1. من صورة قائمة الدخل، استخرج البنود الفرعية (الإيضاحات) لمصاريف قائمة الدخل فقط — توقف عند بند الزكاة ولا تُدرجه ولا أي بند بعده (الزكاة تُصنَّف لاحقاً على مستوى الحسابات فقط، وليست ضمن هذه البنود). لكل بند فرعي حدد: اسمه كما ورد، البند الرئيسي الذي ينتمي له (اختر كوداً واحداً فقط من: CS=تكلفة المبيعات، GE=مصاريف عمومية وإدارية، SE=مصاريف بيعية وتسويقية، FIN=تكاليف تمويل، DEP=اهلاك، LOS=خسائر، PROV=مخصصات، OTH=أمور أخرى)، الإجمالي كرقم، وتصنيف المحتوى المحلي (اختر قيمة واحدة فقط من هذه القائمة بالضبط: ${JSON.stringify(LOCAL_CONTENT_NOTES)}).
-2. من مصفوفة ميزان المراجعة، استخرج كل حساب مصروف له صلة بقائمة الدخل: رقم الحساب (إن وجد)، اسم الحساب، الإجمالي كرقم. تجاهل حسابات الأصول/الخصوم/حقوق الملكية والحسابات ذات الرصيد صفر.
+1. من صورة قائمة الدخل، استخرج البنود الفرعية (الإيضاحات) لمصاريف قائمة الدخل فقط — توقف عند بند الزكاة ولا تُدرجه ولا أي بند بعده (الزكاة تُصنَّف لاحقاً على مستوى الحسابات فقط، وليست ضمن هذه البنود). لا تُدرج بنود الإيرادات/المبيعات إطلاقاً — هذا الجدول لمصاريف قائمة الدخل فقط. لكل بند فرعي حدد: اسمه كما ورد، البند الرئيسي الذي ينتمي له (اختر كوداً واحداً فقط من: CS=تكلفة المبيعات، GE=مصاريف عمومية وإدارية، SE=مصاريف بيعية وتسويقية، FIN=تكاليف تمويل، DEP=اهلاك، LOS=خسائر، PROV=مخصصات، OTH=أمور أخرى)، الإجمالي كرقم، وتصنيف المحتوى المحلي (اختر قيمة واحدة فقط من هذه القائمة بالضبط: ${JSON.stringify(LOCAL_CONTENT_NOTES)}).
+2. من مصفوفة ميزان المراجعة، استخرج فقط حسابات المصاريف التي لها صلة ببنود قائمة الدخل التي استخرجتها في الخطوة 1: رقم الحساب (إن وجد)، اسم الحساب، الإجمالي كرقم. تجاهل تماماً: حسابات الإيرادات/المبيعات/الدخل الآخر، وحسابات المركز المالي (الأصول، الخصوم/الالتزامات، حقوق الملكية)، والحسابات ذات الرصيد صفر. الميزان غالباً يحتوي على بنود كثيرة خارج نطاق هذا التحليل — لا تُدرج إلا حسابات المصاريف فعلياً.
 3. اربط (Link) كل حساب من الميزان بأحد بنود قائمة الدخل التي استخرجتها في الخطوة 1، عبر "linkIndex" وهو الفهرس (0-based) لذلك البند داخل مصفوفة notes التي أنشأتها.
 4. صنّف كل حساب بشكل مستقل حسب طبيعته الفعلية (لا تنسخ تصنيف البند تلقائياً) ضمن قائمة تصنيف المحتوى المحلي التالية بالضبط (تشمل قيمة إضافية للتكاليف غير المسموح بها): ${JSON.stringify(LOCAL_CONTENT_ACCOUNTS)}.
 5. مهم: إذا كان ملف ميزان المراجعة نفسه يحتوي على عمود/أعمدة فيها تصنيف العميل الخاص للحساب (مثل "التصنيف الرئيسي" أو "البند" أو ما شابه على مستوى البند الرئيسي، وعمود آخر على مستوى بند فرعي/تفصيلي)، انسخ قيمة هذين العمودين كما وردت حرفياً في الملف لكل حساب إلى الحقلين mainClassInFile و subClassInFile — لا تخترع قيمة ولا تحاول تصنيفها بنفسك، فقط انقلها كما هي إن وُجدت، واتركها فارغة "" إن لم يوجد عمود مماثل في الملف.
@@ -488,7 +505,7 @@ async function logActivity(){
 }
 
 function resetAll(){
-  isImage=null;tbWorkbook=null;tbGrid=[];state={notes:[],accounts:[]};
+  isImage=null;tbWorkbook=null;tbGrid=[];tbTruncated=false;state={notes:[],accounts:[]};
   document.getElementById('isDrop').className='lu';
   document.getElementById('isDrop').innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p>اضغط لرفع صورة قائمة الدخل</p><p class="sub">JPG / PNG — صورة واضحة تشمل كل البنود</p>';
   document.getElementById('tbDrop').className='lu';
