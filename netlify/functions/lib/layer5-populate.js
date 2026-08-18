@@ -24,9 +24,6 @@ const MAIN_LINE_CODE_MAP = {
 
 const MAIN_TABLE_ROW = { CS: 7, GE: 8, SE: 9, FIN: 10, DEP: 11, LOS: 12, PROV: 13, OTH: 14 };
 
-const NOT_IN_SCOPE_LABEL = 'ليس من ضمن بنود قائمة الدخل';
-const NOT_IN_SCOPE_S = NOT_IN_SCOPE_LABEL + ' - ' + NOT_IN_SCOPE_LABEL;
-
 // نفس ترجمة الفئات العشر المعتمدة في Layer 3 إلى القيم العربية الفعلية في قوائم
 // التحقق (K/T) بالقالب — لا ترجمة آلية، تطابق حرفي مسبق الاعتماد.
 const CLASSIFICATION_AR = {
@@ -117,7 +114,11 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
     const row = MAIN_TABLE_ROW[code];
     if (!row) continue;
     const w = writesByRow.get(row) || [];
-    w.push({ col: 'G', type: 'n', value: total });
+    // كل مبالغ المصروفات تُكتب بإشارة موجبة في القالب (طلب صريح) — القيمة الأصلية
+    // في Layer 1 تبقى سالبة كما هي، هذا تطبيع عرض داخل Layer 5 فقط. الصيغ القائمة
+    // (H7=SUMIFS(...)، I7=G7-H7، I3=H3-G2) تبقى متوافقة لأنها تفترض أصلاً مصروفات
+    // موجبة لحساب صافي الربح = الإيرادات - المصروفات.
+    w.push({ col: 'G', type: 'n', value: Math.abs(total) });
     writesByRow.set(row, w);
   }
 
@@ -141,7 +142,7 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
           { col: 'G', type: 'str', value: code },
         ];
         if (sl.amount !== undefined && sl.amount !== null) {
-          w.push({ col: 'H', type: 'n', value: sl.amount });
+          w.push({ col: 'H', type: 'n', value: Math.abs(Number(sl.amount)) });
         }
         const arClass = sl.preliminaryLocalContentClassification
           ? CLASSIFICATION_AR[sl.preliminaryLocalContentClassification]
@@ -161,7 +162,7 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
         { col: 'G', type: 'str', value: code },
       ];
       if (ml.totalPerIncomeStatement !== undefined && ml.totalPerIncomeStatement !== null) {
-        w.push({ col: 'H', type: 'n', value: ml.totalPerIncomeStatement });
+        w.push({ col: 'H', type: 'n', value: Math.abs(Number(ml.totalPerIncomeStatement)) });
       }
       writesByRow.set(notesRow, w);
       mainOnlyRowKey.set(ml.mainLineName, dKey(ml.mainLineName, code));
@@ -206,6 +207,19 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
   const accounts = layer2.trialBalanceAccounts || [];
 
   for (const acc of accounts) {
+    // نطاق الجدول النهائي: فقط الحسابات المرتبطة فعلياً ببند من قائمة الدخل (عبر
+    // subLine حقيقي أو mainLine بلا إيضاح). حسابات Unmapped (ميزانية عمومية/إيراد/
+    // بعد الزكاة) لا تُكتب في جدول الحسابات إطلاقاً — تبقى فقط في مخرجات Layer 2/4
+    // كسجل تدقيق داخلي (Audit Trail)، دون أي صف مقابل لها في القالب النهائي.
+    let sValue = null;
+    if (acc.mappedSubLineId && subLineRowKey.has(acc.mappedSubLineId)) {
+      sValue = subLineRowKey.get(acc.mappedSubLineId);
+    } else if (acc.mappedMainLineName && mainOnlyRowKey.has(acc.mappedMainLineName)) {
+      sValue = mainOnlyRowKey.get(acc.mappedMainLineName);
+    } else {
+      continue; // خارج نطاق قائمة الدخل — لا يُكتب.
+    }
+
     if (accountsRowsUsed >= ACCOUNTS_MAX_ROWS && !accountRowByNumber.has(norm(acc.accountNumber))) {
       truncatedAccounts++;
       continue;
@@ -220,34 +234,14 @@ function populateTemplate(sheetXml, layer1, layer2, layer3) {
       w.push({ col: 'N', type: 'str', value: acc.accountNumber });
     }
     w.push({ col: 'O', type: 'str', value: acc.accountName });
-
-    // عمود S أولاً — آلية الربط الفعلية بالقالب (يجب أن يطابق حرفياً عمود D للصف المقابل).
-    let sValue = null;
-    let inScope = false;
-    if (acc.mappedSubLineId && subLineRowKey.has(acc.mappedSubLineId)) {
-      sValue = subLineRowKey.get(acc.mappedSubLineId);
-      inScope = true;
-    } else if (acc.mappedMainLineName && mainOnlyRowKey.has(acc.mappedMainLineName)) {
-      sValue = mainOnlyRowKey.get(acc.mappedMainLineName);
-      inScope = true;
-    } else {
-      // Unmapped بلا mainLine على الإطلاق (أصول/خصوم/حقوق ملكية/إيراد/بند بعد الزكاة) —
-      // الصف الثابت المُعدّ في القالب نفسه لهذه الحالة تحديداً.
-      sValue = NOT_IN_SCOPE_S;
-      inScope = false;
-    }
-    if (sValue) w.push({ col: 'S', type: 'str', value: sValue });
+    w.push({ col: 'S', type: 'str', value: sValue });
 
     if (acc.amount !== undefined && acc.amount !== null) {
-      // التطبيع يُطبَّق فقط على الحسابات ضمن نطاق قائمة الدخل (مرتبطة فعلياً ببند
-      // مصروف عبر S) لمطابقة اتفاقية الإشارة السالبة للمصروفات في H/G7:G14
-      // (نفس المبدأ المعتمد في Layer 4: "TB expense balances are normalized to the
-      // Income Statement sign convention for reconciliation purposes only; original
-      // source amounts remain unchanged"). حسابات خارج النطاق (أصول/خصوم/حقوق ملكية/
-      // إيراد) تُكتب بإشارتها الأصلية من الميزان كما هي، لأن مبدأ التطبيع لا ينطبق
-      // عليها أصلاً (لا مطابقة SUMIFS تعتمد عليها).
-      const value = inScope ? -Math.abs(Number(acc.amount)) : Number(acc.amount);
-      w.push({ col: 'P', type: 'n', value });
+      // كل مبالغ المصروفات تُكتب بإشارة موجبة في القالب (طلب صريح، يطابق اتفاقية
+      // G/H أعلاه) — القيمة الأصلية في Layer 2/3 تبقى كما هي، هذا تطبيع عرض داخل
+      // Layer 5 فقط. بما أن كل حساب هنا مرتبط فعلياً ببند مصروف (وإلا لكان تخطّاه
+      // الشرط أعلاه)، لا حاجة لأي شرط إضافي على نوع الحساب.
+      w.push({ col: 'P', type: 'n', value: Math.abs(Number(acc.amount)) });
     }
     if (acc.clientMainClassification) w.push({ col: 'Q', type: 'str', value: acc.clientMainClassification });
     if (acc.clientSubClassification) w.push({ col: 'R', type: 'str', value: acc.clientSubClassification });
