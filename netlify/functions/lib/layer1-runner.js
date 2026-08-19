@@ -11,7 +11,7 @@ async function runLayer1(apiKey, images) {
     ...images.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } })),
   ];
   const json = await callClaudeForJson({
-    apiKey, system: LAYER1_SYSTEM_PROMPT, messages: [{ role: 'user', content }], maxTokens: 8000,
+    apiKey, system: LAYER1_SYSTEM_PROMPT, messages: [{ role: 'user', content }], maxTokens: 16000,
   });
   if (!Array.isArray(json.mainLines)) {
     throw new Error('رد Layer 1 لا يحتوي mainLines بالشكل المتوقع');
