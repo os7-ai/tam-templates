@@ -226,7 +226,12 @@ table.rv select{width:100%;min-width:180px;padding:7px 8px;border:1.5px solid va
   <div id="stepProgress" class="hidden">
     <div class="fcard">
       <div class="sec-title">جاري التحليل…</div>
+      <div class="sec-sub">كل مرحلة تعمل كمهمة خلفية مستقلة (Background Job) — يمكن إغلاق الشاشة والعودة لاحقاً دون فقدان أي تقدّم فعلي محفوظ</div>
       <div class="progress-list" id="progressList"></div>
+      <div class="aerr" id="progressErr" style="margin-top:14px"><span id="progressErrMsg"></span></div>
+      <div class="brow" id="progressRetryRow" style="display:none">
+        <button class="bpr" id="progressRetryBtn">إعادة محاولة هذه المرحلة فقط</button>
+      </div>
     </div>
   </div>
 
@@ -638,6 +643,127 @@ function renderProgressList(labels){
   document.getElementById('progressList').innerHTML=labels.map(l=>`<div class="pitem"><span class="picon"></span><span class="ptxt">${l}</span></div>`).join('');
 }
 
+// ---------- Pipeline كـBackground Jobs: تشغيل مرحلة (start سريع) ثم استطلاع
+// pipeline_status.json حتى الاكتمال/الفشل، بدل انتظار الاتصال المتزامن مباشرة (هذا هو
+// ما يحل الـ504 — لا يوجد اتصال مفتوح ينتظره Gateway أياً كانت مدة Claude الفعلية). ----------
+const STAGE_ORDER=['layer1','layer2','layer3','layer4'];
+const STAGE_LABELS=['Layer 1 — استخراج قائمة الدخل والإيضاحات','Layer 2 — ربط ميزان المراجعة','Layer 3 — تصنيف طبيعة المصروف','Layer 4 — المطابقة'];
+const POLL_INTERVAL_MS=3000;
+let triggeredStages=new Set(); // حماية من التشغيل المزدوج داخل نفس التبويب (نقر مزدوج/سباق Polling)
+let pollHandle=null;
+let pipelineInputs=null; // {tbRows, tbScope, threshold} — تُبنى مرة واحدة عند البدء
+
+function stageIndex(stage){ return STAGE_ORDER.indexOf(stage); }
+
+async function triggerStage(stage){
+  if(stage==='layer1'){
+    return apiPost('layer1-start',{engagementId, images:isImages.map(im=>({mediaType:im.mediaType,base64:im.base64}))});
+  }
+  if(stage==='layer2'){
+    return apiPost('layer2-start',{engagementId, tbRows:pipelineInputs.tbRows, tbScope:pipelineInputs.tbScope});
+  }
+  if(stage==='layer3'){
+    return apiPost('layer3-start',{engagementId});
+  }
+  if(stage==='layer4'){
+    // Layer 4 حسابي بحت وسريع — يبقى نداءً متزامناً عادياً (بلا Background)، لكنه
+    // مسجَّل أيضاً في pipeline_status.json لتوحيد شاشة التقدم وحماية Idempotency.
+    const l4=await apiPost('layer4-reconcile',{engagementId, reconciliationThreshold:pipelineInputs.threshold});
+    latestLayer4=l4;
+    reconciliationThresholdUsed=pipelineInputs.threshold;
+    return l4;
+  }
+}
+
+function progressSuffix(stageStatus){
+  const p=stageStatus&&stageStatus.progress;
+  if(p&&p.batchCount) return ` — جاري معالجة الدفعة ${Math.min(p.batchIndex+1,p.batchCount)} من ${p.batchCount}`;
+  return '';
+}
+function stageDoneLabel(stage,status){
+  const st=status.stages[stage];
+  if(stage==='layer2'&&st&&st.result){
+    const r=st.result;
+    const nonOpMsg = r.nonOperationalExcluded ? `، ${r.nonOperationalExcluded} حساب (خارج نطاق قائمة الدخل أو Parent/Subtotal) مُستبعد من الـpipeline التشغيلي` : '';
+    return `Layer 2 — ربط ميزان المراجعة (${r.zeroBalanceExcluded} حساب صفري مُستثنى من ${r.totalRows}${nonOpMsg})`;
+  }
+  return null;
+}
+
+async function runStageAndPoll(stage){
+  if(triggeredStages.has(stage)) return; // حماية جانب العميل من التشغيل المزدوج
+  triggeredStages.add(stage);
+  const idx=stageIndex(stage);
+  setProgressState(idx,'active');
+  document.getElementById('progressErr').classList.remove('show');
+  document.getElementById('progressRetryRow').style.display='none';
+  try{
+    await triggerStage(stage);
+  }catch(e){
+    triggeredStages.delete(stage);
+    handleStageFailure(stage,e.message);
+    return;
+  }
+  if(stage==='layer4'){
+    // مسار متزامن — النتيجة جاهزة فوراً من triggerStage نفسها، لا حاجة لاستطلاع
+    setProgressState(idx,'done');
+    finalizePipelineSuccess();
+    return;
+  }
+  pollStage(stage);
+}
+
+function pollStage(stage){
+  clearTimeout(pollHandle);
+  const idx=stageIndex(stage);
+  pollHandle=setTimeout(async ()=>{
+    let status;
+    try{
+      status=await apiPost('pipeline-status',{engagementId});
+    }catch(e){
+      pollStage(stage); // خطأ عابر في الاستطلاع نفسه — لا يعني فشل المرحلة، أعد المحاولة
+      return;
+    }
+    const st=status.stages[stage];
+    if(!st||st.status==='pending'||st.status==='running'){
+      setProgressState(idx,'active',STAGE_LABELS[idx]+progressSuffix(st));
+      pollStage(stage);
+      return;
+    }
+    if(st.status==='done'){
+      setProgressState(idx,'done',stageDoneLabel(stage,status)||undefined);
+      const nextIdx=idx+1;
+      if(nextIdx<STAGE_ORDER.length) runStageAndPoll(STAGE_ORDER[nextIdx]);
+      else finalizePipelineSuccess();
+      return;
+    }
+    if(st.status==='error'){
+      handleStageFailure(stage, st.error||'خطأ غير معروف');
+      return;
+    }
+  },POLL_INTERVAL_MS);
+}
+
+function handleStageFailure(stage,message){
+  const idx=stageIndex(stage);
+  setProgressState(idx,'err');
+  console.log(`[timing] pipeline — فشل عند ${STAGE_LABELS[idx]}: ${message}`);
+  document.getElementById('progressErrMsg').textContent=`حدث خطأ أثناء ${STAGE_LABELS[idx]}: ${message}`;
+  document.getElementById('progressErr').classList.add('show');
+  const retryRow=document.getElementById('progressRetryRow');
+  retryRow.style.display='flex';
+  document.getElementById('progressRetryBtn').onclick=()=>{
+    triggeredStages.delete(stage);
+    runStageAndPoll(stage);
+  };
+}
+
+function finalizePipelineSuccess(){
+  console.log('[timing] pipeline — اكتمل الكل بنجاح');
+  renderResults(latestLayer4);
+  showStep('stepResults');
+}
+
 async function startPipeline(){
   document.getElementById('uploadErr').classList.remove('show');
   const threshold=Number(document.getElementById('threshold').value);
@@ -645,45 +771,13 @@ async function startPipeline(){
   const tbRows=buildTbRows();
   if(tbRows.length===0){ showUploadErr('لم يتم التعرف على أي صف بيانات — تحقق من اختيار الأعمدة وصف البداية'); return; }
 
+  pipelineInputs={tbRows,tbScope,threshold};
+  triggeredStages=new Set();
   showStep('stepProgress');
-  renderProgressList(['Layer 1 — استخراج قائمة الدخل والإيضاحات','Layer 2 — ربط ميزان المراجعة','Layer 3 — تصنيف طبيعة المصروف','Layer 4 — المطابقة']);
-  const pipelineT0=performance.now();
-  const pipelineLabels=['Layer 1','Layer 2','Layer 3','Layer 4'];
-
-  try{
-    setProgressState(0,'active');
-    await apiPost('layer1-extract',{engagementId, images:isImages.map(im=>({mediaType:im.mediaType,base64:im.base64}))});
-    setProgressState(0,'done');
-
-    setProgressState(1,'active');
-    const l2res=await apiPost('layer2-map',{engagementId, tbRows, tbScope});
-    const nonOpMsg = l2res.nonOperationalExcluded ? `، ${l2res.nonOperationalExcluded} حساب (خارج نطاق قائمة الدخل أو Parent/Subtotal) مُستبعد من الـpipeline التشغيلي` : '';
-    setProgressState(1,'done',`Layer 2 — ربط ميزان المراجعة (${l2res.zeroBalanceExcluded} حساب صفري مُستثنى من ${l2res.totalRows}${nonOpMsg})`);
-
-    setProgressState(2,'active');
-    await apiPost('layer3-classify',{engagementId, mode:'full'});
-    setProgressState(2,'done');
-
-    setProgressState(3,'active');
-    const l4=await apiPost('layer4-reconcile',{engagementId, reconciliationThreshold:threshold});
-    setProgressState(3,'done');
-    latestLayer4=l4;
-    reconciliationThresholdUsed=threshold;
-
-    const pipelineDt=((performance.now()-pipelineT0)/1000).toFixed(1);
-    console.log(`[timing] pipeline — اكتمل الكل بعد ${pipelineDt}s`);
-    renderResults(l4);
-    showStep('stepResults');
-  }catch(e){
-    const pipelineDt=((performance.now()-pipelineT0)/1000).toFixed(1);
-    const items=document.querySelectorAll('#progressList .pitem');
-    const activeIdx=Array.from(items).findIndex(it=>it.classList.contains('active'));
-    const stageLabel = activeIdx>=0 ? pipelineLabels[activeIdx] : 'غير معروفة';
-    if(activeIdx>=0) setProgressState(activeIdx,'err');
-    console.log(`[timing] pipeline — فشل عند ${stageLabel} بعد ${pipelineDt}s إجمالي`);
-    showStep('stepUpload');
-    showUploadErr(`حدث خطأ أثناء ${stageLabel} (إجمالي مدة الـpipeline حتى الفشل: ${pipelineDt} ثانية): `+e.message);
-  }
+  renderProgressList(STAGE_LABELS);
+  document.getElementById('progressErr').classList.remove('show');
+  document.getElementById('progressRetryRow').style.display='none';
+  runStageAndPoll('layer1');
 }
 
 function badgeFor(status){

@@ -1,8 +1,9 @@
-// Layer 1 — يستدعي Claude فعلياً بصورة/PDF قائمة الدخل والإيضاحات، يتحقق من شكل
-// الرد، ويحفظ الـBaseline في مخزن الـEngagement (لا يُعدَّل بعد ذلك أبداً).
+// Layer 1 — نسخة متزامنة (تُبقى للاختبار اليدوي المباشر فقط). المسار الفعلي المُستخدَم
+// من الواجهة الآن هو layer1-start.js + layer1-extract-background.js (Background Job)،
+// تفادياً لسقف تنفيذ Netlify المتزامن. كلا المسارين يستخدمان lib/layer1-runner.js نفسه
+// — نفس الصور، نفس الـPrompt، نفس max_tokens، بلا أي اختلاف في الاستدعاء نفسه.
 const { requireUser, requireApiKey } = require('./lib/auth');
-const { callClaudeForJson } = require('./lib/claude-client');
-const { LAYER1_SYSTEM_PROMPT } = require('./lib/prompts/layer1-prompt');
+const { runLayer1 } = require('./lib/layer1-runner');
 const { saveJson } = require('./lib/engagement-store');
 const { logStage } = require('./lib/timing');
 
@@ -24,19 +25,9 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'engagementId وimages مطلوبة' }) };
     }
 
-    const content = [
-      { type: 'text', text: 'صور/صفحات قائمة الدخل والإيضاحات المالية مرفقة أدناه بالترتيب.' },
-      ...images.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.base64 } })),
-    ];
-
     logStage('layer1-extract', engagementId, 'claude_call_start', t0);
-    const json = await callClaudeForJson({
-      apiKey, system: LAYER1_SYSTEM_PROMPT, messages: [{ role: 'user', content }], maxTokens: 8000,
-    });
+    const json = await runLayer1(apiKey, images);
     logStage('layer1-extract', engagementId, 'claude_call_end', t0);
-    if (!Array.isArray(json.mainLines)) {
-      throw new Error('رد Layer 1 لا يحتوي mainLines بالشكل المتوقع');
-    }
 
     await saveJson(sb, user.id, engagementId, 'layer1.json', json);
     logStage('layer1-extract', engagementId, 'end', t0);
