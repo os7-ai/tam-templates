@@ -42,7 +42,15 @@ ${JSON.stringify(layer1Json)}
   mappedSubLineId=null إلزامًا، mappingReason إلزامي غير فارغ، وcandidateSubLines (إن
   كان سبب المراجعة تعدد subLine) تحتوي 2 عنصر فأكثر فعليين من نفس mainLine.
 - إن mappingStatus="Unmapped": mappedMainLineName وmappedSubLineId=null، mappingReason
-  إلزامي غير فارغ يوضح: هل السبب خارج النطاق، أم Parent/Subtotal، أم عدم تطابق.
+  إلزامي غير فارغ يوضح: هل السبب خارج النطاق، أم Parent/Subtotal، أم عدم تطابق. ويجب
+  أيضًا تعيين unmappedReasonCategory بإحدى القيم الثلاث الثابتة التالية بما يطابق
+  السبب الفعلي (هذا حقل بنيوي يعكس نفس القواعد 2/3/7 أعلاه فقط، وليس تصنيفًا جديدًا):
+  * "Out of Income Statement Scope" — للحالة في القاعدة 2 (ميزانية عمومية/إيرادات/
+    زكاة، أي حساب خارج نطاق قائمة الدخل التشغيلية أصلاً).
+  * "Parent/Subtotal" — للحالة في القاعدة 3 (صف إجمالي له تفاصيل فرعية أدناه).
+  * "No Matching SubLine" — للحالة في القاعدة 7 (ضمن نطاق قائمة الدخل لكن لا تطابق
+    مع أي subLine/mainLine معروف).
+  إن لم يكن mappingStatus="Unmapped"، يبقى unmappedReasonCategory=null إلزامًا.
 
 أخرج JSON فقط بدون أي نص إضافي وبدون Markdown، بالشكل التالي بالضبط لكل حساب في
 الميزان المُعطى لك في رسالة المستخدم:
@@ -58,6 +66,7 @@ ${JSON.stringify(layer1Json)}
       "mappedSubLineId": "string|null",
       "mappingStatus": "Mapped|Review Required|Unmapped",
       "mappingReason": "string|null",
+      "unmappedReasonCategory": "Out of Income Statement Scope|Parent/Subtotal|No Matching SubLine|null",
       "mappingBasis": "string",
       "candidateSubLines": [{"subLineId": "string", "subLineName": "string"}]
     }

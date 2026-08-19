@@ -160,6 +160,22 @@ table.rv select{width:100%;min-width:180px;padding:7px 8px;border:1.5px solid va
       </div>
       <input type="file" id="tbInp" accept=".xlsx,.xls" style="display:none">
 
+      <!-- نتيجة الاكتشاف التلقائي — تُعرض أولاً؛ الإعداد اليدوي الكامل يظهر فقط عند
+           فشل الاكتشاف أو عند طلب المستخدم صراحةً "تعديل يدوي" -->
+      <div id="tbAutoBanner" class="hidden" style="margin-top:16px">
+        <div class="aok show" id="tbAutoOk">
+          <span id="tbAutoOkMsg"></span>
+        </div>
+        <div class="tblwrap"><table class="prev" id="tbAutoPreviewTable"></table></div>
+        <div class="brow" style="margin-top:12px">
+          <button class="bbk" onclick="switchToManualTb()">تعديل يدوي</button>
+          <button class="bpr" onclick="confirmAutoDetect()" style="box-shadow:none">تأكيد واستخدام هذا الإعداد</button>
+        </div>
+      </div>
+      <div class="awarn" id="tbAutoFailWarn" style="margin-top:16px">
+        <span id="tbAutoFailMsg">تعذّر الاكتشاف التلقائي الكامل — يرجى تحديد الأعمدة يدوياً أدناه</span>
+      </div>
+
       <div id="tbConfig" class="hidden" style="margin-top:16px">
         <div class="field">
           <label>الورقة (Sheet)</label>
@@ -380,12 +396,126 @@ document.getElementById('tbInp').onchange=e=>{
       tbWorkbook.SheetNames.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
       document.getElementById('tbDrop').classList.add('has');
       document.getElementById('tbDropTxt').textContent='✅ تم رفع: '+f.name;
-      document.getElementById('tbConfig').classList.remove('hidden');
-      onSheetChange();
+      runAutoDetectTb();
     }catch(err){ showUploadErr('تعذّر قراءة ملف الإكسل: '+err.message); }
   };
   r.readAsArrayBuffer(f);
 };
+
+// ---------- اكتشاف تلقائي: الورقة + الأعمدة + صف بداية البيانات ----------
+// مبدأ التشغيل: المراجع يتدخل يدوياً فقط عند فشل الاكتشاف أو غموضه — وليس كخطوة
+// افتراضية. الاكتشاف يعتمد فقط على مطابقة كلمات مفتاحية في صف العناوين لكل عمود
+// (رقم/اسم الحساب، الرصيد) — لا "تخمين" لطبيعة الحسابات نفسها، وهذا خارج نطاق أي
+// قرار Business Logic أصلاً (مجرد تحديد أي عمود في الملف يحمل أي بيانات).
+const TB_HEADER_KEYWORDS = {
+  amount: ['الرصيد الختامي','رصيد ختامي','الرصيد','رصيد','المبلغ','مبلغ','closing balance','net balance','balance','amount'],
+  accNum: ['رقم الحساب','رقم حساب','كود الحساب','account code','account number','account no','acct no','كود'],
+  accName: ['اسم الحساب','بيان الحساب','اسم','account name','description','particulars','account'],
+};
+const TB_HEADER_SCAN_ROWS = 15;
+
+function detectHeaderRow(grid){
+  let best=null;
+  for(let r=0;r<Math.min(grid.length,TB_HEADER_SCAN_ROWS);r++){
+    const row=grid[r]||[];
+    const assigned={amount:null,accNum:null,accName:null};
+    for(let c=0;c<row.length;c++){
+      const cell=String(row[c]==null?'':row[c]).trim().toLowerCase();
+      if(!cell)continue;
+      for(const field of ['amount','accNum','accName']){
+        if(assigned[field]!=null)continue;
+        if(TB_HEADER_KEYWORDS[field].some(k=>cell.includes(k))){ assigned[field]=c; break; }
+      }
+    }
+    const score=['amount','accNum','accName'].filter(f=>assigned[f]!=null).length;
+    if(!best||score>best.score) best={rowIndex:r,assigned,score};
+  }
+  return best;
+}
+function scoreSheetForTb(grid){
+  const h=detectHeaderRow(grid);
+  if(!h||h.score<3)return null; // الأعمدة الثلاثة الإلزامية فقط — رقم/اسم الحساب والرصيد
+  let dataRows=0;
+  for(let i=h.rowIndex+1;i<grid.length;i++){
+    const row=grid[i];
+    if(row&&row.some(c=>c!==''&&c!=null))dataRows++;
+  }
+  if(dataRows<2)return null; // ورقة بلا بيانات فعلية كافية — على الأغلب مطابقة عرضية
+  return {...h, dataRows};
+}
+function runAutoDetectTb(){
+  document.getElementById('tbAutoBanner').classList.add('hidden');
+  document.getElementById('tbAutoFailWarn').classList.remove('show');
+  document.getElementById('tbConfig').classList.add('hidden');
+
+  const candidates=[];
+  for(const name of tbWorkbook.SheetNames){
+    const grid=XLSX.utils.sheet_to_json(tbWorkbook.Sheets[name],{header:1,raw:true,defval:''});
+    const s=scoreSheetForTb(grid);
+    if(s) candidates.push({sheetName:name, grid, ...s});
+  }
+  // أفضل مرشح: أكبر عدد صفوف بيانات فعلية (الورقة الحقيقية للميزان غالباً الأكبر،
+  // بخلاف أوراق غلاف/ملاحظات قد تحوي تطابقاً عرضياً لكلمات العناوين فقط)
+  candidates.sort((a,b)=>b.dataRows-a.dataRows);
+  const winner=candidates[0];
+  const runnerUp=candidates[1];
+  const ambiguous = winner && runnerUp && runnerUp.dataRows >= winner.dataRows*0.6;
+
+  if(!winner || ambiguous){
+    document.getElementById('tbAutoFailWarn').classList.add('show');
+    document.getElementById('tbAutoFailMsg').textContent = !winner
+      ? 'تعذّر اكتشاف عمود رقم/اسم الحساب أو الرصيد تلقائياً في أي ورقة — يرجى التحديد يدوياً أدناه'
+      : 'أكثر من ورقة تحتمل أن تكون ميزان المراجعة — يرجى التأكيد يدوياً أدناه';
+    document.getElementById('tbConfig').classList.remove('hidden');
+    document.getElementById('sheetSel').value = winner ? winner.sheetName : tbWorkbook.SheetNames[0];
+    onSheetChange();
+    return;
+  }
+
+  document.getElementById('sheetSel').value = winner.sheetName;
+  tbGrid = winner.grid;
+  window.__autoDetection = {
+    sheetName: winner.sheetName,
+    dataStartRow: winner.rowIndex + 2, // Excel row number لأول صف بيانات بعد صف العناوين
+    colAccNum: winner.assigned.accNum,
+    colAccName: winner.assigned.accName,
+    colAmount: winner.assigned.amount,
+  };
+  renderAutoDetectPreview();
+}
+function renderAutoDetectPreview(){
+  const d=window.__autoDetection;
+  const maxCols=tbGrid.reduce((m,row)=>Math.max(m,row.length),0);
+  const opts=(sel,extra)=>{
+    let html=extra?'<option value="-1">— بلا —</option>':'';
+    for(let c=0;c<maxCols;c++){
+      const sample=(tbGrid[0]&&tbGrid[0][c]!=null&&tbGrid[0][c]!=='')?String(tbGrid[0][c]).slice(0,18):'';
+      html+=`<option value="${c}">${colLetter(c)} — ${escAttr(sample)}</option>`;
+    }
+    sel.innerHTML=html;
+  };
+  opts(document.getElementById('colAccNum'),false); document.getElementById('colAccNum').value=d.colAccNum;
+  opts(document.getElementById('colAccName'),false); document.getElementById('colAccName').value=d.colAccName;
+  opts(document.getElementById('colAmount'),false); document.getElementById('colAmount').value=d.colAmount;
+  opts(document.getElementById('colMainClass'),true); document.getElementById('colMainClass').value=-1;
+  opts(document.getElementById('colSubClass'),true); document.getElementById('colSubClass').value=-1;
+  document.getElementById('dataStartRow').value=d.dataStartRow;
+
+  const rows=buildTbRows().slice(0,6);
+  const tbl=document.getElementById('tbAutoPreviewTable');
+  tbl.innerHTML='<thead><tr><th>رقم الحساب</th><th>اسم الحساب</th><th>الرصيد</th></tr></thead>'+
+    '<tbody>'+rows.map(r=>`<tr><td>${escAttr(r.accountNumber)}</td><td>${escAttr(r.accountName)}</td><td>${r.amount}</td></tr>`).join('')+'</tbody>';
+  document.getElementById('tbAutoOkMsg').textContent =
+    `تم الاكتشاف التلقائي: الورقة «${d.sheetName}»، البيانات تبدأ من الصف ${d.dataStartRow} — رقم الحساب: العمود ${colLetter(d.colAccNum)}، اسم الحساب: العمود ${colLetter(d.colAccName)}، الرصيد: العمود ${colLetter(d.colAmount)}. راجع المعاينة أدناه.`;
+  document.getElementById('tbAutoBanner').classList.remove('hidden');
+  checkReady();
+}
+function confirmAutoDetect(){ checkReady(); }
+function switchToManualTb(){
+  document.getElementById('tbAutoBanner').classList.add('hidden');
+  document.getElementById('tbConfig').classList.remove('hidden');
+  renderTbPreview();
+}
 function onSheetChange(){
   if(!tbWorkbook)return;
   const name=document.getElementById('sheetSel').value;
@@ -512,7 +642,8 @@ async function startPipeline(){
 
     setProgressState(1,'active');
     const l2res=await apiPost('layer2-map',{engagementId, tbRows, tbScope});
-    setProgressState(1,'done',`Layer 2 — ربط ميزان المراجعة (${l2res.zeroBalanceExcluded} حساب صفري مُستثنى من ${l2res.totalRows})`);
+    const scopeMsg = l2res.scopeExcluded ? `، ${l2res.scopeExcluded} حساب خارج نطاق قائمة الدخل مُستبعد من الـpipeline التشغيلي` : '';
+    setProgressState(1,'done',`Layer 2 — ربط ميزان المراجعة (${l2res.zeroBalanceExcluded} حساب صفري مُستثنى من ${l2res.totalRows}${scopeMsg})`);
 
     setProgressState(2,'active');
     await apiPost('layer3-classify',{engagementId, mode:'full'});

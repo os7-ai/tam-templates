@@ -1,6 +1,14 @@
 // Layer 2 — Zero Balance Filter (كود بحت) ثم استدعاء Claude فعلياً لربط الحسابات
 // غير الصفرية بمخرجات Layer 1. يحفظ tb_raw_source (Audit Trail الكامل) وlayer2.json
 // (Baseline التشغيلي، بلا حسابات صفرية) بشكل منفصل تماماً.
+//
+// نطاق الـTB (tbScope): "full" يُبقي كل حساب غير صفري في layer2.json التشغيلي (مبدأ
+// الاكتمال المعتمد سابقاً) — بما فيها Unmapped. "incomeStatementOnly" يستبعد فعلياً من
+// layer2.json التشغيلي فقط الحسابات التي صنّفتها Layer 2 نفسها دلالياً كخارج نطاق قائمة
+// الدخل (unmappedReasonCategory="Out of Income Statement Scope") — وليس Parent/Subtotal
+// ولا No Matching SubLine (هذان يبقيان ضمن النطاق التشغيلي في كلا الخيارين). السجل
+// الكامل غير المُصفّى (كل ما أعادته Layer 2 فعلاً) يُحفظ دائماً كاملاً في layer2_full.json
+// للتدقيق — لا فقدان بيانات، فقط استبعاد من الـpipeline التشغيلي حسب اختيار صريح للمراجع.
 const { requireUser, requireApiKey } = require('./lib/auth');
 const { callClaudeForJson } = require('./lib/claude-client');
 const { buildLayer2SystemPrompt } = require('./lib/prompts/layer2-prompt');
@@ -65,8 +73,22 @@ exports.handler = async (event) => {
       trialBalanceAccounts = trialBalanceAccounts.concat(json.trialBalanceAccounts);
     }
 
-    const layer2 = { trialBalanceAccounts };
+    // ---------- استبعاد حسب نطاق الـTB (بعد تصنيف Layer 2 الدلالي الكامل) ----------
+    const isOutOfScope = (a) => a.mappingStatus === 'Unmapped' && a.unmappedReasonCategory === 'Out of Income Statement Scope';
+    const operationalAccounts = (tbScope === 'incomeStatementOnly')
+      ? trialBalanceAccounts.filter(a => !isOutOfScope(a))
+      : trialBalanceAccounts;
+    const scopeExcludedCount = trialBalanceAccounts.length - operationalAccounts.length;
+
+    const layer2 = { trialBalanceAccounts: operationalAccounts };
+    const layer2Full = {
+      trialBalanceAccounts: trialBalanceAccounts.map(a => ({
+        ...a,
+        excludedFromOperationalPipeline: tbScope === 'incomeStatementOnly' && isOutOfScope(a),
+      })),
+    };
     await saveJson(sb, user.id, engagementId, 'layer2.json', layer2);
+    await saveJson(sb, user.id, engagementId, 'layer2_full.json', layer2Full);
     await saveJson(sb, user.id, engagementId, 'tb_raw_source.json', tbRawSource);
     await saveJson(sb, user.id, engagementId, 'tb_scope.json', { tbScope, recordedAt: new Date().toISOString() });
 
@@ -76,6 +98,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         layer2,
         zeroBalanceExcluded: tbRawSource.length - nonZeroRows.length,
+        scopeExcluded: scopeExcludedCount,
         totalRows: tbRawSource.length,
       }),
     };
