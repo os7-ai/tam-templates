@@ -8,10 +8,15 @@ const { requireUser, requireApiKey } = require('./lib/auth');
 const { saveJson, extractToken } = require('./lib/engagement-store');
 const { claimStage, finishStage } = require('./lib/pipeline-status');
 
+// الأولوية لِـhost الطلب الفعلي نفسه (يعكس بدقة Preview أو Production حسب من استدعى
+// فعلاً) — process.env.URL على Netlify يشير دائماً للدومين الأساسي للموقع (mdadalpha.com)
+// بصرف النظر عن الـdeploy الفعلي، فاستخدامه أولاً كان يُرسِل نداءات الدوال الخلفية من أي
+// Preview إلى دومين الإنتاج فيرجع 404. DEPLOY_PRIME_URL/URL يبقيان احتياطاً فقط إن غابت
+// الـheaders لأي سبب.
 function baseUrl(event) {
-  if (process.env.URL) return process.env.URL;
   const host = event.headers['x-forwarded-host'] || event.headers.host;
-  return `https://${host}`;
+  if (host) return `https://${host}`;
+  return process.env.DEPLOY_PRIME_URL || process.env.URL;
 }
 
 exports.handler = async (event) => {
