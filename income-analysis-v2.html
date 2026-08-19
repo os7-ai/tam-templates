@@ -594,16 +594,29 @@ function showUploadErr(msg){
 }
 
 // ---------- نداءات الخادم ----------
+// أداة تشخيصية مؤقتة: تسجّل بداية/نهاية/مدة كل نداء في الكونسول حتى نحدد أي endpoint
+// وبعد كم ثانية يحدث الـ504 — لا تغيّر شكل الطلب أو تعامل الاستجابة، تسجيل فقط.
 async function apiPost(fn,body){
-  const res=await fetch('/.netlify/functions/'+fn,{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},
-    body:JSON.stringify(body),
-  });
+  const t0=performance.now();
+  console.log(`[timing] ${fn} — بدء الطلب @ ${new Date().toISOString()}`);
+  let res;
+  try{
+    res=await fetch('/.netlify/functions/'+fn,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},
+      body:JSON.stringify(body),
+    });
+  }catch(networkErr){
+    const dt=((performance.now()-t0)/1000).toFixed(1);
+    console.log(`[timing] ${fn} — فشل شبكة بعد ${dt}s:`, networkErr.message);
+    throw new Error(`[${fn}] فشل الاتصال بعد ${dt} ثانية: ${networkErr.message}`);
+  }
+  const dt=((performance.now()-t0)/1000).toFixed(1);
+  console.log(`[timing] ${fn} — استجابة بعد ${dt}s — status=${res.status}`);
   const data=await res.json().catch(()=>({}));
   if(!res.ok){
     if(res.status===401){window.location.href='login.html';}
-    throw new Error((data&&data.error)||('خطأ '+res.status));
+    throw new Error(`[${fn}] HTTP ${res.status} بعد ${dt} ثانية: `+((data&&data.error)||('خطأ '+res.status)));
   }
   return data;
 }
@@ -634,6 +647,8 @@ async function startPipeline(){
 
   showStep('stepProgress');
   renderProgressList(['Layer 1 — استخراج قائمة الدخل والإيضاحات','Layer 2 — ربط ميزان المراجعة','Layer 3 — تصنيف طبيعة المصروف','Layer 4 — المطابقة']);
+  const pipelineT0=performance.now();
+  const pipelineLabels=['Layer 1','Layer 2','Layer 3','Layer 4'];
 
   try{
     setProgressState(0,'active');
@@ -655,14 +670,19 @@ async function startPipeline(){
     latestLayer4=l4;
     reconciliationThresholdUsed=threshold;
 
+    const pipelineDt=((performance.now()-pipelineT0)/1000).toFixed(1);
+    console.log(`[timing] pipeline — اكتمل الكل بعد ${pipelineDt}s`);
     renderResults(l4);
     showStep('stepResults');
   }catch(e){
+    const pipelineDt=((performance.now()-pipelineT0)/1000).toFixed(1);
     const items=document.querySelectorAll('#progressList .pitem');
     const activeIdx=Array.from(items).findIndex(it=>it.classList.contains('active'));
+    const stageLabel = activeIdx>=0 ? pipelineLabels[activeIdx] : 'غير معروفة';
     if(activeIdx>=0) setProgressState(activeIdx,'err');
+    console.log(`[timing] pipeline — فشل عند ${stageLabel} بعد ${pipelineDt}s إجمالي`);
     showStep('stepUpload');
-    showUploadErr('حدث خطأ أثناء التحليل: '+e.message);
+    showUploadErr(`حدث خطأ أثناء ${stageLabel} (إجمالي مدة الـpipeline حتى الفشل: ${pipelineDt} ثانية): `+e.message);
   }
 }
 

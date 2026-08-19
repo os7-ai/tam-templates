@@ -15,6 +15,7 @@ const { requireUser, requireApiKey } = require('./lib/auth');
 const { callClaudeForJson } = require('./lib/claude-client');
 const { buildLayer2SystemPrompt } = require('./lib/prompts/layer2-prompt');
 const { saveJson, loadJson } = require('./lib/engagement-store');
+const { logStage } = require('./lib/timing');
 
 const BATCH_SIZE = 35;
 
@@ -30,9 +31,13 @@ exports.handler = async (event) => {
   const { apiKey, errorResponse: keyErr } = requireApiKey();
   if (keyErr) return keyErr;
 
+  const t0 = Date.now();
+  let engagementId;
   try {
     const body = JSON.parse(event.body || '{}');
-    const { engagementId, tbRows, tbScope } = body; // tbRows: [{accountNumber, accountName, amount, clientMainClassification?, clientSubClassification?}]
+    const { tbRows, tbScope } = body; // tbRows: [{accountNumber, accountName, amount, clientMainClassification?, clientSubClassification?}]
+    engagementId = body.engagementId;
+    logStage('layer2-map', engagementId, 'start', t0, { tbRows: (tbRows || []).length, tbScope });
     if (!engagementId || !Array.isArray(tbRows)) {
       return { statusCode: 400, body: JSON.stringify({ error: 'engagementId وtbRows مطلوبة' }) };
     }
@@ -65,15 +70,19 @@ exports.handler = async (event) => {
     const batches = [];
     for (let i = 0; i < nonZeroRows.length; i += BATCH_SIZE) batches.push(nonZeroRows.slice(i, i + BATCH_SIZE));
     if (batches.length === 0) batches.push([]);
+    logStage('layer2-map', engagementId, 'claude_batches_start', t0, { batchCount: batches.length, batchSize: BATCH_SIZE });
 
     const system = buildLayer2SystemPrompt(layer1);
     let trialBalanceAccounts = [];
-    for (const batch of batches) {
-      const messages = [{ role: 'user', content: [{ type: 'text', text: JSON.stringify(batch) }] }];
+    for (let bi = 0; bi < batches.length; bi++) {
+      logStage('layer2-map', engagementId, 'batch_start', t0, { batchIndex: bi, batchCount: batches.length, batchRows: batches[bi].length });
+      const messages = [{ role: 'user', content: [{ type: 'text', text: JSON.stringify(batches[bi]) }] }];
       const json = await callClaudeForJson({ apiKey, system, messages, maxTokens: 8000 });
+      logStage('layer2-map', engagementId, 'batch_end', t0, { batchIndex: bi, batchCount: batches.length });
       if (!Array.isArray(json.trialBalanceAccounts)) throw new Error('رد Layer 2 لا يحتوي trialBalanceAccounts بالشكل المتوقع');
       trialBalanceAccounts = trialBalanceAccounts.concat(json.trialBalanceAccounts);
     }
+    logStage('layer2-map', engagementId, 'claude_batches_end', t0);
 
     // ---------- استبعاد ثابت من التشغيلي (بعد تصنيف Layer 2 الدلالي الكامل) ----------
     // غير مشروط بـtbScope إطلاقاً — ينطبق دائماً بغض النظر عن اختيار المراجع.
@@ -93,6 +102,7 @@ exports.handler = async (event) => {
     await saveJson(sb, user.id, engagementId, 'layer2_full.json', layer2Full);
     await saveJson(sb, user.id, engagementId, 'tb_raw_source.json', tbRawSource);
     await saveJson(sb, user.id, engagementId, 'tb_scope.json', { tbScope, recordedAt: new Date().toISOString() });
+    logStage('layer2-map', engagementId, 'end', t0);
 
     return {
       statusCode: 200,
@@ -105,6 +115,7 @@ exports.handler = async (event) => {
       }),
     };
   } catch (err) {
+    logStage('layer2-map', engagementId, 'error', t0, { message: err.message });
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };

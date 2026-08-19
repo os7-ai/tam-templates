@@ -7,21 +7,26 @@ const { requireUser, requireApiKey } = require('./lib/auth');
 const { callClaudeForJson } = require('./lib/claude-client');
 const { buildLayer3SystemPrompt } = require('./lib/prompts/layer3-prompt');
 const { saveJson, loadJson } = require('./lib/engagement-store');
+const { logStage } = require('./lib/timing');
 
 const BATCH_SIZE = 35;
 
-async function classifyBatches(apiKey, layer1, layer2, accounts) {
+async function classifyBatches(apiKey, layer1, layer2, accounts, engagementId, t0) {
   const batches = [];
   for (let i = 0; i < accounts.length; i += BATCH_SIZE) batches.push(accounts.slice(i, i + BATCH_SIZE));
   if (batches.length === 0) batches.push([]);
+  logStage('layer3-classify', engagementId, 'claude_batches_start', t0, { batchCount: batches.length, batchSize: BATCH_SIZE });
   const system = buildLayer3SystemPrompt(layer1, { trialBalanceAccounts: accounts });
   let classifiedAccounts = [];
-  for (const batch of batches) {
-    const messages = [{ role: 'user', content: [{ type: 'text', text: JSON.stringify(batch) }] }];
+  for (let bi = 0; bi < batches.length; bi++) {
+    logStage('layer3-classify', engagementId, 'batch_start', t0, { batchIndex: bi, batchCount: batches.length, batchRows: batches[bi].length });
+    const messages = [{ role: 'user', content: [{ type: 'text', text: JSON.stringify(batches[bi]) }] }];
     const json = await callClaudeForJson({ apiKey, system, messages, maxTokens: 8000 });
+    logStage('layer3-classify', engagementId, 'batch_end', t0, { batchIndex: bi, batchCount: batches.length });
     if (!Array.isArray(json.classifiedAccounts)) throw new Error('رد Layer 3 لا يحتوي classifiedAccounts بالشكل المتوقع');
     classifiedAccounts = classifiedAccounts.concat(json.classifiedAccounts);
   }
+  logStage('layer3-classify', engagementId, 'claude_batches_end', t0);
   return classifiedAccounts;
 }
 
@@ -32,9 +37,13 @@ exports.handler = async (event) => {
   const { apiKey, errorResponse: keyErr } = requireApiKey();
   if (keyErr) return keyErr;
 
+  const t0 = Date.now();
+  let engagementId;
   try {
     const body = JSON.parse(event.body || '{}');
-    const { engagementId, mode, accountNumbers, layer2Override } = body;
+    const { mode, accountNumbers, layer2Override } = body;
+    engagementId = body.engagementId;
+    logStage('layer3-classify', engagementId, 'start', t0, { mode: mode || 'full' });
 
     const layer1 = await loadJson(sb, user.id, engagementId, 'layer1.json');
     const layer2 = layer2Override || await loadJson(sb, user.id, engagementId, 'layer2.json');
@@ -48,16 +57,19 @@ exports.handler = async (event) => {
       }
       const nums = new Set(accountNumbers.map(String));
       const targetAccounts = layer2.trialBalanceAccounts.filter(a => nums.has(String(a.accountNumber)));
-      const classified = await classifyBatches(apiKey, layer1, layer2, targetAccounts);
+      const classified = await classifyBatches(apiKey, layer1, layer2, targetAccounts, engagementId, t0);
+      logStage('layer3-classify', engagementId, 'end', t0);
       return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ classifiedAccounts: classified }) };
     }
 
     // الوضع الكامل — يُنتج Baseline جديد فقط عند أول تشغيل لهذا الـEngagement
-    const classifiedAccounts = await classifyBatches(apiKey, layer1, layer2, layer2.trialBalanceAccounts);
+    const classifiedAccounts = await classifyBatches(apiKey, layer1, layer2, layer2.trialBalanceAccounts, engagementId, t0);
     const layer3 = { classifiedAccounts };
     await saveJson(sb, user.id, engagementId, 'layer3.json', layer3);
+    logStage('layer3-classify', engagementId, 'end', t0);
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(layer3) };
   } catch (err) {
+    logStage('layer3-classify', engagementId, 'error', t0, { message: err.message });
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };

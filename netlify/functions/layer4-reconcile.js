@@ -4,15 +4,20 @@
 const { requireUser } = require('./lib/auth');
 const { computeReconciliation, buildReviewFlags } = require('./lib/reviewer-mapping');
 const { saveJson, loadJson } = require('./lib/engagement-store');
+const { logStage } = require('./lib/timing');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
   const { sb, user, errorResponse } = await requireUser(event);
   if (errorResponse) return errorResponse;
 
+  const t0 = Date.now();
+  let engagementId;
   try {
     const body = JSON.parse(event.body || '{}');
-    const { engagementId, reconciliationThreshold } = body;
+    const { reconciliationThreshold } = body;
+    engagementId = body.engagementId;
+    logStage('layer4-reconcile', engagementId, 'start', t0);
     if (reconciliationThreshold === undefined || reconciliationThreshold === null) {
       return { statusCode: 400, body: JSON.stringify({ error: 'reconciliationThreshold مطلوب — لا يُخترع من الخادم.' }) };
     }
@@ -32,8 +37,10 @@ exports.handler = async (event) => {
       reconciliationThresholdUsed: { value: Number(reconciliationThreshold), recordedAt: new Date().toISOString() },
     };
     await saveJson(sb, user.id, engagementId, 'layer4.json', layer4);
+    logStage('layer4-reconcile', engagementId, 'end', t0);
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(layer4) };
   } catch (err) {
+    logStage('layer4-reconcile', engagementId, 'error', t0, { message: err.message });
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
