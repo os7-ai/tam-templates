@@ -36,14 +36,26 @@ exports.handler = async (event) => {
 
     await saveJson(token, user.id, engagementId, 'inputs/layer1_images.json', { images });
 
-    const res = await fetch(`${baseUrl(event)}/.netlify/functions/layer1-extract-background`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: event.headers.authorization || event.headers.Authorization || '' },
-      body: JSON.stringify({ engagementId }),
-    });
+    const targetUrl = `${baseUrl(event)}/.netlify/functions/layer1-extract-background`;
+    let res, resBodyText;
+    try {
+      res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: event.headers.authorization || event.headers.Authorization || '' },
+        body: JSON.stringify({ engagementId }),
+      });
+      resBodyText = await res.text().catch(() => '');
+    } catch (fetchErr) {
+      // تشخيصي فقط — نُظهر السبب الحقيقي (شبكة/DNS/إلخ) بدل إخفائه خلف 502 عام
+      const diag = `فشل الاتصال الداخلي بـlayer1-extract-background: ${fetchErr.message} (url=${targetUrl})`;
+      await finishStage(token, user.id, engagementId, 'layer1', { status: 'error', error: diag });
+      return { statusCode: 502, body: JSON.stringify({ error: diag }) };
+    }
     if (!res.ok && res.status !== 202) {
-      await finishStage(token, user.id, engagementId, 'layer1', { status: 'error', error: `تعذّر بدء المهمة الخلفية (HTTP ${res.status})` });
-      return { statusCode: 502, body: JSON.stringify({ error: 'تعذّر بدء المهمة الخلفية لـLayer 1' }) };
+      // تشخيصي فقط — نُظهر status الحقيقي ونص الاستجابة الفعلي بدل إخفائهما خلف 502 ثابت
+      const diag = `تعذّر بدء المهمة الخلفية — الاستجابة الفعلية: HTTP ${res.status} من ${targetUrl}. النص: ${resBodyText.slice(0, 500)}`;
+      await finishStage(token, user.id, engagementId, 'layer1', { status: 'error', error: diag });
+      return { statusCode: 502, body: JSON.stringify({ error: diag }) };
     }
 
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ started: true }) };
