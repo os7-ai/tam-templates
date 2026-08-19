@@ -1,23 +1,14 @@
 // نقطة البدء المتزامنة لـLayer 1 (سريعة، أقل من ثانية): تحقق + حجز المرحلة (Idempotency)
-// + حفظ لقطة المدخلات في Storage (بلا Base64 داخل pipeline_status.json — المرجع فقط)
-// + تشغيل الدالة الخلفية الفعلية (layer1-extract-background) دون انتظار اكتمالها. أي
-// خطأ تحقق/مصادقة/تنفيذ مزدوج يصل للمتصفح فوراً من هنا مباشرة — بخلاف الدالة الخلفية
-// نفسها التي لا تستطيع إيصال أي استجابة حقيقية للمتصفح بعد أن يُرجع Netlify رد 202 عند
-// نجاح جدولة الاستدعاء غير المتزامن (لذلك التحقق كله هنا، قبل الجدولة، لا هناك).
+// + حفظ لقطة المدخلات في Storage (بلا Base64 داخل pipeline_status.json — المرجع فقط)،
+// ثم تُرجع فوراً. لا تستدعي layer1-extract-background داخلياً إطلاقاً — ثبت عملياً
+// (باختبار حي: pipeline_status أظهر endedAt بعد ~109 ثانية بينما مات هذا الاستدعاء عند
+// ~30 ثانية) أن الانتظار الداخلي لاستجابة الدالة الخلفية الكاملة كان هو سبب الـ504،
+// وليس أي مشكلة في الدالة الخلفية نفسها (التي أثبتت أنها تُكمل وتحفظ layer1.json فعلاً
+// حتى بعد موت هذا الاستدعاء). الواجهة (لا هذه الدالة) هي من تُطلق layer1-extract-background
+// مباشرة بعد نجاح هذا الاستدعاء، دون انتظار اكتمالها — راجع income-analysis-v2.html.
 const { requireUser, requireApiKey } = require('./lib/auth');
 const { saveJson, extractToken } = require('./lib/engagement-store');
-const { claimStage, finishStage } = require('./lib/pipeline-status');
-
-// الأولوية لِـhost الطلب الفعلي نفسه (يعكس بدقة Preview أو Production حسب من استدعى
-// فعلاً) — process.env.URL على Netlify يشير دائماً للدومين الأساسي للموقع (mdadalpha.com)
-// بصرف النظر عن الـdeploy الفعلي، فاستخدامه أولاً كان يُرسِل نداءات الدوال الخلفية من أي
-// Preview إلى دومين الإنتاج فيرجع 404. DEPLOY_PRIME_URL/URL يبقيان احتياطاً فقط إن غابت
-// الـheaders لأي سبب.
-function baseUrl(event) {
-  const host = event.headers['x-forwarded-host'] || event.headers.host;
-  if (host) return `https://${host}`;
-  return process.env.DEPLOY_PRIME_URL || process.env.URL;
-}
+const { claimStage } = require('./lib/pipeline-status');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -41,29 +32,7 @@ exports.handler = async (event) => {
 
     await saveJson(token, user.id, engagementId, 'inputs/layer1_images.json', { images });
 
-    const targetUrl = `${baseUrl(event)}/.netlify/functions/layer1-extract-background`;
-    let res, resBodyText;
-    try {
-      res = await fetch(targetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: event.headers.authorization || event.headers.Authorization || '' },
-        body: JSON.stringify({ engagementId }),
-      });
-      resBodyText = await res.text().catch(() => '');
-    } catch (fetchErr) {
-      // تشخيصي فقط — نُظهر السبب الحقيقي (شبكة/DNS/إلخ) بدل إخفائه خلف 502 عام
-      const diag = `فشل الاتصال الداخلي بـlayer1-extract-background: ${fetchErr.message} (url=${targetUrl})`;
-      await finishStage(token, user.id, engagementId, 'layer1', { status: 'error', error: diag });
-      return { statusCode: 502, body: JSON.stringify({ error: diag }) };
-    }
-    if (!res.ok && res.status !== 202) {
-      // تشخيصي فقط — نُظهر status الحقيقي ونص الاستجابة الفعلي بدل إخفائهما خلف 502 ثابت
-      const diag = `تعذّر بدء المهمة الخلفية — الاستجابة الفعلية: HTTP ${res.status} من ${targetUrl}. النص: ${resBodyText.slice(0, 500)}`;
-      await finishStage(token, user.id, engagementId, 'layer1', { status: 'error', error: diag });
-      return { statusCode: 502, body: JSON.stringify({ error: diag }) };
-    }
-
-    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ started: true }) };
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claimed: true }) };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }

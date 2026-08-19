@@ -657,7 +657,20 @@ function stageIndex(stage){ return STAGE_ORDER.indexOf(stage); }
 
 async function triggerStage(stage){
   if(stage==='layer1'){
-    return apiPost('layer1-start',{engagementId, images:isImages.map(im=>({mediaType:im.mediaType,base64:im.base64}))});
+    // layer1-start سريعة فقط (حجز + حفظ لقطة المدخلات) وتُرجع خلال أقل من ثانية —
+    // ثبت باختبار حي أن أي انتظار داخلي لاكتمال layer1-extract-background كان هو
+    // سبب الـ504 (الدالة الخلفية تُكمل فعلياً حتى بعد موت أي طرف ينتظرها). لذلك
+    // الواجهة هنا — وليس أي دالة خادم — من تُطلق layer1-extract-background مباشرة،
+    // وتتعمّد عدم انتظار (await) اكتمالها إطلاقاً: نستدعيها ثم نُكمل فوراً إلى
+    // الاستطلاع (pollStage) بلا أي تعليق على نتيجتها. مصدر الحقيقة الوحيد لاحقاً
+    // لمعرفة done/error هو pipeline-status فقط — نتيجة هذا النداء نفسه (نجح أو
+    // فشل الاتصال) لا تُستخدم أبداً لتقرير حالة المرحلة في الواجهة، فقط تُسجَّل
+    // في الكونسول للتشخيص.
+    await apiPost('layer1-start',{engagementId, images:isImages.map(im=>({mediaType:im.mediaType,base64:im.base64}))});
+    apiPost('layer1-extract-background',{engagementId})
+      .then(()=>console.log('[timing] layer1-extract-background — عادت استجابتها (غير مُنتظَرة من الواجهة، بلا أثر على الـUI)'))
+      .catch(e=>console.log('[timing] layer1-extract-background — فشل نداء الإطلاق نفسه من المتصفح (لا يعني بالضرورة فشل المعالجة إن كانت بدأت فعلاً على الخادم):', e.message));
+    return;
   }
   if(stage==='layer2'){
     return apiPost('layer2-start',{engagementId, tbRows:pipelineInputs.tbRows, tbScope:pipelineInputs.tbScope});
