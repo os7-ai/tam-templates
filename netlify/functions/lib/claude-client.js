@@ -30,26 +30,48 @@ async function callClaude({ apiKey, system, messages, maxTokens }) {
   if (!text.trim()) {
     throw new Error('لم يصل نص فعلي من النموذج. سبب التوقف: ' + (data.stop_reason || 'غير معروف'));
   }
-  return { text, stop_reason: data.stop_reason || '' };
+  return { text, stop_reason: data.stop_reason || '', usage: data.usage || null };
 }
 
-function extractJson(text) {
+// meta تشخيصي فقط (stop_reason/usage من نفس نداء Claude) — لا يُغيّر أي منطق استخراج أو
+// تحقق، فقط يُغني رسالة الخطأ عند فشل قراءة JSON بما يكفي للتفريق بين اقتطاع بسبب
+// max_tokens وJSON مُشوَّه رغم اكتمال الرد، دون الحاجة لسجلات Netlify.
+function diagSuffix(meta) {
+  if (!meta) return '';
+  const outTok = (meta.usage && meta.usage.output_tokens) || 'غير معروف';
+  return `[stop_reason=${meta.stop_reason || 'غير معروف'}, output_tokens=${outTok}]`;
+}
+
+function extractJson(text, meta) {
   const cleaned = text.replace(/```json|```/g, '').trim();
   const s = cleaned.indexOf('{');
   const e = cleaned.lastIndexOf('}');
   if (s === -1 || e === -1 || e < s) {
-    throw new Error('رد النموذج لم يتضمن JSON صالحاً. أول 300 حرف: ' + cleaned.slice(0, 300));
+    throw new Error('رد النموذج لم يتضمن JSON صالحاً. ' + diagSuffix(meta) + ' أول 300 حرف: ' + cleaned.slice(0, 300));
   }
+  const jsonSlice = cleaned.slice(s, e + 1);
   try {
-    return JSON.parse(cleaned.slice(s, e + 1));
+    return JSON.parse(jsonSlice);
   } catch (err) {
-    throw new Error('تعذّر قراءة نتيجة التحليل (' + err.message + '). آخر 200 حرف: ' + cleaned.slice(-200));
+    // موضع الخطأ كما يُبلغه JSON.parse نفسه (ضمن jsonSlice) — نبني مقتطفاً حوله مباشرة
+    // بدل إظهار ذيل النص فقط، ونحسب بُعده عن نهاية النص المُستخرج (مؤشر اقتطاع محتمل).
+    const posMatch = /position (\d+)/.exec(err.message);
+    const pos = posMatch ? Number(posMatch[1]) : jsonSlice.length;
+    const windowStart = Math.max(0, pos - 400);
+    const windowEnd = Math.min(jsonSlice.length, pos + 400);
+    const excerpt = jsonSlice.slice(windowStart, windowEnd);
+    const distanceFromEnd = jsonSlice.length - pos;
+    throw new Error(
+      'تعذّر قراءة نتيجة التحليل (' + err.message + '). ' + diagSuffix(meta)
+      + ` نص_الطول=${jsonSlice.length} موضع_الخطأ_يبعد_عن_النهاية=${distanceFromEnd} حرفاً.`
+      + ` مقتطف حول الموضع [${windowStart}:${windowEnd}]: ...${excerpt}...`
+    );
   }
 }
 
 async function callClaudeForJson(opts) {
-  const { text } = await callClaude(opts);
-  return extractJson(text);
+  const { text, stop_reason, usage } = await callClaude(opts);
+  return extractJson(text, { stop_reason, usage });
 }
 
 module.exports = { callClaude, callClaudeForJson, extractJson, MODEL };
