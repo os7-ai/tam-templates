@@ -4,15 +4,16 @@
 // — نفس الصور، نفس الـPrompt، نفس max_tokens، بلا أي اختلاف في الاستدعاء نفسه.
 const { requireUser, requireApiKey } = require('./lib/auth');
 const { runLayer1 } = require('./lib/layer1-runner');
-const { saveJson } = require('./lib/engagement-store');
+const { saveJson, extractToken } = require('./lib/engagement-store');
 const { logStage } = require('./lib/timing');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
-  const { sb, user, errorResponse } = await requireUser(event);
+  const { user, errorResponse } = await requireUser(event);
   if (errorResponse) return errorResponse;
   const { apiKey, errorResponse: keyErr } = requireApiKey();
   if (keyErr) return keyErr;
+  const token = extractToken(event);
 
   const t0 = Date.now();
   let engagementId;
@@ -29,7 +30,7 @@ exports.handler = async (event) => {
     const json = await runLayer1(apiKey, images);
     logStage('layer1-extract', engagementId, 'claude_call_end', t0);
 
-    await saveJson(sb, user.id, engagementId, 'layer1.json', json);
+    await saveJson(token, user.id, engagementId, 'layer1.json', json);
     logStage('layer1-extract', engagementId, 'end', t0);
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(json) };
   } catch (err) {

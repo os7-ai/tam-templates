@@ -5,7 +5,7 @@
 const AdmZip = require('adm-zip');
 const { requireUser } = require('./lib/auth');
 const { populateTemplate } = require('./lib/layer5-populate');
-const { loadJson } = require('./lib/engagement-store');
+const { loadJson, extractToken } = require('./lib/engagement-store');
 
 const ALLOWED_TEMPLATES = new Set(['income-statement-analysis.xlsx']);
 const TARGET_SHEET_NAME = 'تصنيف الميزان';
@@ -29,6 +29,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
   const { sb, user, errorResponse } = await requireUser(event);
   if (errorResponse) return errorResponse;
+  const token = extractToken(event);
 
   try {
     const body = JSON.parse(event.body || '{}');
@@ -39,15 +40,15 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'قالب غير مسموح' }) };
     }
 
-    const layer1 = await loadJson(sb, user.id, engagementId, 'layer1.json');
+    const layer1 = await loadJson(token, user.id, engagementId, 'layer1.json');
     // الأولوية لِـ_reviewed (بعد قرارات المراجع) إن وُجد، وإلا Baseline — كلاهما بنفس
     // الشكل تماماً (مُشتق من applySubLineDecisions/mergeLayer3Reevaluation)، فلا فرق
     // في طريقة الاستهلاك هنا.
-    const layer2Reviewed = await loadJson(sb, user.id, engagementId, 'layer2_reviewed.json');
-    const layer3Reviewed = await loadJson(sb, user.id, engagementId, 'layer3_reviewed.json');
-    const layer2 = layer2Reviewed || (await loadJson(sb, user.id, engagementId, 'layer2.json'));
-    const layer3 = layer3Reviewed || (await loadJson(sb, user.id, engagementId, 'layer3.json'));
-    const reviewerDecisions = (await loadJson(sb, user.id, engagementId, 'reviewerDecisions.json'))
+    const layer2Reviewed = await loadJson(token, user.id, engagementId, 'layer2_reviewed.json');
+    const layer3Reviewed = await loadJson(token, user.id, engagementId, 'layer3_reviewed.json');
+    const layer2 = layer2Reviewed || (await loadJson(token, user.id, engagementId, 'layer2.json'));
+    const layer3 = layer3Reviewed || (await loadJson(token, user.id, engagementId, 'layer3.json'));
+    const reviewerDecisions = (await loadJson(token, user.id, engagementId, 'reviewerDecisions.json'))
       || { subLineDecisions: {}, mainLineCodeDecisions: {} };
 
     if (!layer1 || !layer2 || !layer3) {

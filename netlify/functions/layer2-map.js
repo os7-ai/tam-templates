@@ -14,7 +14,7 @@
 const { requireUser, requireApiKey } = require('./lib/auth');
 const { callClaudeForJson } = require('./lib/claude-client');
 const { buildLayer2SystemPrompt } = require('./lib/prompts/layer2-prompt');
-const { saveJson, loadJson } = require('./lib/engagement-store');
+const { saveJson, loadJson, extractToken } = require('./lib/engagement-store');
 const { logStage } = require('./lib/timing');
 
 const BATCH_SIZE = 35;
@@ -26,10 +26,11 @@ function isZero(amount) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
-  const { sb, user, errorResponse } = await requireUser(event);
+  const { user, errorResponse } = await requireUser(event);
   if (errorResponse) return errorResponse;
   const { apiKey, errorResponse: keyErr } = requireApiKey();
   if (keyErr) return keyErr;
+  const token = extractToken(event);
 
   const t0 = Date.now();
   let engagementId;
@@ -45,7 +46,7 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'tbScope يجب أن يكون "full" أو "incomeStatementOnly"' }) };
     }
 
-    const layer1 = await loadJson(sb, user.id, engagementId, 'layer1.json');
+    const layer1 = await loadJson(token, user.id, engagementId, 'layer1.json');
     if (!layer1) {
       return { statusCode: 400, body: JSON.stringify({ error: 'لم يُشغَّل Layer 1 لهذا الـEngagement بعد' }) };
     }
@@ -98,10 +99,10 @@ exports.handler = async (event) => {
         excludedFromOperationalPipeline: isNonOperational(a),
       })),
     };
-    await saveJson(sb, user.id, engagementId, 'layer2.json', layer2);
-    await saveJson(sb, user.id, engagementId, 'layer2_full.json', layer2Full);
-    await saveJson(sb, user.id, engagementId, 'tb_raw_source.json', tbRawSource);
-    await saveJson(sb, user.id, engagementId, 'tb_scope.json', { tbScope, recordedAt: new Date().toISOString() });
+    await saveJson(token, user.id, engagementId, 'layer2.json', layer2);
+    await saveJson(token, user.id, engagementId, 'layer2_full.json', layer2Full);
+    await saveJson(token, user.id, engagementId, 'tb_raw_source.json', tbRawSource);
+    await saveJson(token, user.id, engagementId, 'tb_scope.json', { tbScope, recordedAt: new Date().toISOString() });
     logStage('layer2-map', engagementId, 'end', t0);
 
     return {

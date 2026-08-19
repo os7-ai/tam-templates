@@ -6,7 +6,7 @@
 const { requireUser, requireApiKey } = require('./lib/auth');
 const { callClaudeForJson } = require('./lib/claude-client');
 const { buildLayer3SystemPrompt } = require('./lib/prompts/layer3-prompt');
-const { saveJson, loadJson } = require('./lib/engagement-store');
+const { saveJson, loadJson, extractToken } = require('./lib/engagement-store');
 const { logStage } = require('./lib/timing');
 
 const BATCH_SIZE = 35;
@@ -32,10 +32,11 @@ async function classifyBatches(apiKey, layer1, layer2, accounts, engagementId, t
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
-  const { sb, user, errorResponse } = await requireUser(event);
+  const { user, errorResponse } = await requireUser(event);
   if (errorResponse) return errorResponse;
   const { apiKey, errorResponse: keyErr } = requireApiKey();
   if (keyErr) return keyErr;
+  const token = extractToken(event);
 
   const t0 = Date.now();
   let engagementId;
@@ -45,8 +46,8 @@ exports.handler = async (event) => {
     engagementId = body.engagementId;
     logStage('layer3-classify', engagementId, 'start', t0, { mode: mode || 'full' });
 
-    const layer1 = await loadJson(sb, user.id, engagementId, 'layer1.json');
-    const layer2 = layer2Override || await loadJson(sb, user.id, engagementId, 'layer2.json');
+    const layer1 = await loadJson(token, user.id, engagementId, 'layer1.json');
+    const layer2 = layer2Override || await loadJson(token, user.id, engagementId, 'layer2.json');
     if (!layer1 || !layer2) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Layer 1/2 غير متوفرين لهذا الـEngagement' }) };
     }
@@ -65,7 +66,7 @@ exports.handler = async (event) => {
     // الوضع الكامل — يُنتج Baseline جديد فقط عند أول تشغيل لهذا الـEngagement
     const classifiedAccounts = await classifyBatches(apiKey, layer1, layer2, layer2.trialBalanceAccounts, engagementId, t0);
     const layer3 = { classifiedAccounts };
-    await saveJson(sb, user.id, engagementId, 'layer3.json', layer3);
+    await saveJson(token, user.id, engagementId, 'layer3.json', layer3);
     logStage('layer3-classify', engagementId, 'end', t0);
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(layer3) };
   } catch (err) {

@@ -2,7 +2,7 @@
 // (tbRows وtbScope) في Storage (مرجع فقط في pipeline_status.json) + تشغيل الدالة
 // الخلفية (layer2-map-background) دون انتظار اكتمالها. نفس مبدأ layer1-start.js.
 const { requireUser, requireApiKey } = require('./lib/auth');
-const { saveJson, loadJson } = require('./lib/engagement-store');
+const { saveJson, loadJson, extractToken } = require('./lib/engagement-store');
 const { claimStage, finishStage } = require('./lib/pipeline-status');
 
 function baseUrl(event) {
@@ -13,10 +13,11 @@ function baseUrl(event) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
-  const { sb, user, errorResponse } = await requireUser(event);
+  const { user, errorResponse } = await requireUser(event);
   if (errorResponse) return errorResponse;
   const { errorResponse: keyErr } = requireApiKey();
   if (keyErr) return keyErr;
+  const token = extractToken(event);
 
   try {
     const body = JSON.parse(event.body || '{}');
@@ -27,17 +28,17 @@ exports.handler = async (event) => {
     if (tbScope !== 'full' && tbScope !== 'incomeStatementOnly') {
       return { statusCode: 400, body: JSON.stringify({ error: 'tbScope يجب أن يكون "full" أو "incomeStatementOnly"' }) };
     }
-    const layer1 = await loadJson(sb, user.id, engagementId, 'layer1.json');
+    const layer1 = await loadJson(token, user.id, engagementId, 'layer1.json');
     if (!layer1) {
       return { statusCode: 400, body: JSON.stringify({ error: 'لم يُشغَّل Layer 1 لهذا الـEngagement بعد' }) };
     }
 
-    const { claimed } = await claimStage(sb, user.id, engagementId, 'layer2');
+    const { claimed } = await claimStage(token, user.id, engagementId, 'layer2');
     if (!claimed) {
       return { statusCode: 409, body: JSON.stringify({ error: 'Layer 2 قيد التنفيذ بالفعل لهذا الـEngagement' }) };
     }
 
-    await saveJson(sb, user.id, engagementId, 'inputs/layer2_tb.json', { tbRows, tbScope });
+    await saveJson(token, user.id, engagementId, 'inputs/layer2_tb.json', { tbRows, tbScope });
 
     const res = await fetch(`${baseUrl(event)}/.netlify/functions/layer2-map-background`, {
       method: 'POST',
@@ -45,7 +46,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ engagementId }),
     });
     if (!res.ok && res.status !== 202) {
-      await finishStage(sb, user.id, engagementId, 'layer2', { status: 'error', error: `تعذّر بدء المهمة الخلفية (HTTP ${res.status})` });
+      await finishStage(token, user.id, engagementId, 'layer2', { status: 'error', error: `تعذّر بدء المهمة الخلفية (HTTP ${res.status})` });
       return { statusCode: 502, body: JSON.stringify({ error: 'تعذّر بدء المهمة الخلفية لـLayer 2' }) };
     }
 

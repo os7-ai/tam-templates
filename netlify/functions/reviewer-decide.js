@@ -18,15 +18,16 @@ const {
   diffAgainstBaseline,
 } = require('./lib/reviewer-mapping');
 const { classifyAccounts } = require('./lib/layer3-runner');
-const { saveJson, loadJson } = require('./lib/engagement-store');
+const { saveJson, loadJson, extractToken } = require('./lib/engagement-store');
 
 const EMPTY_DECISIONS = { subLineDecisions: {}, mainLineCodeDecisions: {} };
 const FIXED_MAIN_CODES = ['CS', 'GE', 'SE', 'FIN', 'DEP', 'LOS', 'PROV', 'OTH'];
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
-  const { sb, user, errorResponse } = await requireUser(event);
+  const { user, errorResponse } = await requireUser(event);
   if (errorResponse) return errorResponse;
+  const token = extractToken(event);
 
   try {
     const body = JSON.parse(event.body || '{}');
@@ -36,15 +37,15 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'decisionType يجب أن يكون "subLine" أو "mainLineCode"' }) };
     }
 
-    const layer1 = await loadJson(sb, user.id, engagementId, 'layer1.json');
-    const layer2 = await loadJson(sb, user.id, engagementId, 'layer2.json');
-    const layer3 = await loadJson(sb, user.id, engagementId, 'layer3.json');
-    const layer4 = await loadJson(sb, user.id, engagementId, 'layer4.json');
+    const layer1 = await loadJson(token, user.id, engagementId, 'layer1.json');
+    const layer2 = await loadJson(token, user.id, engagementId, 'layer2.json');
+    const layer3 = await loadJson(token, user.id, engagementId, 'layer3.json');
+    const layer4 = await loadJson(token, user.id, engagementId, 'layer4.json');
     if (!layer1 || !layer2 || !layer3 || !layer4) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Layer 1/2/3/4 (Baseline) غير مكتملين لهذا الـEngagement' }) };
     }
 
-    const reviewerDecisions = (await loadJson(sb, user.id, engagementId, 'reviewerDecisions.json')) || {
+    const reviewerDecisions = (await loadJson(token, user.id, engagementId, 'reviewerDecisions.json')) || {
       subLineDecisions: {}, mainLineCodeDecisions: {},
     };
 
@@ -91,7 +92,7 @@ exports.handler = async (event) => {
       };
     }
 
-    await saveJson(sb, user.id, engagementId, 'reviewerDecisions.json', reviewerDecisions);
+    await saveJson(token, user.id, engagementId, 'reviewerDecisions.json', reviewerDecisions);
 
     // ---------- إعادة اشتقاق _reviewed كاملة من (Baseline + كل القرارات الحالية) ----------
     const checkedDecisions = checkDecisionContext(reviewerDecisions, layer1, layer2);
@@ -119,9 +120,9 @@ exports.handler = async (event) => {
       reconciliationThresholdUsed: layer4.reconciliationThresholdUsed,
     };
 
-    await saveJson(sb, user.id, engagementId, 'layer2_reviewed.json', layer2Reviewed);
-    await saveJson(sb, user.id, engagementId, 'layer3_reviewed.json', layer3Reviewed);
-    await saveJson(sb, user.id, engagementId, 'layer4_reviewed.json', layer4Reviewed);
+    await saveJson(token, user.id, engagementId, 'layer2_reviewed.json', layer2Reviewed);
+    await saveJson(token, user.id, engagementId, 'layer3_reviewed.json', layer3Reviewed);
+    await saveJson(token, user.id, engagementId, 'layer4_reviewed.json', layer4Reviewed);
 
     return {
       statusCode: 200,
