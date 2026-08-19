@@ -1,38 +1,37 @@
-// نقطة البدء المتزامنة لـLayer 2 (سريعة): تحقق + حجز المرحلة + حفظ لقطة المدخلات
-// (tbRows وtbScope) في Storage (مرجع فقط في pipeline_status.json) + تشغيل الدالة
-// الخلفية (layer2-map-background) دون انتظار اكتمالها. نفس مبدأ layer1-start.js.
+// نقطة البدء المتزامنة لـLayer 2 (سريعة، أقل من ثانية): تحقق + حجز المرحلة (Idempotency)
+// + حفظ لقطة المدخلات (rows من Mapping Template وreconciliationThreshold) في Storage،
+// ثم تُرجع فوراً. لا تستدعي layer2-map-background داخلياً إطلاقاً — نفس السبب المثبت عملياً
+// في layer1-start.js (الانتظار الداخلي لاستجابة دالة خلفية كاملة يصطدم بسقف التنفيذ
+// المتزامن ~30 ثانية ويُنتج 504 حتى لو أكملت الدالة الخلفية عملها فعلياً). الواجهة (لا هذه
+// الدالة) هي من تُطلق layer2-map-background مباشرة بعد نجاح هذا الاستدعاء، دون انتظار
+// اكتمالها — راجع income-analysis-v2.html.
 const { requireUser, requireApiKey } = require('./lib/auth');
 const { saveJson, loadJson, extractToken } = require('./lib/engagement-store');
-const { claimStage, finishStage } = require('./lib/pipeline-status');
-
-// الأولوية لِـhost الطلب الفعلي نفسه (يعكس بدقة Preview أو Production حسب من استدعى
-// فعلاً) — process.env.URL على Netlify يشير دائماً للدومين الأساسي للموقع (mdadalpha.com)
-// بصرف النظر عن الـdeploy الفعلي، فاستخدامه أولاً كان يُرسِل نداءات الدوال الخلفية من أي
-// Preview إلى دومين الإنتاج فيرجع 404. DEPLOY_PRIME_URL/URL يبقيان احتياطاً فقط إن غابت
-// الـheaders لأي سبب.
-function baseUrl(event) {
-  const host = event.headers['x-forwarded-host'] || event.headers.host;
-  if (host) return `https://${host}`;
-  return process.env.DEPLOY_PRIME_URL || process.env.URL;
-}
+const { claimStage } = require('./lib/pipeline-status');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
   const { user, errorResponse } = await requireUser(event);
   if (errorResponse) return errorResponse;
-  const { errorResponse: keyErr } = requireApiKey();
+  const { errorResponse: keyErr } = requireApiKey(); // تحقق إعداد فقط؛ المفتاح نفسه يُستخدم داخل الدالة الخلفية
   if (keyErr) return keyErr;
   const token = extractToken(event);
 
   try {
     const body = JSON.parse(event.body || '{}');
-    const { engagementId, tbRows, tbScope } = body;
-    if (!engagementId || !Array.isArray(tbRows)) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'engagementId وtbRows مطلوبة' }) };
+    const { engagementId, rows, reconciliationThreshold } = body;
+    if (!engagementId || !Array.isArray(rows) || rows.length === 0) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'engagementId وrows (Mapping Template) مطلوبة' }) };
     }
-    if (tbScope !== 'full' && tbScope !== 'incomeStatementOnly') {
-      return { statusCode: 400, body: JSON.stringify({ error: 'tbScope يجب أن يكون "full" أو "incomeStatementOnly"' }) };
+    if (reconciliationThreshold === undefined || reconciliationThreshold === null) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'reconciliationThreshold مطلوب — لا يُخترع من الخادم.' }) };
     }
+    for (const r of rows) {
+      if (!r.accountName || r.amount === undefined || r.amount === null || !r.reviewerMainLineLabel || !r.reviewerSubLineLabel) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'كل صف يجب أن يحتوي accountName وamount وreviewerMainLineLabel وreviewerSubLineLabel' }) };
+      }
+    }
+
     const layer1 = await loadJson(token, user.id, engagementId, 'layer1.json');
     if (!layer1) {
       return { statusCode: 400, body: JSON.stringify({ error: 'لم يُشغَّل Layer 1 لهذا الـEngagement بعد' }) };
@@ -43,19 +42,9 @@ exports.handler = async (event) => {
       return { statusCode: 409, body: JSON.stringify({ error: 'Layer 2 قيد التنفيذ بالفعل لهذا الـEngagement' }) };
     }
 
-    await saveJson(token, user.id, engagementId, 'inputs/layer2_tb.json', { tbRows, tbScope });
+    await saveJson(token, user.id, engagementId, 'inputs/layer2_mapping_template.json', { rows, reconciliationThreshold: Number(reconciliationThreshold) });
 
-    const res = await fetch(`${baseUrl(event)}/.netlify/functions/layer2-map-background`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: event.headers.authorization || event.headers.Authorization || '' },
-      body: JSON.stringify({ engagementId }),
-    });
-    if (!res.ok && res.status !== 202) {
-      await finishStage(token, user.id, engagementId, 'layer2', { status: 'error', error: `تعذّر بدء المهمة الخلفية (HTTP ${res.status})` });
-      return { statusCode: 502, body: JSON.stringify({ error: 'تعذّر بدء المهمة الخلفية لـLayer 2' }) };
-    }
-
-    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ started: true }) };
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claimed: true }) };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }

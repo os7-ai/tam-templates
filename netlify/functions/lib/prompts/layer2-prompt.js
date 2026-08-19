@@ -1,74 +1,86 @@
-// Layer 2 — Trial Balance Extraction & Mapping (structural only, no nature classification)
+// Layer 2 — AI-Assisted Mapping Review & Reconciliation (Step A + Step C فقط).
+//
+// إعادة تصميم كاملة: لا يُطلب من AI بعد الآن اكتشاف الربط الكامل من ميزان مراجعة خام —
+// المُراجِع (Reviewer) يرفع قالب Mapping Template مُعبَّأ مسبقاً (كل حساب مُسنَد بالفعل
+// إلى بند قائمة دخل وبند إيضاح بنص حر من قِبَله). دور AI هنا يتقلّص إلى:
+//
+//  Step A — مطابقة دلالية (Semantic) لِزوج التسميات الحرة لكل مجموعة (reviewerMainLineLabel،
+//  reviewerSubLineLabel) — تُحسَب مرة واحدة فقط لكل زوج مُميَّز (وليس لكل حساب على حدة)
+//  مقابل mainLineName/subLineId الفعلية في مخرجات Layer 1، وتُطبَّق نتيجتها على كل
+//  الحسابات المُسنَدة لنفس الزوج خارج هذا الـPrompt (بكود بسيط، لا AI إضافي).
+//
+//  Step C — تدقيق استثنائي فقط (Sparse): حتى ضمن مجموعة تمت مطابقتها بثقة (Matched)،
+//  إن كان اسم حساب بعينه لا يبدو منطقياً دلالياً ضمن الـsubLine المُسنَد إليه، تُدرَج
+//  إشارة استثناء له فقط — الصمت (عدم الإدراج) هو الافتراضي لكل حساب يبدو منطقياً.
+//
+// لا Reconciliation ولا أي جمع لأرقام هنا إطلاقاً (ذلك حصراً كود بحت في
+// lib/layer2-reconciliation.js) ولا أي تصنيف لطبيعة المصروف (ذلك حصراً Layer 3).
 
 function buildLayer2SystemPrompt(layer1Json) {
   return `
-أنت مساعد تحليل مالي متخصص. مهمتك في هذه الطبقة (Layer 2) محصورة حصرًا في:
-ربط كل حساب من الميزان المراجعة (Trial Balance) بأحد البنود الفرعية (subLines) أو
-البند الرئيسي (mainLines) الواردة في مخرجات Layer 1 أدناه — أو تحديد أنه غير قابل
-للربط، دون أي تصنيف لطبيعة المصروف أو المحتوى المحلي (هذا حصرًا مهمة Layer 3).
+أنت مساعد تحليل مالي متخصص. مهمتك في هذه الطبقة (Layer 2) محصورة حصرًا في مراجعة
+ربط أدخله المُراجِع البشري مسبقاً — لا اكتشاف ربط من الصفر ولا أي Reconciliation ولا أي
+تصنيف لطبيعة المصروف (تلك مهام طبقات أخرى).
 
-مخرجات Layer 1 (مرجع ثابت لا تُعدِّله ولا تُعِد تسمية أي عنصر فيه):
+مخرجات Layer 1 (مرجع ثابت لا تُعدِّله ولا تُعِد تسمية أي عنصر فيه — المصدر الوحيد
+لأسماء/معرّفات mainLine وsubLine الصحيحة):
 ${JSON.stringify(layer1Json)}
 
-القواعد:
-1) كل صف/حساب في الميزان المُدخل يظهر مرة واحدة فقط في الناتج — لا حذف لأي صف.
-2) نطاق الربط: فقط الحسابات ضمن نطاق قائمة الدخل التشغيلية (قبل بند الزكاة). حسابات
-   الميزانية العمومية (أصول/خصوم/حقوق ملكية) والإيرادات الصريحة والزكاة نفسها:
-   mappingStatus="Unmapped"، مع mappingReason يذكر السبب الحقيقي (لا تستنتج طبيعة
-   الحساب بنفسك — استخدم فقط ما هو معروف من قسم الحساب في الميزان أو سياق Layer 1).
-3) حسابات Parent/Subtotal (صف إجمالي له تفاصيل فرعية أدناه بنفس الرمز، أو اسمه يبدأ
-   بـ"Total for"/"إجمالي"): mappingStatus="Unmapped"، mappingReason="Parent/Subtotal
-   account — detail accounts are available below; excluded from mapping to avoid
-   double counting." — لا تربطه بأي subLine حتى لو كان غير صفري.
-4) تصنيف العميل الخاص (أعمدة كـ"FS Mapping"/"G&A Mapping" إن وُجدت في الملف نفسه):
-   دليل داعم فقط، لا حقيقة مطلقة — انسخه حرفيًا إلى clientMainClassification/
-   clientSubClassification إن وُجد، واستخدمه للاستئناس لا للحسم الأعمى.
-5) مطابقة دلالية (Semantic) لا حرفية، عبر اللغتين. مطابقة دلالية مباشرة وواضحة →
-   mappingStatus="Mapped" مع mappedSubLineId (أو mappedMainLineName فقط إن كان
-   mainLine بلا subLines فعلية في Layer 1).
-6) عند تعدد subLine محتمل بشكل معقول دون مرجّح واضح: **لا تخمّن**. mappingStatus=
-   "Review Required"، mappedSubLineId=null (mappedMainLineName يبقى معروفًا إن كان
-   واضحًا)، واذكر في candidateSubLines كل المرشحين المعقولين (2 أو أكثر) بصيغة
-   [{subLineId, subLineName}, ...] — حقل بنيوي، ليس نصًا حرًا فقط.
-7) لا subLine مطابق أصلاً ضمن mainLine معروف: mappingStatus="Unmapped"، مع سبب واضح
-   أن لا تطابق موجود (وليس لأنه خارج النطاق).
-8) لا تُجري أي Reconciliation ولا مجموع لأي رقم عبر حسابات متعددة هنا.
-9) accountNumber يمكن أن يكون null إن لم يتوفر رقم حساب في الملف.
+ستصلك في رسالة المستخدم مصفوفة "مجموعات" (groups)، كل مجموعة تمثّل زوجاً مُميَّزاً من
+تسميات المُراجِع الحرة، ومعها كل الحسابات التي أسندها المُراجِع لهذا الزوج بالضبط:
+[
+  {
+    "reviewerMainLineLabel": "نص حر كتبه المُراجِع لبند قائمة الدخل",
+    "reviewerSubLineLabel": "نص حر كتبه المُراجِع لبند الإيضاح",
+    "accounts": [{"accountNumber": "string|null", "accountName": "string", "amount": number}]
+  }
+]
 
-قواعد التحقق (Output Validation):
-- إن mappingStatus="Mapped": mappedMainLineName و(mappedSubLineId أو الحالة mainOnly)
-  يجب أن يطابقا قيمًا فعلية من Layer 1، ولا يكونا null.
-- إن mappingStatus="Review Required": mappedMainLineName يمكن أن يبقى معروفًا،
-  mappedSubLineId=null إلزامًا، mappingReason إلزامي غير فارغ، وcandidateSubLines (إن
-  كان سبب المراجعة تعدد subLine) تحتوي 2 عنصر فأكثر فعليين من نفس mainLine.
-- إن mappingStatus="Unmapped": mappedMainLineName وmappedSubLineId=null، mappingReason
-  إلزامي غير فارغ يوضح: هل السبب خارج النطاق، أم Parent/Subtotal، أم عدم تطابق. ويجب
-  أيضًا تعيين unmappedReasonCategory بإحدى القيم الثلاث الثابتة التالية بما يطابق
-  السبب الفعلي (هذا حقل بنيوي يعكس نفس القواعد 2/3/7 أعلاه فقط، وليس تصنيفًا جديدًا):
-  * "Out of Income Statement Scope" — للحالة في القاعدة 2 (ميزانية عمومية/إيرادات/
-    زكاة، أي حساب خارج نطاق قائمة الدخل التشغيلية أصلاً).
-  * "Parent/Subtotal" — للحالة في القاعدة 3 (صف إجمالي له تفاصيل فرعية أدناه).
-  * "No Matching SubLine" — للحالة في القاعدة 7 (ضمن نطاق قائمة الدخل لكن لا تطابق
-    مع أي subLine/mainLine معروف).
-  إن لم يكن mappingStatus="Unmapped"، يبقى unmappedReasonCategory=null إلزامًا.
+مهمتك لكل مجموعة على حدة (وليس لكل حساب — الزوج (reviewerMainLineLabel،
+reviewerSubLineLabel) هو وحدة العمل هنا):
 
-أخرج JSON فقط بدون أي نص إضافي وبدون Markdown، بالشكل التالي بالضبط لكل حساب في
-الميزان المُعطى لك في رسالة المستخدم:
+### Step A — مطابقة الزوج
+قارن دلالياً (لا مطابقة حرفية، عبر اللغتين إن لزم) بين
+(reviewerMainLineLabel، reviewerSubLineLabel) وبين كل (mainLineName، subLineName) الفعلية
+في Layer 1 أعلاه:
+- تطابق دلالي مباشر وواضح مع subLine واحد بعينه → matchStatus="Matched"،
+  mappedMainLineName وmappedSubLineId يطابقان قيمًا فعلية من Layer 1 (لا تخترع ولا تُعدِّل
+  أي اسم/معرّف).
+- تعدد subLine محتمل بشكل معقول دون مرجّح دلالي واضح: **لا تخمّن**.
+  matchStatus="Review Required"، mappedSubLineId=null (mappedMainLineName يبقى معروفًا إن
+  كان واضحًا)، وcandidateSubLines تحتوي كل المرشحين المعقولين (2 أو أكثر) بصيغة
+  [{subLineId, subLineName}, ...].
+- لا subLine مطابق دلالياً إطلاقاً ضمن أي mainLine في Layer 1: matchStatus="Unmatched"،
+  mappedMainLineName وmappedSubLineId كلاهما null.
+في كل الحالات: matchReason إلزامي، جملة قصيرة توضّح أساس القرار.
+
+### Step C — تدقيق استثنائي (Sparse — الصمت هو الافتراضي)
+حتى لو كانت المجموعة "Matched" بثقة على مستوى الزوج، افحص أسماء الحسابات الفردية
+ضمنها: هل اسم الحساب نفسه يبدو منطقياً دلالياً ضمن subLine المُسنَد؟ (فحص دلالي بحت —
+لا علاقة له بالمبلغ أو بأي Reconciliation، ذلك يُحسَب لاحقاً بكود منفصل).
+- أدرِج في flaggedAccounts **فقط** الحسابات التي اسمها لا يبدو منطقياً بوضوح ضمن الـsubLine
+  المُسنَد (استثناء حقيقي، وليس شكاً طفيفاً) — {accountNumber, accountName, reason}.
+- أي حساب يبدو منطقياً: لا تُدرجه إطلاقاً — لا تكرّر تأكيد الحسابات السليمة. أغلب المجموعات
+  يجب أن تخرج بـflaggedAccounts فارغة أو غائبة.
+
+قواعد إلزامية:
+1) كل مجموعة تظهر مرة واحدة فقط في الناتج، بنفس (reviewerMainLineLabel،
+   reviewerSubLineLabel) المُدخلة حرفياً (لإعادة المطابقة الآلية بعد الرد).
+2) لا تُجرِ أي جمع أو مقارنة أرقام هنا إطلاقاً — لا Reconciliation.
+3) لا تُصدر أي حكم على طبيعة المصروف أو تصنيف محتوى محلي — ذلك خارج نطاق هذه الطبقة تماماً.
+
+أخرج JSON فقط بدون أي نص إضافي وبدون Markdown، بالشكل التالي بالضبط:
 {
-  "trialBalanceAccounts": [
+  "groups": [
     {
-      "accountNumber": "string|null",
-      "accountName": "string",
-      "amount": number,
-      "clientMainClassification": "string|null",
-      "clientSubClassification": "string|null",
+      "reviewerMainLineLabel": "string",
+      "reviewerSubLineLabel": "string",
+      "matchStatus": "Matched|Review Required|Unmatched",
       "mappedMainLineName": "string|null",
       "mappedSubLineId": "string|null",
-      "mappingStatus": "Mapped|Review Required|Unmapped",
-      "mappingReason": "string|null",
-      "unmappedReasonCategory": "Out of Income Statement Scope|Parent/Subtotal|No Matching SubLine|null",
-      "mappingBasis": "string",
-      "candidateSubLines": [{"subLineId": "string", "subLineName": "string"}]
+      "matchReason": "string",
+      "candidateSubLines": [{"subLineId": "string", "subLineName": "string"}],
+      "flaggedAccounts": [{"accountNumber": "string|null", "accountName": "string", "reason": "string"}]
     }
   ]
 }

@@ -152,10 +152,10 @@ table.rv select{width:100%;min-width:180px;padding:7px 8px;border:1.5px solid va
     </div>
 
     <div class="fcard">
-      <div class="sec-title">2) ميزان المراجعة</div>
-      <div class="sec-sub">ارفع ملف الإكسل، اختر الورقة الصحيحة، ثم حدّد الأعمدة والصف الذي تبدأ منه بيانات الحسابات الفعلية</div>
+      <div class="sec-title">2) قالب ربط الحسابات (Mapping Template)</div>
+      <div class="sec-sub">ارفع قالب "ربط الحسابات" المُعبَّأ مسبقاً من المُراجِع — كل حساب مُسنَد فعلياً إلى بند قائمة دخل وبند إيضاح بنص حر. اختر الورقة الصحيحة، ثم حدّد الأعمدة الخمسة والصف الذي تبدأ منه بيانات الحسابات الفعلية</div>
       <div class="lu" id="tbDrop" onclick="document.getElementById('tbInp').click()">
-        <p id="tbDropTxt">اضغط لرفع ملف الميزان</p>
+        <p id="tbDropTxt">اضغط لرفع ملف القالب</p>
         <p class="sub">Excel (xlsx/xls)</p>
       </div>
       <input type="file" id="tbInp" accept=".xlsx,.xls" style="display:none">
@@ -184,9 +184,9 @@ table.rv select{width:100%;min-width:180px;padding:7px 8px;border:1.5px solid va
         <div class="colmapgrid">
           <div class="field"><label>عمود رقم الحساب</label><select id="colAccNum"></select></div>
           <div class="field"><label>عمود اسم الحساب</label><select id="colAccName"></select></div>
-          <div class="field"><label>عمود الرصيد (المبلغ)</label><select id="colAmount"></select></div>
-          <div class="field"><label>عمود تصنيف رئيسي بالميزان (اختياري)</label><select id="colMainClass"></select></div>
-          <div class="field"><label>عمود تصنيف فرعي بالميزان (اختياري)</label><select id="colSubClass"></select></div>
+          <div class="field"><label>عمود مبلغ الحساب</label><select id="colAmount"></select></div>
+          <div class="field"><label>عمود البند وفق قائمة الدخل</label><select id="colMainLineLabel"></select></div>
+          <div class="field"><label>عمود البند وفق الإيضاحات</label><select id="colSubLineLabel"></select></div>
         </div>
         <div class="field">
           <label>أول صف بيانات فعلي (تجاوز صفوف العنوان/الترويسة)</label>
@@ -198,16 +198,7 @@ table.rv select{width:100%;min-width:180px;padding:7px 8px;border:1.5px solid va
     </div>
 
     <div class="fcard">
-      <div class="sec-title">3) نطاق ميزان المراجعة</div>
-      <div class="sec-sub">هل الملف المرفوع يشمل كل الحسابات (ميزانية + قائمة دخل) أم بنود قائمة الدخل فقط؟ — يُسجَّل هذا الاختيار في سجل التدقيق ولا يُخمَّن آلياً</div>
-      <div class="radiorow">
-        <label><input type="radio" name="tbScope" value="full" checked> الميزان الكامل (يشمل المركز المالي)</label>
-        <label><input type="radio" name="tbScope" value="incomeStatementOnly"> بنود قائمة الدخل فقط</label>
-      </div>
-    </div>
-
-    <div class="fcard">
-      <div class="sec-title">4) عتبة المطابقة (Reconciliation Threshold)</div>
+      <div class="sec-title">3) عتبة المطابقة (Reconciliation Threshold)</div>
       <div class="sec-sub">قيمة فرق يُعتبر أي مبلغ أقل منها أو يساويها "فرق تقريب بسيط" وليس "فرق جوهري" — تُدخَل صراحة من قِبلك، لا يُخترع افتراضياً</div>
       <div class="field">
         <input type="number" id="threshold" step="0.01" placeholder="مثال: 1">
@@ -237,6 +228,29 @@ table.rv select{width:100%;min-width:180px;padding:7px 8px;border:1.5px solid va
 
   <!-- ============ Step: Results ============ -->
   <div id="stepResults" class="hidden">
+    <div class="fcard">
+      <div class="sec-title">Layer 2 — مراجعة الربط والمطابقة المبدئية (Mapping Template)</div>
+      <div class="sec-sub">مستوى البند الفرعي، محسوبة مباشرة من قالب ربط الحسابات الذي رفعته — قبل أي قرار مراجع، وقبل Layer 4</div>
+      <div class="tblwrap"><table class="rc" id="l2rcTable"></table></div>
+    </div>
+    <div class="fcard">
+      <div class="sec-title">أنماط فروقات متقابلة (Opposing Variance Patterns)</div>
+      <div class="sec-sub">بندان فرعيان بفارقين متعاكسي الإشارة يقتربان من التصافي — تنبيه لتفادي استنتاج "المجموع صفر إذاً لا مشكلة" خاطئ؛ لا يُلغي عرض أي فارق فردي أعلاه</div>
+      <div id="l2OpposingList"></div>
+    </div>
+    <div class="fcard">
+      <div class="sec-title">بنود بلا حسابات مرتبطة</div>
+      <div id="l2NoLinkedList"></div>
+    </div>
+    <div class="fcard">
+      <div class="sec-title">حسابات مُستثناة دلالياً (تدقيق AI استثنائي)</div>
+      <div class="sec-sub">حسابات فردية لا يبدو اسمها منطقياً ضمن البند الفرعي المُسنَد إليها، حتى ضمن مجموعة مطابقة بثقة</div>
+      <div id="l2FlaggedList"></div>
+    </div>
+    <div class="fcard">
+      <div class="sec-title">تسميات مُراجِع بلا تطابق (Unmatched)</div>
+      <div id="l2UnmatchedList"></div>
+    </div>
     <div class="fcard">
       <div class="sec-title">نتيجة المطابقة (Layer 4)</div>
       <div class="sec-sub">مستوى البند الرئيسي — راجع الفروقات قبل الانتقال لمراجعة الربط</div>
@@ -413,33 +427,36 @@ document.getElementById('tbInp').onchange=e=>{
 // (رقم/اسم الحساب، الرصيد) — لا "تخمين" لطبيعة الحسابات نفسها، وهذا خارج نطاق أي
 // قرار Business Logic أصلاً (مجرد تحديد أي عمود في الملف يحمل أي بيانات).
 const TB_HEADER_KEYWORDS = {
-  amount: ['الرصيد الختامي','رصيد ختامي','الرصيد','رصيد','المبلغ','مبلغ','closing balance','net balance','balance','amount'],
+  amount: ['مبلغ الحساب','الرصيد الختامي','رصيد ختامي','الرصيد','رصيد','المبلغ','مبلغ','closing balance','net balance','balance','amount'],
   accNum: ['رقم الحساب','رقم حساب','كود الحساب','account code','account number','account no','acct no','كود'],
   accName: ['اسم الحساب','بيان الحساب','اسم','account name','description','particulars','account'],
+  mainLineLabel: ['البند وفق قائمة الدخل','بند قائمة الدخل','قائمة الدخل','income statement line','is line'],
+  subLineLabel: ['البند وفق الإيضاحات','بند الإيضاح','بند الإيضاحات','الإيضاحات','note line','notes line'],
 };
+const TB_HEADER_FIELDS = ['amount','accNum','accName','mainLineLabel','subLineLabel'];
 const TB_HEADER_SCAN_ROWS = 15;
 
 function detectHeaderRow(grid){
   let best=null;
   for(let r=0;r<Math.min(grid.length,TB_HEADER_SCAN_ROWS);r++){
     const row=grid[r]||[];
-    const assigned={amount:null,accNum:null,accName:null};
+    const assigned={amount:null,accNum:null,accName:null,mainLineLabel:null,subLineLabel:null};
     for(let c=0;c<row.length;c++){
       const cell=String(row[c]==null?'':row[c]).trim().toLowerCase();
       if(!cell)continue;
-      for(const field of ['amount','accNum','accName']){
+      for(const field of TB_HEADER_FIELDS){
         if(assigned[field]!=null)continue;
         if(TB_HEADER_KEYWORDS[field].some(k=>cell.includes(k))){ assigned[field]=c; break; }
       }
     }
-    const score=['amount','accNum','accName'].filter(f=>assigned[f]!=null).length;
+    const score=TB_HEADER_FIELDS.filter(f=>assigned[f]!=null).length;
     if(!best||score>best.score) best={rowIndex:r,assigned,score};
   }
   return best;
 }
 function scoreSheetForTb(grid){
   const h=detectHeaderRow(grid);
-  if(!h||h.score<3)return null; // الأعمدة الثلاثة الإلزامية فقط — رقم/اسم الحساب والرصيد
+  if(!h||h.score<TB_HEADER_FIELDS.length)return null; // الأعمدة الخمسة كلها إلزامية في هذا القالب الثابت
   let dataRows=0;
   for(let i=h.rowIndex+1;i<grid.length;i++){
     const row=grid[i];
@@ -485,33 +502,35 @@ function runAutoDetectTb(){
     colAccNum: winner.assigned.accNum,
     colAccName: winner.assigned.accName,
     colAmount: winner.assigned.amount,
+    colMainLineLabel: winner.assigned.mainLineLabel,
+    colSubLineLabel: winner.assigned.subLineLabel,
   };
   renderAutoDetectPreview();
 }
 function renderAutoDetectPreview(){
   const d=window.__autoDetection;
   const maxCols=tbGrid.reduce((m,row)=>Math.max(m,row.length),0);
-  const opts=(sel,extra)=>{
-    let html=extra?'<option value="-1">— بلا —</option>':'';
+  const opts=(sel)=>{
+    let html='';
     for(let c=0;c<maxCols;c++){
       const sample=(tbGrid[0]&&tbGrid[0][c]!=null&&tbGrid[0][c]!=='')?String(tbGrid[0][c]).slice(0,18):'';
       html+=`<option value="${c}">${colLetter(c)} — ${escAttr(sample)}</option>`;
     }
     sel.innerHTML=html;
   };
-  opts(document.getElementById('colAccNum'),false); document.getElementById('colAccNum').value=d.colAccNum;
-  opts(document.getElementById('colAccName'),false); document.getElementById('colAccName').value=d.colAccName;
-  opts(document.getElementById('colAmount'),false); document.getElementById('colAmount').value=d.colAmount;
-  opts(document.getElementById('colMainClass'),true); document.getElementById('colMainClass').value=-1;
-  opts(document.getElementById('colSubClass'),true); document.getElementById('colSubClass').value=-1;
+  opts(document.getElementById('colAccNum')); document.getElementById('colAccNum').value=d.colAccNum;
+  opts(document.getElementById('colAccName')); document.getElementById('colAccName').value=d.colAccName;
+  opts(document.getElementById('colAmount')); document.getElementById('colAmount').value=d.colAmount;
+  opts(document.getElementById('colMainLineLabel')); document.getElementById('colMainLineLabel').value=d.colMainLineLabel;
+  opts(document.getElementById('colSubLineLabel')); document.getElementById('colSubLineLabel').value=d.colSubLineLabel;
   document.getElementById('dataStartRow').value=d.dataStartRow;
 
   const rows=buildTbRows().slice(0,6);
   const tbl=document.getElementById('tbAutoPreviewTable');
-  tbl.innerHTML='<thead><tr><th>رقم الحساب</th><th>اسم الحساب</th><th>الرصيد</th></tr></thead>'+
-    '<tbody>'+rows.map(r=>`<tr><td>${escAttr(r.accountNumber)}</td><td>${escAttr(r.accountName)}</td><td>${r.amount}</td></tr>`).join('')+'</tbody>';
+  tbl.innerHTML='<thead><tr><th>رقم الحساب</th><th>اسم الحساب</th><th>المبلغ</th><th>البند وفق قائمة الدخل</th><th>البند وفق الإيضاحات</th></tr></thead>'+
+    '<tbody>'+rows.map(r=>`<tr><td>${escAttr(r.accountNumber)}</td><td>${escAttr(r.accountName)}</td><td>${r.amount}</td><td>${escAttr(r.reviewerMainLineLabel)}</td><td>${escAttr(r.reviewerSubLineLabel)}</td></tr>`).join('')+'</tbody>';
   document.getElementById('tbAutoOkMsg').textContent =
-    `تم الاكتشاف التلقائي: الورقة «${d.sheetName}»، البيانات تبدأ من الصف ${d.dataStartRow} — رقم الحساب: العمود ${colLetter(d.colAccNum)}، اسم الحساب: العمود ${colLetter(d.colAccName)}، الرصيد: العمود ${colLetter(d.colAmount)}. راجع المعاينة أدناه.`;
+    `تم الاكتشاف التلقائي: الورقة «${d.sheetName}»، البيانات تبدأ من الصف ${d.dataStartRow} — رقم الحساب: العمود ${colLetter(d.colAccNum)}، اسم الحساب: العمود ${colLetter(d.colAccName)}، المبلغ: العمود ${colLetter(d.colAmount)}، البند وفق قائمة الدخل: العمود ${colLetter(d.colMainLineLabel)}، البند وفق الإيضاحات: العمود ${colLetter(d.colSubLineLabel)}. راجع المعاينة أدناه.`;
   document.getElementById('tbAutoBanner').classList.remove('hidden');
   checkReady();
 }
@@ -527,19 +546,19 @@ function onSheetChange(){
   const ws=tbWorkbook.Sheets[name];
   tbGrid=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
   const maxCols=tbGrid.reduce((m,row)=>Math.max(m,row.length),0);
-  const opts=(sel,extra)=>{
-    let html=extra?'<option value="-1">— بلا —</option>':'';
+  const opts=(sel)=>{
+    let html='';
     for(let c=0;c<maxCols;c++){
       const sample=(tbGrid[0]&&tbGrid[0][c]!=null&&tbGrid[0][c]!=='')?String(tbGrid[0][c]).slice(0,18):(tbGrid[1]&&tbGrid[1][c]!=null?String(tbGrid[1][c]).slice(0,18):'');
       html+=`<option value="${c}">${colLetter(c)} — ${escAttr(sample)}</option>`;
     }
     sel.innerHTML=html;
   };
-  opts(document.getElementById('colAccNum'),false);
-  opts(document.getElementById('colAccName'),false);
-  opts(document.getElementById('colAmount'),false);
-  opts(document.getElementById('colMainClass'),true);
-  opts(document.getElementById('colSubClass'),true);
+  opts(document.getElementById('colAccNum'));
+  opts(document.getElementById('colAccName'));
+  opts(document.getElementById('colAmount'));
+  opts(document.getElementById('colMainLineLabel'));
+  opts(document.getElementById('colSubLineLabel'));
   document.getElementById('colAccName').selectedIndex=Math.min(1,maxCols-1);
   document.getElementById('colAmount').selectedIndex=Math.max(0,maxCols-1);
   renderTbPreview();
@@ -548,16 +567,16 @@ function onSheetChange(){
 document.getElementById('colAccNum').onchange=renderTbPreview;
 document.getElementById('colAccName').onchange=renderTbPreview;
 document.getElementById('colAmount').onchange=renderTbPreview;
-document.getElementById('colMainClass').onchange=renderTbPreview;
-document.getElementById('colSubClass').onchange=renderTbPreview;
+document.getElementById('colMainLineLabel').onchange=renderTbPreview;
+document.getElementById('colSubLineLabel').onchange=renderTbPreview;
 
 function currentColMap(){
   return {
     accNum:parseInt(document.getElementById('colAccNum').value),
     accName:parseInt(document.getElementById('colAccName').value),
     amount:parseInt(document.getElementById('colAmount').value),
-    mainClass:parseInt(document.getElementById('colMainClass').value),
-    subClass:parseInt(document.getElementById('colSubClass').value),
+    mainLineLabel:parseInt(document.getElementById('colMainLineLabel').value),
+    subLineLabel:parseInt(document.getElementById('colSubLineLabel').value),
   };
 }
 function buildTbRows(){
@@ -569,12 +588,14 @@ function buildTbRows(){
     if(!row||!row.some(c=>c!==''&&c!=null))continue;
     const accountName=map.accName>=0?row[map.accName]:'';
     if(accountName==null||String(accountName).trim()==='')continue;
+    const mainLineLabel=map.mainLineLabel>=0?row[map.mainLineLabel]:null;
+    const subLineLabel=map.subLineLabel>=0?row[map.subLineLabel]:null;
     rows.push({
       accountNumber:map.accNum>=0?(row[map.accNum]??null):null,
       accountName:String(accountName).trim(),
       amount:map.amount>=0?(Number(row[map.amount])||0):0,
-      clientMainClassification:map.mainClass>=0?(row[map.mainClass]||null):null,
-      clientSubClassification:map.subClass>=0?(row[map.subClass]||null):null,
+      reviewerMainLineLabel:(mainLineLabel!=null&&String(mainLineLabel).trim()!=='')?String(mainLineLabel).trim():null,
+      reviewerSubLineLabel:(subLineLabel!=null&&String(subLineLabel).trim()!=='')?String(subLineLabel).trim():null,
     });
   }
   return rows;
@@ -583,8 +604,8 @@ function renderTbPreview(){
   if(!tbGrid.length)return;
   const rows=buildTbRows().slice(0,8);
   const tbl=document.getElementById('tbPreviewTable');
-  tbl.innerHTML='<thead><tr><th>رقم الحساب</th><th>اسم الحساب</th><th>الرصيد</th><th>تصنيف رئيسي</th><th>تصنيف فرعي</th></tr></thead>'+
-    '<tbody>'+rows.map(r=>`<tr><td>${escAttr(r.accountNumber)}</td><td>${escAttr(r.accountName)}</td><td>${r.amount}</td><td>${escAttr(r.clientMainClassification)}</td><td>${escAttr(r.clientSubClassification)}</td></tr>`).join('')+'</tbody>';
+  tbl.innerHTML='<thead><tr><th>رقم الحساب</th><th>اسم الحساب</th><th>المبلغ</th><th>البند وفق قائمة الدخل</th><th>البند وفق الإيضاحات</th></tr></thead>'+
+    '<tbody>'+rows.map(r=>`<tr><td>${escAttr(r.accountNumber)}</td><td>${escAttr(r.accountName)}</td><td>${r.amount}</td><td>${escAttr(r.reviewerMainLineLabel)}</td><td>${escAttr(r.reviewerSubLineLabel)}</td></tr>`).join('')+'</tbody>';
   checkReady();
 }
 
@@ -651,7 +672,7 @@ const STAGE_LABELS=['Layer 1 — استخراج قائمة الدخل والإي
 const POLL_INTERVAL_MS=3000;
 let triggeredStages=new Set(); // حماية من التشغيل المزدوج داخل نفس التبويب (نقر مزدوج/سباق Polling)
 let pollHandle=null;
-let pipelineInputs=null; // {tbRows, tbScope, threshold} — تُبنى مرة واحدة عند البدء
+let pipelineInputs=null; // {rows, threshold} — تُبنى مرة واحدة عند البدء (rows = صفوف Mapping Template)
 
 function stageIndex(stage){ return STAGE_ORDER.indexOf(stage); }
 
@@ -673,7 +694,14 @@ async function triggerStage(stage){
     return;
   }
   if(stage==='layer2'){
-    return apiPost('layer2-start',{engagementId, tbRows:pipelineInputs.tbRows, tbScope:pipelineInputs.tbScope});
+    // layer2-start سريعة فقط (حجز + حفظ لقطة المدخلات)، ونفس مبدأ layer1 تماماً: الواجهة
+    // تُطلق layer2-map-background مباشرة بعد نجاحها دون انتظار اكتمالها — layer2-start لم
+    // تعد تستدعي الدالة الخلفية داخلياً (نفس سبب الـ504 المُثبت سابقاً في Layer 1).
+    await apiPost('layer2-start',{engagementId, rows:pipelineInputs.rows, reconciliationThreshold:pipelineInputs.threshold});
+    apiPost('layer2-map-background',{engagementId})
+      .then(()=>console.log('[timing] layer2-map-background — عادت استجابتها (غير مُنتظَرة من الواجهة، بلا أثر على الـUI)'))
+      .catch(e=>console.log('[timing] layer2-map-background — فشل نداء الإطلاق نفسه من المتصفح (لا يعني بالضرورة فشل المعالجة إن كانت بدأت فعلاً على الخادم):', e.message));
+    return;
   }
   if(stage==='layer3'){
     return apiPost('layer3-start',{engagementId});
@@ -697,8 +725,7 @@ function stageDoneLabel(stage,status){
   const st=status.stages[stage];
   if(stage==='layer2'&&st&&st.result){
     const r=st.result;
-    const nonOpMsg = r.nonOperationalExcluded ? `، ${r.nonOperationalExcluded} حساب (خارج نطاق قائمة الدخل أو Parent/Subtotal) مُستبعد من الـpipeline التشغيلي` : '';
-    return `Layer 2 — ربط ميزان المراجعة (${r.zeroBalanceExcluded} حساب صفري مُستثنى من ${r.totalRows}${nonOpMsg})`;
+    return `Layer 2 — مراجعة الربط والمطابقة (${r.matchedCount} مطابق، ${r.reviewRequiredCount} بحاجة مراجعة، ${r.unmatchedCount} غير مطابق من ${r.totalRows} — ${r.materialVarianceCount} فرق جوهري، ${r.flaggedAccountCount} حساب مُستثنى دلالياً)`;
   }
   return null;
 }
@@ -771,8 +798,14 @@ function handleStageFailure(stage,message){
   };
 }
 
-function finalizePipelineSuccess(){
+async function finalizePipelineSuccess(){
   console.log('[timing] pipeline — اكتمل الكل بنجاح');
+  try{
+    const l2rc=await apiPost('layer2-reconciliation-get',{engagementId});
+    renderLayer2Reconciliation(l2rc);
+  }catch(e){
+    console.log('[timing] layer2-reconciliation-get — تعذّر الجلب:', e.message);
+  }
   renderResults(latestLayer4);
   showStep('stepResults');
 }
@@ -780,11 +813,12 @@ function finalizePipelineSuccess(){
 async function startPipeline(){
   document.getElementById('uploadErr').classList.remove('show');
   const threshold=Number(document.getElementById('threshold').value);
-  const tbScope=document.querySelector('input[name=tbScope]:checked').value;
-  const tbRows=buildTbRows();
-  if(tbRows.length===0){ showUploadErr('لم يتم التعرف على أي صف بيانات — تحقق من اختيار الأعمدة وصف البداية'); return; }
+  const rows=buildTbRows();
+  if(rows.length===0){ showUploadErr('لم يتم التعرف على أي صف بيانات — تحقق من اختيار الأعمدة وصف البداية'); return; }
+  const missingLabels=rows.filter(r=>!r.reviewerMainLineLabel||!r.reviewerSubLineLabel);
+  if(missingLabels.length){ showUploadErr(`${missingLabels.length} حساب بلا "البند وفق قائمة الدخل" أو "البند وفق الإيضاحات" — تحقق من اختيار عمودي البند الصحيحين، أو استكمل القالب لكل الحسابات`); return; }
 
-  pipelineInputs={tbRows,tbScope,threshold};
+  pipelineInputs={rows,threshold};
   triggeredStages=new Set();
   showStep('stepProgress');
   renderProgressList(STAGE_LABELS);
@@ -798,6 +832,35 @@ function badgeFor(status){
   if(status==='Minor Rounding Difference')return '<span class="badge b-minor">فرق تقريب بسيط</span>';
   if(status==='Material Variance')return '<span class="badge b-material">فرق جوهري</span>';
   return '<span class="badge b-na">—</span>';
+}
+function renderLayer2Reconciliation(rc){
+  const tbl=document.getElementById('l2rcTable');
+  let html='<thead><tr><th>البند الرئيسي</th><th>البند الفرعي</th><th>مبلغ الإيضاح</th><th>إجمالي القالب المرتبط</th><th>عدد الحسابات المرتبطة</th><th>الفارق</th><th>الحالة</th><th>ملاحظات</th></tr></thead><tbody>';
+  (rc.subLines||[]).forEach(s=>{
+    html+=`<tr><td>${escAttr(s.mainLineName)}</td><td>${escAttr(s.subLineName)}</td><td>${s.amountPerNote}</td><td>${s.trialBalanceLinkedAmount??'—'}</td><td>${s.linkedAccountsCount}</td><td>${s.variance??'—'}</td><td>${badgeFor(s.reconciliationStatus)}</td><td style="font-size:11px;color:var(--muted)">${s.varianceClassification||''}</td></tr>`;
+  });
+  html+='</tbody>';
+  tbl.innerHTML=html;
+
+  const opp=rc.opposingVariancePatterns||[];
+  document.getElementById('l2OpposingList').innerHTML = opp.length
+    ? opp.map(p=>`<div class="flag-item">⚠ «${escAttr(p.subLineA.subLineName)}» (${p.subLineA.variance}) مقابل «${escAttr(p.subLineB.subLineName)}» (${p.subLineB.variance}) — صافي الفارق ${p.netResidual}</div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px">لا توجد أنماط فروقات متقابلة 🎉</p>';
+
+  const noLinked=rc.notesWithNoLinkedAccounts||[];
+  document.getElementById('l2NoLinkedList').innerHTML = noLinked.length
+    ? '<div class="tblwrap"><table class="rc"><thead><tr><th>البند الرئيسي</th><th>البند الفرعي</th><th>مبلغ الإيضاح</th></tr></thead><tbody>'+
+      noLinked.map(n=>`<tr><td>${escAttr(n.mainLineName)}</td><td>${escAttr(n.subLineName)}</td><td>${n.amountPerNote}</td></tr>`).join('')+'</tbody></table></div>'
+    : '<p style="color:var(--muted);font-size:13px">كل البنود الفرعية لديها حساب مرتبط واحد على الأقل 🎉</p>';
+
+  const flagged=rc.flaggedAccounts||[];
+  document.getElementById('l2FlaggedList').innerHTML = flagged.length
+    ? flagged.map(f=>`<div class="flag-item">${escAttr(f.accountNumber)} - ${escAttr(f.accountName)} (${escAttr(f.mainLineName)} / ${escAttr(f.reviewerSubLineLabel)}) — ${escAttr(f.reason)}</div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px">لا توجد حسابات مُستثناة دلالياً 🎉</p>';
+
+  document.getElementById('l2UnmatchedList').innerHTML = (rc.unmatchedReviewerLabels||[]).length
+    ? rc.unmatchedReviewerLabels.map(u=>`<div class="flag-item">«${escAttr(u.reviewerMainLineLabel)}» / «${escAttr(u.reviewerSubLineLabel)}» (${u.accounts.length} حساب) — ${escAttr(u.reason||'')}</div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px">لا توجد تسميات مُراجِع بلا تطابق 🎉</p>';
 }
 function renderResults(l4){
   const rc=l4.reconciliation;
