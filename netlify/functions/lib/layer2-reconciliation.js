@@ -31,7 +31,7 @@ function computeLayer2Reconciliation(layer1, trialBalanceAccounts, threshold) {
 
   const subLines = subLineMeta.map(meta => {
     const linkedAccounts = trialBalanceAccounts.filter(a => a.mappingStatus === 'Mapped' && a.mappedSubLineId === meta.subLineId);
-    const trialBalanceLinkedAmount = linkedAccounts.length ? -linkedAccounts.reduce((s, a) => s + Math.abs(a.amount), 0) : null;
+    const trialBalanceLinkedAmount = linkedAccounts.length ? linkedAccounts.reduce((s, a) => s + Math.abs(a.amount), 0) : null;
     const variance = (trialBalanceLinkedAmount != null) ? round2(meta.amountPerNote - trialBalanceLinkedAmount) : null;
     const status = statusOf(variance, th);
 
@@ -48,7 +48,7 @@ function computeLayer2Reconciliation(layer1, trialBalanceAccounts, threshold) {
     } else if (unresolvedCandidateAmount === 0) {
       varianceClassification = 'Source Variance';
     } else {
-      hypotheticalResidualIfCandidatesLinked = round2(variance + unresolvedCandidateAmount);
+      hypotheticalResidualIfCandidatesLinked = round2(variance - unresolvedCandidateAmount);
       varianceClassification = (Math.abs(hypotheticalResidualIfCandidatesLinked) <= th)
         ? 'Mapping Review'
         : 'Mixed (Mapping Review + Source Variance)';

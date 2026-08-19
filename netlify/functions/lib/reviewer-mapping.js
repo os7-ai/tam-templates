@@ -141,7 +141,7 @@ function computeReconciliation(layer1, layer2Reviewed, layer3Reviewed, threshold
 
   const mainLines = layer1.mainLines.map(ml => {
     const tbAccs = layer3Reviewed.classifiedAccounts.filter(a => a.mappedMainLineName === ml.mainLineName);
-    const trialBalanceTotal = tbAccs.length ? -tbAccs.reduce((s, a) => s + Math.abs(a.amount), 0) : null;
+    const trialBalanceTotal = tbAccs.length ? tbAccs.reduce((s, a) => s + Math.abs(a.amount), 0) : null;
 
     const isVsNotesVar = ml.variance; // منقول من Layer 1 كما هو، لا يُعاد حسابه
     const notesVsTBVar = (ml.subLinesTotal != null && trialBalanceTotal != null)
@@ -151,7 +151,7 @@ function computeReconciliation(layer1, layer2Reviewed, layer3Reviewed, threshold
 
     const subLines = (ml.subLines || []).map(sl => {
       const subAccs = layer3Reviewed.classifiedAccounts.filter(a => a.mappedSubLineId === sl.subLineId);
-      const tbLinked = subAccs.length ? -subAccs.reduce((s, a) => s + Math.abs(a.amount), 0) : null;
+      const tbLinked = subAccs.length ? subAccs.reduce((s, a) => s + Math.abs(a.amount), 0) : null;
       const variance = (tbLinked != null) ? round2(sl.amount - tbLinked) : null;
 
       // مرشحون غير محسومين (Review Required) لهذا subLine تحديداً، لأغراض تشخيصية فقط
@@ -169,7 +169,7 @@ function computeReconciliation(layer1, layer2Reviewed, layer3Reviewed, threshold
       } else if (candidateAmount === 0) {
         varianceClassification = 'Source Variance';
       } else {
-        hypotheticalResidual = round2(variance + candidateAmount);
+        hypotheticalResidual = round2(variance - candidateAmount);
         varianceClassification = (Math.abs(hypotheticalResidual) <= threshold)
           ? 'Mapping Review'
           : 'Mixed (Mapping Review + Source Variance)';
