@@ -43,7 +43,7 @@ exports.handler = async (event) => {
       await updateStageProgress(token, user.id, engagementId, 'layer3', { batchIndex: bi, batchCount: batches.length });
       logStage('layer3-classify-background', engagementId, 'batch_start', t0, { batchIndex: bi, batchCount: batches.length, batchRows: batches[bi].length });
       const messages = [{ role: 'user', content: [{ type: 'text', text: JSON.stringify(batches[bi]) }] }];
-      const json = await callClaudeForJson({ apiKey, system, messages, maxTokens: 8000 });
+      const json = await callClaudeForJson({ apiKey, system, messages, maxTokens: 16000 });
       logStage('layer3-classify-background', engagementId, 'batch_end', t0, { batchIndex: bi, batchCount: batches.length });
       if (!Array.isArray(json.classifiedAccounts)) throw new Error('رد Layer 3 لا يحتوي classifiedAccounts بالشكل المتوقع');
       classifiedAccounts = classifiedAccounts.concat(json.classifiedAccounts);
