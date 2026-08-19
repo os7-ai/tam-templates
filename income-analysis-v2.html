@@ -642,8 +642,8 @@ async function startPipeline(){
 
     setProgressState(1,'active');
     const l2res=await apiPost('layer2-map',{engagementId, tbRows, tbScope});
-    const scopeMsg = l2res.scopeExcluded ? `، ${l2res.scopeExcluded} حساب خارج نطاق قائمة الدخل مُستبعد من الـpipeline التشغيلي` : '';
-    setProgressState(1,'done',`Layer 2 — ربط ميزان المراجعة (${l2res.zeroBalanceExcluded} حساب صفري مُستثنى من ${l2res.totalRows}${scopeMsg})`);
+    const nonOpMsg = l2res.nonOperationalExcluded ? `، ${l2res.nonOperationalExcluded} حساب (خارج نطاق قائمة الدخل أو Parent/Subtotal) مُستبعد من الـpipeline التشغيلي` : '';
+    setProgressState(1,'done',`Layer 2 — ربط ميزان المراجعة (${l2res.zeroBalanceExcluded} حساب صفري مُستثنى من ${l2res.totalRows}${nonOpMsg})`);
 
     setProgressState(2,'active');
     await apiPost('layer3-classify',{engagementId, mode:'full'});
