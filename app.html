@@ -179,9 +179,15 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .hist-table tr:last-child td{border-bottom:none}
 .hist-table tbody tr:hover td{background:var(--bg)}
 .hist-empty{text-align:center;padding:48px;color:var(--muted);font-size:13px}
+
+.auth-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .25s ease}
+.auth-loading.hide{opacity:0;pointer-events:none}
+.auth-spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:authspin .7s linear infinite}
+@keyframes authspin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+<div class="auth-loading" id="authLoading"><div class="auth-spin"></div></div>
 <div class="sidebar">
   <div class="sb-brand" onclick="location.href='home.html'">
     <svg width="30" height="30" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -424,18 +430,25 @@ function displayName(email){
   return parts.join(' ')||email||'';
 }
 
+const authTimeout=setTimeout(()=>window.location.href='login.html',8000);
 (async()=>{
-  const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
-  sb=supabase.createClient(cfg.url,cfg.key);
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session){window.location.href='login.html';return;}
-  const email=session.user.email;
-  document.getElementById('sbAvatar').textContent=initials(email);
-  document.getElementById('topAvatar').textContent=initials(email);
-  document.getElementById('sbName').textContent=displayName(email);
-  if(location.hash==='#history')showHistory();
-  const q=new URLSearchParams(location.search).get('q');
-  if(q){document.getElementById('topSearch').value=q;filterTemplates(q);}
+  try{
+    const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
+    sb=supabase.createClient(cfg.url,cfg.key);
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){window.location.href='login.html';return;}
+    const email=session.user.email;
+    document.getElementById('sbAvatar').textContent=initials(email);
+    document.getElementById('topAvatar').textContent=initials(email);
+    document.getElementById('sbName').textContent=displayName(email);
+    if(location.hash==='#history')showHistory();
+    const q=new URLSearchParams(location.search).get('q');
+    if(q){document.getElementById('topSearch').value=q;filterTemplates(q);}
+    clearTimeout(authTimeout);
+    document.getElementById('authLoading').classList.add('hide');
+  }catch(e){
+    window.location.href='login.html';
+  }
 })();
 function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
 document.getElementById('topSearch').addEventListener('input',e=>filterTemplates(e.target.value));

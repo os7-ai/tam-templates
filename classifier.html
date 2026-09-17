@@ -742,10 +742,16 @@
   .topbar-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
   .topbar-bell{width:38px;height:38px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text3);cursor:not-allowed;flex-shrink:0}
   .topbar-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1C2653,#0AAED0);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+
+  .auth-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .25s ease}
+  .auth-loading.hide{opacity:0;pointer-events:none}
+  .auth-spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:authspin .7s linear infinite}
+  @keyframes authspin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
+<div class="auth-loading" id="authLoading"><div class="auth-spin"></div></div>
 <div class="sidebar">
   <div class="sb-brand" onclick="location.href='home.html'">
     <svg width="30" height="30" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -963,6 +969,7 @@ function displayName(email){
   const parts=local.split(/[._-]+/).filter(Boolean).map(p=>p[0].toUpperCase()+p.slice(1));
   return parts.join(' ')||email||'';
 }
+const authTimeout = setTimeout(() => window.location.href = 'login.html', 8000);
 (async () => {
   try {
     const cfg = await fetch('/.netlify/functions/app-config').then(r => r.json());
@@ -974,6 +981,8 @@ function displayName(email){
     document.getElementById('sbAvatar').textContent = initials(email);
     document.getElementById('topAvatar').textContent = initials(email);
     document.getElementById('sbName').textContent = displayName(email);
+    clearTimeout(authTimeout);
+    document.getElementById('authLoading').classList.add('hide');
   } catch (e) {
     window.location.href = 'login.html';
   }

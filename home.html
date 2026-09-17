@@ -70,9 +70,15 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .banner-mountains{position:absolute;bottom:0;left:0;width:100%;height:70%}
 .banner p{position:relative;z-index:1;font-size:15px;font-weight:800;max-width:70%;line-height:1.6}
 @media(max-width:700px){.banner p{max-width:100%}}
+
+.auth-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .25s ease}
+.auth-loading.hide{opacity:0;pointer-events:none}
+.auth-spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:authspin .7s linear infinite}
+@keyframes authspin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+<div class="auth-loading" id="authLoading"><div class="auth-spin"></div></div>
 <div class="sidebar">
   <div class="sb-brand" onclick="location.href='home.html'">
     <svg width="30" height="30" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
@@ -149,18 +155,25 @@ function displayName(email){
   const parts=local.split(/[._-]+/).filter(Boolean).map(p=>p[0].toUpperCase()+p.slice(1));
   return parts.join(' ')||email||'';
 }
+const authTimeout=setTimeout(()=>window.location.href='login.html',8000);
 (async()=>{
-  const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
-  sb=supabase.createClient(cfg.url,cfg.key);
-  const {data:{session}}=await sb.auth.getSession();
-  if(!session){window.location.href='login.html';return;}
-  const email=session.user.email;
-  document.getElementById('sbAvatar').textContent=initials(email);
-  document.getElementById('topAvatar').textContent=initials(email);
-  const name=displayName(email);
-  document.getElementById('sbName').textContent=name;
-  document.getElementById('welcomeHeading').textContent='مرحباً '+name+' 👋';
-  document.getElementById('greetingLine').textContent=greetingByTime();
+  try{
+    const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
+    sb=supabase.createClient(cfg.url,cfg.key);
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session){window.location.href='login.html';return;}
+    const email=session.user.email;
+    document.getElementById('sbAvatar').textContent=initials(email);
+    document.getElementById('topAvatar').textContent=initials(email);
+    const name=displayName(email);
+    document.getElementById('sbName').textContent=name;
+    document.getElementById('welcomeHeading').textContent='مرحباً '+name+' 👋';
+    document.getElementById('greetingLine').textContent=greetingByTime();
+    clearTimeout(authTimeout);
+    document.getElementById('authLoading').classList.add('hide');
+  }catch(e){
+    window.location.href='login.html';
+  }
 })();
 function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
 
