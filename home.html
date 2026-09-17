@@ -8,35 +8,38 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-:root{--navy:#1C2653;--navy2:#2a3875;--accent:#0AAED0;--bg:#F0F4FA;--card:#fff;--border:#D6DEF0;--text:#1C2653;--muted:#6B7A9E}
+:root{--navy:#1C2653;--navy2:#2a3875;--sb1:#0a0e2c;--sb2:#1a2450;--accent:#0AAED0;--bg:#F0F4FA;--card:#fff;--border:#D6DEF0;--text:#1C2653;--muted:#6B7A9E}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;direction:rtl}
 
 /* ── Sidebar ─────────────────────────────────────── */
-.sidebar{position:fixed;top:0;right:0;bottom:0;width:240px;background:linear-gradient(180deg,var(--navy),var(--navy2));display:flex;flex-direction:column;z-index:100;box-shadow:-2px 0 24px rgba(13,20,45,.15)}
-.sb-brand{display:flex;align-items:center;gap:10px;padding:22px 20px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0}
+.sidebar{position:fixed;top:0;right:0;bottom:0;width:240px;background:linear-gradient(195deg,var(--sb1),var(--sb2));display:flex;flex-direction:column;z-index:100;box-shadow:-2px 0 28px rgba(4,6,20,.28)}
+.sb-brand{display:flex;align-items:center;gap:11px;padding:24px 20px 20px;cursor:pointer;flex-shrink:0}
 .sb-brand svg{flex-shrink:0}
 .sb-brand-text{display:flex;flex-direction:column;min-width:0}
-.sb-brand-name{color:#fff;font-size:17px;font-weight:900}
+.sb-brand-name{color:#fff;font-size:17px;font-weight:900;letter-spacing:.2px}
 .sb-brand-org{color:rgba(255,255,255,.5);font-size:10.5px;font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sb-nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
-.sb-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;color:rgba(255,255,255,.75);text-decoration:none;font-size:13.5px;font-weight:700;font-family:'Tajawal',sans-serif;transition:all .18s;background:none;border:none;width:100%;text-align:right;cursor:pointer}
-.sb-item:hover{background:rgba(255,255,255,.08);color:#fff}
-.sb-item.active{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(10,174,208,.35)}
-.sb-icon{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-.sb-item.active .sb-icon{background:rgba(255,255,255,.22)}
+.sb-glow{height:1px;margin:0 20px 14px;background:linear-gradient(90deg,transparent,var(--accent) 50%,transparent);opacity:.5;flex-shrink:0}
+.sb-nav{flex:1;padding:4px 12px 16px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+.sb-item{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;color:rgba(255,255,255,.68);text-decoration:none;font-size:13.5px;font-weight:700;font-family:'Tajawal',sans-serif;transition:all .2s cubic-bezier(.4,0,.2,1);background:none;border:none;width:100%;text-align:right;cursor:pointer}
+.sb-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.sb-item.active{background:linear-gradient(135deg,var(--accent),#0a86a3);color:#fff;box-shadow:0 4px 16px rgba(10,174,208,.4)}
+.sb-icon{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:rgba(255,255,255,.85)}
+.sb-item:hover .sb-icon{color:#fff}
+.sb-item.active .sb-icon{background:rgba(255,255,255,.22);color:#fff}
 .sb-label{flex:1;min-width:0}
-.sb-item.disabled{opacity:.45;cursor:not-allowed}
-.sb-item.disabled:hover{background:none;color:rgba(255,255,255,.75)}
-.sb-soon{font-size:9.5px;font-weight:700;background:rgba(255,255,255,.15);color:#fff;padding:2px 7px;border-radius:20px;flex-shrink:0}
-.sb-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:8px;flex-shrink:0}
-.sb-email{color:rgba(255,255,255,.55);font-size:11px;text-align:center;word-break:break-all}
-.sb-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.85);padding:8px;border-radius:9px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%}
-.sb-logout:hover{background:rgba(255,255,255,.2)}
+.sb-item.disabled{opacity:.4;cursor:not-allowed}
+.sb-item.disabled:hover{background:none;color:rgba(255,255,255,.68)}
+.sb-item.disabled .sb-icon{color:rgba(255,255,255,.6)}
+.sb-soon{font-size:9px;font-weight:700;background:transparent;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.75);padding:2px 7px;border-radius:20px;flex-shrink:0}
+.sb-foot{padding:16px;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:9px;flex-shrink:0}
+.sb-email{color:rgba(255,255,255,.45);font-size:11px;text-align:center;word-break:break-all}
+.sb-logout{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:9px;border-radius:10px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%;transition:all .18s}
+.sb-logout:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:#fff}
 .app-main{margin-right:240px;min-height:100vh}
 @media(max-width:860px){
   .sidebar{width:72px}
-  .sb-brand-text,.sb-label,.sb-soon,.sb-email{display:none}
+  .sb-brand-text,.sb-label,.sb-soon,.sb-email,.sb-glow{display:none}
   .sb-brand{justify-content:center;padding:20px 0}
   .sb-item{justify-content:center;padding:11px}
   .sb-logout{font-size:0;padding:10px}
@@ -63,14 +66,15 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
       <span class="sb-brand-org">Alpha Consulting Group</span>
     </div>
   </div>
+  <div class="sb-glow"></div>
   <nav class="sb-nav">
     <div class="sb-item disabled" title="قريباً">
-      <span class="sb-icon">📊</span><span class="sb-label">مراجعة المحتوى المحلي</span><span class="sb-soon">قريباً</span>
+      <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span><span class="sb-label">مراجعة المحتوى المحلي</span><span class="sb-soon">قريباً</span>
     </div>
-    <a class="sb-item" href="app.html"><span class="sb-icon">📄</span><span class="sb-label">إعداد مستند</span></a>
-    <a class="sb-item" href="classifier.html"><span class="sb-icon">🏷️</span><span class="sb-label">تصنيف مورد</span></a>
-    <a class="sb-item" href="correspondence.html"><span class="sb-icon">✉️</span><span class="sb-label">نماذج مراسلات</span></a>
-    <a class="sb-item" href="files.html"><span class="sb-icon">🗂️</span><span class="sb-label">نماذج وملفات</span></a>
+    <a class="sb-item" href="app.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg></span><span class="sb-label">إعداد مستند</span></a>
+    <a class="sb-item" href="classifier.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.59-4.59a2 2 0 0 0 0-2.83z"/><circle cx="7.5" cy="7.5" r="1.3" fill="currentColor" stroke="none"/></svg></span><span class="sb-label">تصنيف مورد</span></a>
+    <a class="sb-item" href="correspondence.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg></span><span class="sb-label">نماذج مراسلات</span></a>
+    <a class="sb-item" href="files.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="sb-label">نماذج وملفات</span></a>
   </nav>
   <div class="sb-foot">
     <span class="sb-email" id="userEmail"></span>
