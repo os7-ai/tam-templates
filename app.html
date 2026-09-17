@@ -103,6 +103,9 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .hcard:hover{box-shadow:0 8px 28px rgba(28,38,83,.16);border-color:var(--navy);transform:translateY(-3px)}
 .hcard-main{display:flex;align-items:flex-start;gap:14px;padding:18px 20px;flex:1}
 .hcard-icon{width:44px;height:44px;background:var(--bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all .28s}
+.hcard-icon.ic-doc{background:#EAF1FB}
+.hcard-icon.ic-xls{background:#E9F6EF}
+.hcard-icon.ic-ppt{background:#FBEAE6}
 .hcard:hover .hcard-icon{background:var(--navy)}
 .hcard-meta{flex:1}
 .hcard-meta h3{font-size:15px;font-weight:800;color:var(--text);margin-bottom:5px}
@@ -243,7 +246,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
   <div id="step1">
     <div class="page-hero">
-      <h2>مرحباً 👋</h2>
+      <h2>إعداد مستند</h2>
       <p>اختر نوع المستند الذي ترغب بإعداده</p>
     </div>
     <div class="tpl-filterbar">
@@ -258,10 +261,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
       <div class="hcard" data-cat="proposal" onclick="selAndGo('entity-proposal')">
         <div class="hcard-main">
-          <div class="hcard-icon">📊</div>
+          <div class="hcard-icon ic-ppt"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#D24726"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">P</text></svg></div>
           <div class="hcard-meta">
-            <h3>عرض فني ومالي - على مستوى المنشأة</h3>
-            <p>إعداد عرض فني ومالي متكامل للعميل</p>
+            <h3>عرض فني ومالي</h3>
+            <p>على مستوى المنشأة</p>
           </div>
         </div>
         <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
@@ -269,10 +272,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
       <div class="hcard" data-cat="proposal" onclick="selAndGo('contract-proposal')">
         <div class="hcard-main">
-          <div class="hcard-icon">📊</div>
+          <div class="hcard-icon ic-ppt"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#D24726"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">P</text></svg></div>
           <div class="hcard-meta">
-            <h3>عرض فني ومالي - على مستوى العقد</h3>
-            <p>إعداد عرض فني ومالي متكامل للعميل</p>
+            <h3>عرض فني ومالي</h3>
+            <p>على مستوى العقد</p>
           </div>
         </div>
         <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
@@ -280,10 +283,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
       <div class="hcard" data-cat="engagement" onclick="selAndGo('entity-engagement')">
         <div class="hcard-main">
-          <div class="hcard-icon">📝</div>
+          <div class="hcard-icon ic-doc"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2B579A"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">W</text></svg></div>
           <div class="hcard-meta">
-            <h3>خطاب ارتباط - على مستوى المنشأة</h3>
-            <p>إعداد خطاب ارتباط للمنشأة</p>
+            <h3>خطاب ارتباط</h3>
+            <p>على مستوى المنشأة</p>
           </div>
         </div>
         <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
@@ -291,10 +294,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
       <div class="hcard" data-cat="engagement" onclick="selAndGo('contract-engagement')">
         <div class="hcard-main">
-          <div class="hcard-icon">📝</div>
+          <div class="hcard-icon ic-doc"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2B579A"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">W</text></svg></div>
           <div class="hcard-meta">
-            <h3>خطاب ارتباط - على مستوى العقد</h3>
-            <p>إعداد خطاب ارتباط للعقد</p>
+            <h3>خطاب ارتباط</h3>
+            <p>على مستوى العقد</p>
           </div>
         </div>
         <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
@@ -302,10 +305,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
       <div class="hcard" data-cat="other" onclick="selAndGo('entity-confirmation-letter')">
         <div class="hcard-main">
-          <div class="hcard-icon">✉️</div>
+          <div class="hcard-icon ic-doc"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2B579A"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">W</text></svg></div>
           <div class="hcard-meta">
-            <h3>خطاب إفادة - على مستوى المنشأة</h3>
-            <p>إنشاء خطابات الإفادة عن حالة المراجعة</p>
+            <h3>خطاب إفادة</h3>
+            <p>على مستوى المنشأة</p>
           </div>
         </div>
         <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
@@ -313,10 +316,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
       <div class="hcard" data-cat="other" onclick="selAndGo('contract-confirmation-letter')">
         <div class="hcard-main">
-          <div class="hcard-icon">✉️</div>
+          <div class="hcard-icon ic-doc"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2B579A"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">W</text></svg></div>
           <div class="hcard-meta">
-            <h3>خطاب إفادة - على مستوى العقد</h3>
-            <p>إنشاء خطابات الإفادة عن حالة المراجعة</p>
+            <h3>خطاب إفادة</h3>
+            <p>على مستوى العقد</p>
           </div>
         </div>
         <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
@@ -325,7 +328,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
       <!-- نموذج فوترة عميل (direct) -->
       <div class="hcard" data-cat="other" onclick="selAndGo('invoice-request')">
         <div class="hcard-main">
-          <div class="hcard-icon">🧾</div>
+          <div class="hcard-icon ic-xls"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#217346"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">X</text></svg></div>
           <div class="hcard-meta">
             <h3>نموذج فوترة عميل</h3>
             <p>إعداد نموذج طلب فوترة العميل</p>
