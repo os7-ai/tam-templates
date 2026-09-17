@@ -662,15 +662,6 @@
     font-size:10px; color:var(--text3);
   }
 
-  /* ─── HEADER LINK ─── */
-  .top-link {
-    font-size:12px; color:var(--text3); text-decoration:none;
-    display:inline-flex; align-items:center; gap:5px;
-    padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius);
-    background:var(--bg2); transition:all .18s;
-  }
-  .top-link:hover { border-color:var(--accent); color:var(--accent); }
-
   /* ─── DISCUSSION ─── */
   .discuss {
     margin-top:22px; border-top:1px solid var(--border); padding-top:18px;
@@ -706,10 +697,69 @@
   .discuss-input button:hover:not(:disabled){ background:var(--accent); }
   .discuss-input button:disabled { opacity:.5; cursor:not-allowed; }
 
+  /* ── Sidebar ─────────────────────────────────────── */
+  .sidebar{position:fixed;top:0;right:0;bottom:0;width:240px;background:linear-gradient(180deg,#1C2653,#2a3875);display:flex;flex-direction:column;z-index:100;box-shadow:-2px 0 24px rgba(13,20,45,.15)}
+  .sb-brand{display:flex;align-items:center;gap:10px;padding:22px 20px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0}
+  .sb-brand svg{flex-shrink:0}
+  .sb-brand-text{display:flex;flex-direction:column;min-width:0}
+  .sb-brand-name{color:#fff;font-size:17px;font-weight:900}
+  .sb-brand-org{color:rgba(255,255,255,.5);font-size:10.5px;font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sb-nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+  .sb-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;color:rgba(255,255,255,.75);text-decoration:none;font-size:13.5px;font-weight:700;font-family:'Tajawal',sans-serif;transition:all .18s;background:none;border:none;width:100%;text-align:right;cursor:pointer}
+  .sb-item:hover{background:rgba(255,255,255,.08);color:#fff}
+  .sb-item.active{background:#0AAED0;color:#fff;box-shadow:0 4px 14px rgba(10,174,208,.35)}
+  .sb-icon{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+  .sb-item.active .sb-icon{background:rgba(255,255,255,.22)}
+  .sb-label{flex:1;min-width:0}
+  .sb-item.disabled{opacity:.45;cursor:not-allowed}
+  .sb-item.disabled:hover{background:none;color:rgba(255,255,255,.75)}
+  .sb-soon{font-size:9.5px;font-weight:700;background:rgba(255,255,255,.15);color:#fff;padding:2px 7px;border-radius:20px;flex-shrink:0}
+  .sb-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+  .sb-email{color:rgba(255,255,255,.55);font-size:11px;text-align:center;word-break:break-all}
+  .sb-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.85);padding:8px;border-radius:9px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%}
+  .sb-logout:hover{background:rgba(255,255,255,.2)}
+  .app-main{margin-right:240px;min-height:100vh}
+  @media(max-width:860px){
+    .sidebar{width:72px}
+    .sb-brand-text,.sb-label,.sb-soon,.sb-email{display:none}
+    .sb-brand{justify-content:center;padding:20px 0}
+    .sb-item{justify-content:center;padding:11px}
+    .sb-logout{font-size:0;padding:10px}
+    .sb-logout::before{content:'⏻';font-size:15px}
+    .app-main{margin-right:72px}
+  }
 </style>
 </head>
 <body>
 
+<div class="sidebar">
+  <div class="sb-brand" onclick="location.href='home.html'">
+    <svg width="30" height="30" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="13" height="13" rx="3.5" fill="#4FCDE8"/>
+      <rect x="1" y="17" width="13" height="13" rx="3.5" fill="#0AAED0"/>
+      <rect x="17" y="17" width="13" height="13" rx="3.5" fill="#0AAED0"/>
+    </svg>
+    <div class="sb-brand-text">
+      <span class="sb-brand-name">مداد</span>
+      <span class="sb-brand-org">Alpha Consulting Group</span>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-item disabled" title="قريباً">
+      <span class="sb-icon">📊</span><span class="sb-label">مراجعة المحتوى المحلي</span><span class="sb-soon">قريباً</span>
+    </div>
+    <a class="sb-item" href="app.html"><span class="sb-icon">📄</span><span class="sb-label">إعداد مستند</span></a>
+    <a class="sb-item active" href="classifier.html"><span class="sb-icon">🏷️</span><span class="sb-label">تصنيف مورد</span></a>
+    <a class="sb-item" href="correspondence.html"><span class="sb-icon">✉️</span><span class="sb-label">نماذج مراسلات</span></a>
+    <a class="sb-item" href="files.html"><span class="sb-icon">🗂️</span><span class="sb-label">نماذج وملفات</span></a>
+  </nav>
+  <div class="sb-foot">
+    <span class="sb-email" id="userEmail"></span>
+    <button class="sb-logout" onclick="logout()">تسجيل خروج</button>
+  </div>
+</div>
+
+<div class="app-main">
 <div class="shell">
 
   <!-- HEADER -->
@@ -724,9 +774,6 @@
         <div style="font-size:16px;font-weight:700;color:var(--text)">مُصنِّف الأنشطة الاقتصادية</div>
         <div style="font-size:11px;color:var(--text3);margin-top:1px">ISIC Classifier · المحتوى المحلي</div>
       </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <a href="home.html" class="top-link">→ الرئيسية</a>
     </div>
   </header>
 
@@ -873,6 +920,7 @@
   </footer>
 
 </div>
+</div>
 
 <script>
 // ─── AUTH GUARD ──────────────────────────────────────────────────────────────
@@ -884,10 +932,12 @@ let sb = null, accessToken = '';
     const { data: { session } } = await sb.auth.getSession();
     if (!session) { window.location.href = 'login.html'; return; }
     accessToken = session.access_token;
+    document.getElementById('userEmail').textContent = session.user.email;
   } catch (e) {
     window.location.href = 'login.html';
   }
 })();
+function logout(){ if(sb) sb.auth.signOut().then(()=>window.location.href='login.html'); }
 
 // ─── SSIC FULL DATASET (2,816 نشاط رسمي — الهيئة العامة للإحصاء، يوليو 2025) ──
 let SSIC_FULL = [];

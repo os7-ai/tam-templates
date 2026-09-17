@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مداد | الرئيسية</title>
+<title>مداد | نماذج مراسلات</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='2' width='13' height='13' rx='3' fill='%234FCDE8'/><rect x='2' y='17' width='13' height='13' rx='3' fill='%230AAED0'/><rect x='17' y='17' width='13' height='13' rx='3' fill='%230AAED0'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -44,10 +44,18 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
   .app-main{margin-right:72px}
 }
 
-.main{max-width:720px;margin:0 auto;padding:80px 20px}
-.page-hero{text-align:center}
-.page-hero h2{font-size:26px;font-weight:900;color:var(--text);margin-bottom:8px}
-.page-hero p{font-size:14px;color:var(--muted)}
+.main{max-width:720px;margin:0 auto;padding:56px 20px}
+.page-hero{text-align:center;margin-bottom:36px}
+.page-hero h2{font-size:22px;font-weight:900;color:var(--text);margin-bottom:8px}
+.page-hero p{font-size:13.5px;color:var(--muted)}
+.empty{background:var(--card);border:1.5px dashed var(--border);border-radius:18px;padding:48px 24px;text-align:center}
+.empty-icon{width:64px;height:64px;background:var(--bg);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 18px}
+.empty h3{font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px}
+.empty p{font-size:13px;color:var(--muted);line-height:1.7;max-width:380px;margin:0 auto}
+.preview-list{display:flex;flex-direction:column;gap:10px;margin-top:26px;text-align:right}
+.preview-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;opacity:.6}
+.preview-icon{width:34px;height:34px;background:var(--card);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.preview-item span:last-child{font-size:13px;font-weight:700;color:var(--text)}
 </style>
 </head>
 <body>
@@ -69,7 +77,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
     </div>
     <a class="sb-item" href="app.html"><span class="sb-icon">📄</span><span class="sb-label">إعداد مستند</span></a>
     <a class="sb-item" href="classifier.html"><span class="sb-icon">🏷️</span><span class="sb-label">تصنيف مورد</span></a>
-    <a class="sb-item" href="correspondence.html"><span class="sb-icon">✉️</span><span class="sb-label">نماذج مراسلات</span></a>
+    <a class="sb-item active" href="correspondence.html"><span class="sb-icon">✉️</span><span class="sb-label">نماذج مراسلات</span></a>
     <a class="sb-item" href="files.html"><span class="sb-icon">🗂️</span><span class="sb-label">نماذج وملفات</span></a>
   </nav>
   <div class="sb-foot">
@@ -81,8 +89,16 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 <div class="app-main">
   <div class="main">
     <div class="page-hero">
-      <h2>مرحباً 👋</h2>
-      <p>اختر ما ترغب بإعداده من القائمة الجانبية</p>
+      <h2>نماذج مراسلات</h2>
+      <p>قوالب جاهزة لرسائل البريد الإلكتروني المتكررة مع العملاء</p>
+    </div>
+    <div class="empty">
+      <div class="empty-icon">✉️</div>
+      <h3>لا توجد نماذج بعد</h3>
+      <p>سيتم إضافة نماذج المراسلات هنا قريباً — مثل رسالة الترحيب بعميل جديد وغيرها من الرسائل المتكررة.</p>
+      <div class="preview-list">
+        <div class="preview-item"><span class="preview-icon">📨</span><span>رسالة عميل جديد</span></div>
+      </div>
     </div>
   </div>
 </div>
