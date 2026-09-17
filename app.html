@@ -108,6 +108,13 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .page-hero h2{font-size:22px;font-weight:900;color:var(--text);margin-bottom:6px}
 .page-hero p{font-size:13px;color:var(--muted)}
 @media(max-width:600px){.home-cards{grid-template-columns:1fr}}
+.tpl-filterbar{margin-bottom:18px}
+.tpl-chips{display:flex;gap:8px;flex-wrap:wrap}
+.tpl-chip{background:var(--card);border:1.5px solid var(--border);color:var(--muted);padding:7px 16px;border-radius:20px;font-family:'Tajawal',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .18s}
+.tpl-chip:hover{border-color:var(--navy);color:var(--navy)}
+.tpl-chip.active{background:var(--navy);border-color:var(--navy);color:#fff}
+.tpl-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tpl-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
 .hist-btn{background:var(--card);border:1.5px solid var(--border);color:var(--muted);padding:8px 16px;border-radius:9px;font-family:'Tajawal',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer}
 .hist-btn:hover{border-color:var(--navy);color:var(--navy)}
 .page-toolbar{display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px}
@@ -133,20 +140,31 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .sb-item.disabled:hover{background:none;color:rgba(255,255,255,.68)}
 .sb-item.disabled .sb-icon{color:rgba(255,255,255,.6)}
 .sb-soon{font-size:9px;font-weight:700;background:transparent;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.75);padding:2px 7px;border-radius:20px;flex-shrink:0}
-.sb-foot{padding:16px;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:9px;flex-shrink:0}
-.sb-email{color:rgba(255,255,255,.45);font-size:11px;text-align:center;word-break:break-all}
-.sb-logout{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:9px;border-radius:10px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%;transition:all .18s}
-.sb-logout:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:#fff}
+.sb-foot{padding:12px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0}
+.sb-profile{display:flex;align-items:center;gap:9px}
+.sb-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0a86a3);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0}
+.sb-profile-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.sb-profile-name{color:#fff;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-profile-org{color:rgba(255,255,255,.5);font-size:10px;margin-top:1px}
+.sb-logout-icon{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s}
+.sb-logout-icon:hover{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.4);color:#fca5a5}
 .app-main{margin-right:240px;min-height:100vh}
 @media(max-width:860px){
   .sidebar{width:72px}
-  .sb-brand-text,.sb-label,.sb-soon,.sb-email,.sb-glow{display:none}
+  .sb-brand-text,.sb-label,.sb-soon,.sb-glow,.sb-profile-text{display:none}
   .sb-brand{justify-content:center;padding:20px 0}
   .sb-item{justify-content:center;padding:11px}
-  .sb-logout{font-size:0;padding:10px}
-  .sb-logout::before{content:'⏻';font-size:15px}
+  .sb-profile{flex-direction:column;gap:8px}
   .app-main{margin-right:72px}
 }
+/* ── Topbar ─────────────────────────────────────── */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 28px 0}
+.topbar-search{flex:0 1 420px;min-width:0;display:flex;align-items:center;gap:9px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:9px 14px;color:var(--muted)}
+.topbar-search input{border:none;background:none;outline:none;flex:1;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--text)}
+.topbar-search svg{flex-shrink:0}
+.topbar-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar-bell{width:38px;height:38px;border-radius:10px;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:not-allowed;flex-shrink:0}
+.topbar-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
 .hist-table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
 .hist-table th{background:var(--navy);color:#fff;padding:10px 14px;text-align:right;font-weight:700;font-size:12px}
 .hist-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
@@ -179,12 +197,32 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
     <a class="sb-item" href="files.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="sb-label">نماذج وملفات</span></a>
   </nav>
   <div class="sb-foot">
-    <span class="sb-email" id="userEmail"></span>
-    <button class="sb-logout" onclick="logout()">تسجيل خروج</button>
+    <div class="sb-profile">
+      <div class="sb-avatar" id="sbAvatar">؟</div>
+      <div class="sb-profile-text">
+        <span class="sb-profile-name" id="sbName">...</span>
+        <span class="sb-profile-org">Alpha Consulting</span>
+      </div>
+      <button class="sb-logout-icon" onclick="logout()" title="تسجيل خروج">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 
 <div class="app-main">
+<div class="topbar">
+  <div class="topbar-search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="topSearch" placeholder="بحث عن قالب...">
+  </div>
+  <div class="topbar-actions">
+    <button class="topbar-bell" title="الإشعارات — قريباً">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </button>
+    <div class="topbar-avatar" id="topAvatar">؟</div>
+  </div>
+</div>
 <div class="main">
   <div class="page-toolbar">
     <button class="hist-btn" onclick="showHistory()">سجل النشاط</button>
@@ -202,10 +240,18 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
       <h2>مرحباً 👋</h2>
       <p>اختر نوع المستند الذي ترغب بإعداده</p>
     </div>
+    <div class="tpl-filterbar">
+      <div class="tpl-chips">
+        <button class="tpl-chip active" data-cat="all" onclick="setCat('all')">الكل</button>
+        <button class="tpl-chip" data-cat="proposal" onclick="setCat('proposal')">العروض</button>
+        <button class="tpl-chip" data-cat="letter" onclick="setCat('letter')">المراسلات</button>
+        <button class="tpl-chip" data-cat="invoice" onclick="setCat('invoice')">الفوترة</button>
+      </div>
+    </div>
     <div class="home-cards">
 
       <!-- عرض فني ومالي (branched) -->
-      <div class="hcard" id="hc-proposal">
+      <div class="hcard" id="hc-proposal" data-cat="proposal">
         <div class="hcard-main" onclick="toggleCard('proposal')">
           <div class="hcard-icon">📊</div>
           <div class="hcard-meta">
@@ -226,7 +272,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
       </div>
 
       <!-- خطاب ارتباط (branched) -->
-      <div class="hcard" id="hc-engagement">
+      <div class="hcard" id="hc-engagement" data-cat="letter">
         <div class="hcard-main" onclick="toggleCard('engagement')">
           <div class="hcard-icon">📝</div>
           <div class="hcard-meta">
@@ -247,7 +293,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
       </div>
 
       <!-- خطاب إفادة (branched) -->
-      <div class="hcard" id="hc-confirmation">
+      <div class="hcard" id="hc-confirmation" data-cat="letter">
         <div class="hcard-main" onclick="toggleCard('confirmation')">
           <div class="hcard-icon">✉️</div>
           <div class="hcard-meta">
@@ -268,7 +314,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
       </div>
 
       <!-- نموذج فوترة عميل (direct) -->
-      <div class="hcard" onclick="selAndGo('invoice-request')">
+      <div class="hcard" data-cat="invoice" onclick="selAndGo('invoice-request')">
         <div class="hcard-main">
           <div class="hcard-icon">🧾</div>
           <div class="hcard-meta">
@@ -283,6 +329,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
       </div>
 
     </div>
+    <div class="tpl-empty" id="tplEmpty" style="display:none">لا توجد نتائج مطابقة</div>
   </div>
 
   <div id="step2" class="hidden">
@@ -353,14 +400,57 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 <script>
 let sb,curTpl=null,genBlob=null,genName='',genBlob2=null,genName2='',logoData=null,logoW=0,logoH=0;
 
+function initials(email){
+  const local=(email||'').split('@')[0];
+  const parts=local.split(/[._-]+/).filter(Boolean);
+  if(parts.length>=2) return (parts[0][0]+parts[1][0]).toUpperCase();
+  return local.slice(0,2).toUpperCase();
+}
+function displayName(email){
+  const local=(email||'').split('@')[0];
+  const parts=local.split(/[._-]+/).filter(Boolean).map(p=>p[0].toUpperCase()+p.slice(1));
+  return parts.join(' ')||email||'';
+}
+
 (async()=>{
   const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
   sb=supabase.createClient(cfg.url,cfg.key);
   const {data:{session}}=await sb.auth.getSession();
   if(!session){window.location.href='login.html';return;}
-  document.getElementById('userEmail').textContent=session.user.email;
+  const email=session.user.email;
+  document.getElementById('sbAvatar').textContent=initials(email);
+  document.getElementById('topAvatar').textContent=initials(email);
+  document.getElementById('sbName').textContent=displayName(email);
+  if(location.hash==='#history')showHistory();
+  const q=new URLSearchParams(location.search).get('q');
+  if(q){document.getElementById('topSearch').value=q;filterTemplates(q);}
 })();
 function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
+document.getElementById('topSearch').addEventListener('input',e=>filterTemplates(e.target.value));
+document.getElementById('topSearch').addEventListener('keydown',e=>{if(e.key==='Enter')filterTemplates(e.target.value);});
+
+let activeCat='all';
+function setCat(cat){
+  activeCat=cat;
+  document.querySelectorAll('.tpl-chip').forEach(c=>c.classList.toggle('active',c.dataset.cat===cat));
+  applyFilters();
+}
+function filterTemplates(q){
+  document.getElementById('topSearch').value=q;
+  applyFilters();
+}
+function applyFilters(){
+  const q=(document.getElementById('topSearch').value||'').trim().toLowerCase();
+  let visibleCount=0;
+  document.querySelectorAll('#step1 .hcard').forEach(card=>{
+    const matchCat=activeCat==='all'||card.dataset.cat===activeCat;
+    const matchQ=!q||card.textContent.toLowerCase().includes(q);
+    const show=matchCat&&matchQ;
+    card.style.display=show?'':'none';
+    if(show)visibleCount++;
+  });
+  document.getElementById('tplEmpty').style.display=visibleCount?'none':'';
+}
 
 async function logActivity(vars,templateName){
   try{

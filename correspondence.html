@@ -32,22 +32,33 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .sb-item.disabled:hover{background:none;color:rgba(255,255,255,.68)}
 .sb-item.disabled .sb-icon{color:rgba(255,255,255,.6)}
 .sb-soon{font-size:9px;font-weight:700;background:transparent;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.75);padding:2px 7px;border-radius:20px;flex-shrink:0}
-.sb-foot{padding:16px;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:9px;flex-shrink:0}
-.sb-email{color:rgba(255,255,255,.45);font-size:11px;text-align:center;word-break:break-all}
-.sb-logout{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);padding:9px;border-radius:10px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%;transition:all .18s}
-.sb-logout:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.28);color:#fff}
+.sb-foot{padding:12px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0}
+.sb-profile{display:flex;align-items:center;gap:9px}
+.sb-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0a86a3);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0}
+.sb-profile-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.sb-profile-name{color:#fff;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-profile-org{color:rgba(255,255,255,.5);font-size:10px;margin-top:1px}
+.sb-logout-icon{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s}
+.sb-logout-icon:hover{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.4);color:#fca5a5}
 .app-main{margin-right:240px;min-height:100vh}
 @media(max-width:860px){
   .sidebar{width:72px}
-  .sb-brand-text,.sb-label,.sb-soon,.sb-email,.sb-glow{display:none}
+  .sb-brand-text,.sb-label,.sb-soon,.sb-glow,.sb-profile-text{display:none}
   .sb-brand{justify-content:center;padding:20px 0}
   .sb-item{justify-content:center;padding:11px}
-  .sb-logout{font-size:0;padding:10px}
-  .sb-logout::before{content:'⏻';font-size:15px}
+  .sb-profile{flex-direction:column;gap:8px}
   .app-main{margin-right:72px}
 }
+/* ── Topbar ─────────────────────────────────────── */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 28px 0}
+.topbar-search{flex:0 1 420px;min-width:0;display:flex;align-items:center;gap:9px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:9px 14px;color:var(--muted)}
+.topbar-search input{border:none;background:none;outline:none;flex:1;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--text)}
+.topbar-search svg{flex-shrink:0}
+.topbar-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.topbar-bell{width:38px;height:38px;border-radius:10px;background:var(--card);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:not-allowed;flex-shrink:0}
+.topbar-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
 
-.main{max-width:720px;margin:0 auto;padding:56px 20px}
+.main{max-width:720px;margin:0 auto;padding:24px 20px 56px}
 .page-hero{text-align:center;margin-bottom:36px}
 .page-hero h2{font-size:22px;font-weight:900;color:var(--text);margin-bottom:8px}
 .page-hero p{font-size:13.5px;color:var(--muted)}
@@ -85,12 +96,32 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
     <a class="sb-item" href="files.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="sb-label">نماذج وملفات</span></a>
   </nav>
   <div class="sb-foot">
-    <span class="sb-email" id="userEmail"></span>
-    <button class="sb-logout" onclick="logout()">تسجيل خروج</button>
+    <div class="sb-profile">
+      <div class="sb-avatar" id="sbAvatar">؟</div>
+      <div class="sb-profile-text">
+        <span class="sb-profile-name" id="sbName">...</span>
+        <span class="sb-profile-org">Alpha Consulting</span>
+      </div>
+      <button class="sb-logout-icon" onclick="logout()" title="تسجيل خروج">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 
 <div class="app-main">
+<div class="topbar">
+  <div class="topbar-search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="topSearch" placeholder="بحث عن قالب...">
+  </div>
+  <div class="topbar-actions">
+    <button class="topbar-bell" title="الإشعارات — قريباً">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+    </button>
+    <div class="topbar-avatar" id="topAvatar">؟</div>
+  </div>
+</div>
   <div class="main">
     <div class="page-hero">
       <h2>نماذج مراسلات</h2>
@@ -109,14 +140,34 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
 <script>
 let sb;
+function initials(email){
+  const local=(email||'').split('@')[0];
+  const parts=local.split(/[._-]+/).filter(Boolean);
+  if(parts.length>=2) return (parts[0][0]+parts[1][0]).toUpperCase();
+  return local.slice(0,2).toUpperCase();
+}
+function displayName(email){
+  const local=(email||'').split('@')[0];
+  const parts=local.split(/[._-]+/).filter(Boolean).map(p=>p[0].toUpperCase()+p.slice(1));
+  return parts.join(' ')||email||'';
+}
 (async()=>{
   const cfg=await fetch('/.netlify/functions/app-config').then(r=>r.json());
   sb=supabase.createClient(cfg.url,cfg.key);
   const {data:{session}}=await sb.auth.getSession();
   if(!session){window.location.href='login.html';return;}
-  document.getElementById('userEmail').textContent=session.user.email;
+  const email=session.user.email;
+  document.getElementById('sbAvatar').textContent=initials(email);
+  document.getElementById('topAvatar').textContent=initials(email);
+  document.getElementById('sbName').textContent=displayName(email);
 })();
 function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
+document.getElementById('topSearch').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    const q=e.target.value.trim();
+    location.href='app.html'+(q?('?q='+encodeURIComponent(q)):'');
+  }
+});
 </script>
 </body>
 </html>
