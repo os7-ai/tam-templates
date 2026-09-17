@@ -78,7 +78,12 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .lu{border:2px dashed var(--border);border-radius:12px;padding:18px;text-align:center;cursor:pointer;background:var(--bg)}
 .lu:hover{border-color:var(--accent);background:#f0f7ff}
 .lu.has{border-color:var(--green);border-style:solid;background:#f0fdf4}
+.lu.loading{border-color:var(--accent);border-style:solid;background:#f0f7ff;cursor:wait}
+.lu.err{border-color:#dc2626;border-style:solid;background:#fef2f2}
 .lu p{font-size:12.5px;color:var(--muted);margin-top:6px}
+.extract-spin{width:22px;height:22px;border:2.5px solid rgba(10,174,208,.25);border-top-color:var(--accent);border-radius:50%;animation:sp .65s linear infinite;margin:0 auto}
+.extract-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;justify-content:center}
+.extract-chip{font-size:11px;font-weight:700;background:#dcfce7;color:#15803d;padding:3px 9px;border-radius:20px}
 .lup{max-height:50px;width:auto;margin:0 auto;display:block}
 .brow{display:flex;gap:12px;justify-content:flex-end;margin-top:24px}
 .bbk{background:transparent;border:1.5px solid var(--border);color:var(--muted);padding:11px 22px;border-radius:11px;font-family:'Tajawal',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer}
@@ -416,7 +421,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 </div>
 
 <script>
-let sb,curTpl=null,genBlob=null,genName='',genBlob2=null,genName2='',logoData=null,logoW=0,logoH=0;
+let sb,curTpl=null,genBlob=null,genName='',genBlob2=null,genName2='',logoData=null,logoW=0,logoH=0,accessToken='';
 
 function initials(email){
   const local=(email||'').split('@')[0];
@@ -437,6 +442,7 @@ const authTimeout=setTimeout(()=>window.location.href='login.html',8000);
     sb=supabase.createClient(cfg.url,cfg.key);
     const {data:{session}}=await sb.auth.getSession();
     if(!session){window.location.href='login.html';return;}
+    accessToken=session.access_token;
     const email=session.user.email;
     document.getElementById('sbAvatar').textContent=initials(email);
     document.getElementById('topAvatar').textContent=initials(email);
@@ -635,6 +641,7 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
+    {tp:'doc-extract',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
     {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
@@ -666,6 +673,7 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
+    {tp:'doc-extract',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
     {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
@@ -713,6 +721,7 @@ const T={
     {id:'Project_Name',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
   ]},
   'invoice-request':{name:'نموذج طلب فوترة عميل',file:'invoice-request.xlsx',ext:'xlsx',sections:['معلومات الجهة','العنوان','تفاصيل خطاب الارتباط','الخدمات المطلوب الفوترة عنها'],fields:[
+    {tp:'doc-extract',targets:{entity_name:'entity_name',unified_number:'unified_number',tax_number:'vat_registration_number',street:'street',building_number:'building_number',district:'district',additional_number:'additional_number',region:'region',city:'city',postal_code:'postal_code'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
     {id:'vat_registration_number',lb:'رقم تسجيل ضريبة القيمة المضافة',tp:'text',ph:'300012345600003'},
@@ -829,7 +838,7 @@ function buildInvoiceToggle(f,grid){
 
 function buildField(f){
     const w=document.createElement('div');
-    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'?' full':'');
+    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'||f.tp==='doc-extract'?' full':'');
     if(f.lb){const l=document.createElement('label');l.textContent=f.lb;w.appendChild(l);}
     if(f.wn){const h=document.createElement('div');h.className='warn';h.textContent=f.wn;w.appendChild(h);}
     if(f.tp==='text'){
@@ -982,8 +991,75 @@ function buildField(f){
         if(next>=4)addBtn.style.display='none';
       };
       wrap.appendChild(addBtn);w.appendChild(wrap);
+    }else if(f.tp==='doc-extract'){
+      const box=document.createElement('div');box.className='lu';
+      box.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><p>رفع السجل التجاري أو شهادة ضريبة القيمة المضافة لتعبئة البيانات تلقائياً (اختياري)</p>';
+      const fInp=document.createElement('input');fInp.type='file';fInp.accept='image/*,application/pdf';fInp.style.display='none';
+      box.onclick=()=>fInp.click();
+      fInp.onchange=e=>{const file=e.target.files[0];if(file)handleDocExtract(file,f.targets,box);};
+      w.appendChild(box);w.appendChild(fInp);
     }
     return w;
+}
+
+const EXTRACT_FIELD_LABELS={entity_name:'اسم الجهة',commercial_reg:'السجل التجاري',unified_number:'الرقم الموحد',tax_number:'الرقم الضريبي',vat_registration_number:'الرقم الضريبي',national_address:'العنوان الوطني',street:'الشارع',building_number:'رقم المبنى',district:'الحي',additional_number:'الرقم الإضافي',region:'المنطقة',city:'المدينة',postal_code:'الرمز البريدي'};
+
+function extractJsonFromText(text){
+  const cleaned=text.replace(/```json|```/g,'').trim();
+  const s=cleaned.indexOf('{'),e=cleaned.lastIndexOf('}');
+  if(s===-1||e===-1||e<s)throw new Error('لم يصل رد صالح من خدمة الاستخراج');
+  return JSON.parse(cleaned.slice(s,e+1));
+}
+
+async function handleDocExtract(file,targets,box){
+  box.classList.remove('has','err');box.classList.add('loading');
+  box.innerHTML='<div class="extract-spin"></div><p>جاري استخراج البيانات...</p>';
+  try{
+    const dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});
+    const base64=dataUrl.split(',')[1];
+    const mediaBlock=file.type==='application/pdf'
+      ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
+      :{type:'image',source:{type:'base64',media_type:file.type,data:base64}};
+    const sys='أنت مساعد يستخرج بيانات المنشأة من صورة أو ملف مستند رسمي سعودي (سجل تجاري أو شهادة ضريبة القيمة المضافة). أعد فقط كائن JSON بدون أي شرح إضافي وبدون Markdown، بالمفاتيح التالية بالضبط، واترك القيمة نصاً فارغاً "" إن لم تظهر بوضوح بالمستند: entity_name, commercial_reg, unified_number, tax_number, national_address, street, building_number, district, additional_number, region, city, postal_code. tax_number هو الرقم الضريبي / رقم تسجيل ضريبة القيمة المضافة (عادة 15 رقماً). national_address نص مُجمّع مقروء للعنوان الوطني الكامل إن أمكن تكوينه من العنوان الظاهر بالمستند.';
+    const res=await fetch('/.netlify/functions/claude',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},
+      body:JSON.stringify({
+        max_tokens:600,
+        system:sys,
+        messages:[{role:'user',content:[mediaBlock,{type:'text',text:'استخرج البيانات المطلوبة من هذا المستند بصيغة JSON فقط.'}]}]
+      })
+    });
+    if(!res.ok){
+      const errData=await res.json().catch(()=>({}));
+      if(res.status===401){window.location.href='login.html';return;}
+      throw new Error((errData&&errData.error)||'تعذّر الاتصال بخدمة الاستخراج');
+    }
+    const data=await res.json();
+    const text=(data.content||[]).map(b=>b.text||'').join('');
+    const extracted=extractJsonFromText(text);
+
+    const filled=[];
+    Object.entries(targets).forEach(([srcKey,targetId])=>{
+      const val=(extracted[srcKey]||'').toString().trim();
+      if(!val)return;
+      const el=document.getElementById('f_'+targetId);
+      if(el){el.value=val;filled.push(targetId);}
+    });
+
+    box.classList.remove('loading');
+    if(filled.length){
+      box.classList.add('has');
+      const chips=filled.map(id=>'<span class="extract-chip">✓ '+(EXTRACT_FIELD_LABELS[id]||id)+'</span>').join('');
+      box.innerHTML='<p style="margin:0;font-weight:700;color:var(--green)">✅ تم استخراج وتعبئة '+filled.length+' حقل</p><div class="extract-chips">'+chips+'</div><p style="margin-top:8px">اضغط لرفع ملف آخر</p>';
+    }else{
+      box.classList.add('err');
+      box.innerHTML='<p style="color:#dc2626;font-weight:700;margin:0">⚠️ لم يتم العثور على بيانات واضحة</p><p>تحقق من وضوح الملف أو أدخل البيانات يدوياً — اضغط للمحاولة مجدداً</p>';
+    }
+  }catch(err){
+    box.classList.remove('loading');box.classList.add('err');
+    box.innerHTML='<p style="color:#dc2626;font-weight:700;margin:0">⚠️ تعذّر قراءة المستند</p><p>'+(err.message||'حاول مجدداً أو أدخل البيانات يدوياً')+'</p>';
+  }
 }
 
 // مشتركة بين نموذج الفوترة المباشر وفوترة خطاب الارتباط — تجميع صفوف الخدمات المطلوب فوترتها
