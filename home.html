@@ -70,12 +70,6 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .banner-mountains{position:absolute;bottom:0;left:0;width:100%;height:70%}
 .banner p{position:relative;z-index:1;font-size:15px;font-weight:800;max-width:70%;line-height:1.6}
 
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
-.stat-card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
-.stat-icon{width:36px;height:36px;border-radius:10px;background:var(--bg);color:var(--navy);display:flex;align-items:center;justify-content:center}
-.stat-num{font-size:22px;font-weight:900;color:var(--text);line-height:1.15}
-.stat-num.small{font-size:13.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stat-label{font-size:11.5px;color:var(--muted);font-weight:600}
 
 .dash-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .dash-card{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:18px 20px}
@@ -88,7 +82,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .mini-count{color:var(--accent);font-weight:800;flex-shrink:0}
 .mini-date{color:var(--muted);font-size:11px;flex-shrink:0}
 .empty-mini{color:var(--muted);font-size:12px;text-align:center;padding:18px 0}
-@media(max-width:700px){.dash-cols,.stats-row{grid-template-columns:1fr}.banner p{max-width:100%}}
+@media(max-width:700px){.dash-cols{grid-template-columns:1fr}.banner p{max-width:100%}}
 </style>
 </head>
 <body>
@@ -142,7 +136,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
   <div class="main">
     <div class="page-hero">
       <h2 id="welcomeHeading">مرحباً 👋</h2>
-      <p>حوّل بياناتك إلى مستندات احترافية في ثوانٍ</p>
+      <p id="greetingLine"></p>
     </div>
 
     <div class="banner">
@@ -151,24 +145,6 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
         <polygon points="0,150 70,100 130,130 190,80 250,120 310,90 400,130 400,150" fill="rgba(255,255,255,.14)"/>
       </svg>
       <p>"ليس المهم أن تسرع، المهم أن تستمر."</p>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-        <div class="stat-num" id="statTotal">—</div>
-        <div class="stat-label">إجمالي المستندات</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg></div>
-        <div class="stat-num" id="statWeek">—</div>
-        <div class="stat-label">مستندات هذا الأسبوع</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-        <div class="stat-num small" id="statTop">—</div>
-        <div class="stat-label">الأكثر استخداماً</div>
-      </div>
     </div>
 
     <div class="dash-cols">
@@ -210,25 +186,24 @@ function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
   const name=displayName(email);
   document.getElementById('sbName').textContent=name;
   document.getElementById('welcomeHeading').textContent='مرحباً '+name+' 👋';
+  document.getElementById('greetingLine').textContent=greetingByTime();
   loadDashboard();
 })();
 function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
 
+function greetingByTime(){
+  const h=new Date().getHours();
+  return h<12?'أسعد الله صباحك بكل خير':'أسعد الله مسائك بكل خير';
+}
+
 async function loadDashboard(){
   try{
-    const {count:total}=await sb.from('document_logs').select('*',{count:'exact',head:true});
-    const weekAgoISO=new Date(Date.now()-7*24*60*60*1000).toISOString();
-    const {count:weekCount}=await sb.from('document_logs').select('*',{count:'exact',head:true}).gte('created_at',weekAgoISO);
     const {data:recent}=await sb.from('document_logs').select('template_name,entity_name,created_at').order('created_at',{ascending:false}).limit(200);
-
-    document.getElementById('statTotal').textContent=total??'—';
-    document.getElementById('statWeek').textContent=weekCount??'—';
 
     const list=recent||[];
     const counts={};
     list.forEach(r=>{counts[r.template_name]=(counts[r.template_name]||0)+1;});
     const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-    document.getElementById('statTop').textContent=top.length?top[0][0]:'—';
 
     const topEl=document.getElementById('topTemplatesList');
     topEl.innerHTML=top.length?top.slice(0,4).map(([n,c])=>
