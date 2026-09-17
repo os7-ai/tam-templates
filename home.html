@@ -52,6 +52,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 
 /* ── Topbar ─────────────────────────────────────── */
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 28px 0}
+.topbar.topbar-noSearch{justify-content:flex-end}
 .topbar-search{flex:0 1 420px;min-width:0;display:flex;align-items:center;gap:9px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:9px 14px;color:var(--muted)}
 .topbar-search input{border:none;background:none;outline:none;flex:1;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--text)}
 .topbar-search svg{flex-shrink:0}
@@ -64,11 +65,9 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .page-hero{margin-bottom:22px}
 .page-hero h2{font-size:24px;font-weight:900;color:var(--text);margin-bottom:6px}
 .page-hero p{font-size:13.5px;color:var(--muted);margin-bottom:18px}
-.btn-cta{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border:none;padding:12px 22px;border-radius:12px;font-family:'Tajawal',sans-serif;font-size:13.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 18px rgba(28,38,83,.28);transition:all .18s}
-.btn-cta:hover{transform:translateY(-1px);box-shadow:0 7px 22px rgba(28,38,83,.36)}
-
 .banner{border-radius:18px;padding:26px;margin-bottom:22px;background:linear-gradient(135deg,var(--navy),var(--navy2) 55%,var(--accent) 145%);position:relative;overflow:hidden;color:#fff}
 .banner::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 88% 15%,rgba(255,255,255,.18),transparent 55%)}
+.banner-mountains{position:absolute;bottom:0;left:0;width:100%;height:70%}
 .banner p{position:relative;z-index:1;font-size:15px;font-weight:800;max-width:70%;line-height:1.6}
 
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
@@ -107,6 +106,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
   </div>
   <div class="sb-glow"></div>
   <nav class="sb-nav">
+    <a class="sb-item active" href="home.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></span><span class="sb-label">الصفحة الرئيسية</span></a>
     <div class="sb-item disabled" title="قريباً">
       <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span><span class="sb-label">مراجعة المحتوى المحلي</span><span class="sb-soon">قريباً</span>
     </div>
@@ -130,11 +130,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 </div>
 
 <div class="app-main">
-  <div class="topbar">
-    <div class="topbar-search">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="topSearch" placeholder="بحث عن قالب...">
-    </div>
+  <div class="topbar topbar-noSearch">
     <div class="topbar-actions">
       <button class="topbar-bell" title="الإشعارات — قريباً">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -147,14 +143,14 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
     <div class="page-hero">
       <h2 id="welcomeHeading">مرحباً 👋</h2>
       <p>حوّل بياناتك إلى مستندات احترافية في ثوانٍ</p>
-      <button class="btn-cta" onclick="location.href='app.html'">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        إنشاء مستند جديد
-      </button>
     </div>
 
     <div class="banner">
-      <p>"مستندات أفضل .. لعمل أكثر أثراً"</p>
+      <svg class="banner-mountains" viewBox="0 0 400 150" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="0,150 45,75 90,115 140,50 190,105 230,65 280,110 330,60 400,100 400,150" fill="rgba(255,255,255,.08)"/>
+        <polygon points="0,150 70,100 130,130 190,80 250,120 310,90 400,130 400,150" fill="rgba(255,255,255,.14)"/>
+      </svg>
+      <p>"ليس المهم أن تسرع، المهم أن تستمر."</p>
     </div>
 
     <div class="stats-row">
@@ -217,13 +213,6 @@ function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
   loadDashboard();
 })();
 function logout(){if(sb)sb.auth.signOut().then(()=>window.location.href='login.html');}
-
-document.getElementById('topSearch').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){
-    const q=e.target.value.trim();
-    location.href='app.html'+(q?('?q='+encodeURIComponent(q)):'');
-  }
-});
 
 async function loadDashboard(){
   try{

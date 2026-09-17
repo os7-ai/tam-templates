@@ -99,24 +99,16 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .hidden{display:none!important}
 /* ── Home cards ─────────────────────────────────── */
 .home-cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.hcard{background:var(--card);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:all .28s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 10px rgba(28,38,83,.07);display:flex;flex-direction:column}
-.hcard:hover,.hcard.hcard-open{box-shadow:0 8px 28px rgba(28,38,83,.16);border-color:var(--navy);transform:translateY(-3px)}
-.hcard-main{display:flex;align-items:flex-start;gap:14px;padding:18px 20px;cursor:pointer;flex:1}
+.hcard{background:var(--card);border:1.5px solid var(--border);border-radius:16px;overflow:hidden;transition:all .28s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 10px rgba(28,38,83,.07);display:flex;flex-direction:column;cursor:pointer}
+.hcard:hover{box-shadow:0 8px 28px rgba(28,38,83,.16);border-color:var(--navy);transform:translateY(-3px)}
+.hcard-main{display:flex;align-items:flex-start;gap:14px;padding:18px 20px;flex:1}
 .hcard-icon{width:44px;height:44px;background:var(--bg);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all .28s}
-.hcard:hover .hcard-icon,.hcard.hcard-open .hcard-icon{background:var(--navy)}
+.hcard:hover .hcard-icon{background:var(--navy)}
 .hcard-meta{flex:1}
 .hcard-meta h3{font-size:15px;font-weight:800;color:var(--text);margin-bottom:5px}
 .hcard-meta p{font-size:12.5px;color:var(--muted);line-height:1.55}
-.hcard-chev{width:24px;height:24px;background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--navy);transition:all .28s;flex-shrink:0}
-.hcard.hcard-open .hcard-chev{background:var(--navy);color:#fff;transform:rotate(180deg)}
-.hcard-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-top:1px solid var(--border);font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .22s}
-.hcard:hover .hcard-footer,.hcard.hcard-open .hcard-footer{color:var(--navy)}
-.hcard.hcard-open .hcard-footer{border-top-color:rgba(28,38,83,.12)}
-.hcard-body{max-height:0;overflow:hidden;transition:max-height .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;opacity:0}
-.hcard.hcard-open .hcard-body{max-height:160px;opacity:1}
-.hcard-subs{display:flex;flex-direction:column;gap:6px;padding:10px 20px 16px}
-.hcard-sub{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;color:var(--text);transition:all .22s;text-align:right}
-.hcard-sub:hover{background:var(--navy);border-color:var(--navy);color:#fff}
+.hcard-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-top:1px solid var(--border);font-size:12.5px;font-weight:700;color:var(--muted);transition:all .22s}
+.hcard:hover .hcard-footer{color:var(--navy)}
 .page-hero{text-align:center;margin-bottom:28px}
 .page-hero h2{font-size:22px;font-weight:900;color:var(--text);margin-bottom:6px}
 .page-hero p{font-size:13px;color:var(--muted)}
@@ -201,6 +193,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
   </div>
   <div class="sb-glow"></div>
   <nav class="sb-nav">
+    <a class="sb-item" href="home.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></span><span class="sb-label">الصفحة الرئيسية</span></a>
     <div class="sb-item disabled" title="قريباً">
       <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span><span class="sb-label">مراجعة المحتوى المحلي</span><span class="sb-soon">قريباً</span>
     </div>
@@ -257,77 +250,80 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
       <div class="tpl-chips">
         <button class="tpl-chip active" data-cat="all" onclick="setCat('all')">الكل</button>
         <button class="tpl-chip" data-cat="proposal" onclick="setCat('proposal')">العروض</button>
-        <button class="tpl-chip" data-cat="letter" onclick="setCat('letter')">المراسلات</button>
-        <button class="tpl-chip" data-cat="invoice" onclick="setCat('invoice')">الفوترة</button>
+        <button class="tpl-chip" data-cat="engagement" onclick="setCat('engagement')">خطاب الارتباط</button>
+        <button class="tpl-chip" data-cat="other" onclick="setCat('other')">أخرى</button>
       </div>
     </div>
     <div class="home-cards">
 
-      <!-- عرض فني ومالي (branched) -->
-      <div class="hcard" id="hc-proposal" data-cat="proposal">
-        <div class="hcard-main" onclick="toggleCard('proposal')">
+      <div class="hcard" data-cat="proposal" onclick="selAndGo('entity-proposal')">
+        <div class="hcard-main">
           <div class="hcard-icon">📊</div>
           <div class="hcard-meta">
-            <h3>عرض فني ومالي</h3>
+            <h3>عرض فني ومالي - على مستوى المنشأة</h3>
             <p>إعداد عرض فني ومالي متكامل للعميل</p>
           </div>
         </div>
-        <div class="hcard-footer" onclick="toggleCard('proposal')">
-          <span>اختر مستوى العرض</span>
-          <div class="hcard-chev">▼</div>
-        </div>
-        <div class="hcard-body">
-          <div class="hcard-subs">
-            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('entity-proposal')">على مستوى المنشأة <span>←</span></button>
-            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('contract-proposal')">على مستوى العقد <span>←</span></button>
-          </div>
-        </div>
+        <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
       </div>
 
-      <!-- خطاب ارتباط (branched) -->
-      <div class="hcard" id="hc-engagement" data-cat="letter">
-        <div class="hcard-main" onclick="toggleCard('engagement')">
+      <div class="hcard" data-cat="proposal" onclick="selAndGo('contract-proposal')">
+        <div class="hcard-main">
+          <div class="hcard-icon">📊</div>
+          <div class="hcard-meta">
+            <h3>عرض فني ومالي - على مستوى العقد</h3>
+            <p>إعداد عرض فني ومالي متكامل للعميل</p>
+          </div>
+        </div>
+        <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
+      </div>
+
+      <div class="hcard" data-cat="engagement" onclick="selAndGo('entity-engagement')">
+        <div class="hcard-main">
           <div class="hcard-icon">📝</div>
           <div class="hcard-meta">
-            <h3>خطاب ارتباط</h3>
-            <p>إعداد خطاب ارتباط للمنشأة أو العقد</p>
+            <h3>خطاب ارتباط - على مستوى المنشأة</h3>
+            <p>إعداد خطاب ارتباط للمنشأة</p>
           </div>
         </div>
-        <div class="hcard-footer" onclick="toggleCard('engagement')">
-          <span>اختر مستوى الخطاب</span>
-          <div class="hcard-chev">▼</div>
-        </div>
-        <div class="hcard-body">
-          <div class="hcard-subs">
-            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('entity-engagement')">على مستوى المنشأة <span>←</span></button>
-            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('contract-engagement')">على مستوى العقد <span>←</span></button>
-          </div>
-        </div>
+        <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
       </div>
 
-      <!-- خطاب إفادة (branched) -->
-      <div class="hcard" id="hc-confirmation" data-cat="letter">
-        <div class="hcard-main" onclick="toggleCard('confirmation')">
+      <div class="hcard" data-cat="engagement" onclick="selAndGo('contract-engagement')">
+        <div class="hcard-main">
+          <div class="hcard-icon">📝</div>
+          <div class="hcard-meta">
+            <h3>خطاب ارتباط - على مستوى العقد</h3>
+            <p>إعداد خطاب ارتباط للعقد</p>
+          </div>
+        </div>
+        <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
+      </div>
+
+      <div class="hcard" data-cat="other" onclick="selAndGo('entity-confirmation-letter')">
+        <div class="hcard-main">
           <div class="hcard-icon">✉️</div>
           <div class="hcard-meta">
-            <h3>خطاب إفادة</h3>
+            <h3>خطاب إفادة - على مستوى المنشأة</h3>
             <p>إنشاء خطابات الإفادة عن حالة المراجعة</p>
           </div>
         </div>
-        <div class="hcard-footer" onclick="toggleCard('confirmation')">
-          <span>اختر مستوى الخطاب</span>
-          <div class="hcard-chev">▼</div>
-        </div>
-        <div class="hcard-body">
-          <div class="hcard-subs">
-            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('entity-confirmation-letter')">على مستوى المنشأة <span>←</span></button>
-            <button class="hcard-sub" onclick="event.stopPropagation();selAndGo('contract-confirmation-letter')">على مستوى العقد <span>←</span></button>
+        <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
+      </div>
+
+      <div class="hcard" data-cat="other" onclick="selAndGo('contract-confirmation-letter')">
+        <div class="hcard-main">
+          <div class="hcard-icon">✉️</div>
+          <div class="hcard-meta">
+            <h3>خطاب إفادة - على مستوى العقد</h3>
+            <p>إنشاء خطابات الإفادة عن حالة المراجعة</p>
           </div>
         </div>
+        <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
       </div>
 
       <!-- نموذج فوترة عميل (direct) -->
-      <div class="hcard" data-cat="invoice" onclick="selAndGo('invoice-request')">
+      <div class="hcard" data-cat="other" onclick="selAndGo('invoice-request')">
         <div class="hcard-main">
           <div class="hcard-icon">🧾</div>
           <div class="hcard-meta">
@@ -527,7 +523,7 @@ function sel(id){
   curTpl=id;
   document.getElementById('btnNext1').disabled=false;
 }
-function goStep1(){document.querySelectorAll('.hcard').forEach(c=>c.classList.remove('hcard-open'));setStep(1);}
+function goStep1(){setStep(1);}
 function goStep2(){if(!curTpl)return;renderForm(curTpl);setStep(2);}
 
 // Hijri
@@ -1435,14 +1431,7 @@ function resetApp(){
   document.getElementById('btnDl2').style.display='none';
   document.getElementById('invoiceGenWarn').style.display='none';
   document.getElementById('emailSection').style.display='none';
-  document.querySelectorAll('.hcard').forEach(c=>c.classList.remove('hcard-open'));
   setStep(1);
-}
-function toggleCard(id){
-  const card=document.getElementById('hc-'+id);
-  const wasOpen=card.classList.contains('hcard-open');
-  document.querySelectorAll('.hcard').forEach(c=>c.classList.remove('hcard-open'));
-  if(!wasOpen)card.classList.add('hcard-open');
 }
 function selAndGo(tid){
   curTpl=tid;

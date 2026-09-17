@@ -760,6 +760,7 @@
   </div>
   <div class="sb-glow"></div>
   <nav class="sb-nav">
+    <a class="sb-item" href="home.html"><span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg></span><span class="sb-label">الصفحة الرئيسية</span></a>
     <div class="sb-item disabled" title="قريباً">
       <span class="sb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span><span class="sb-label">مراجعة المحتوى المحلي</span><span class="sb-soon">قريباً</span>
     </div>
@@ -783,11 +784,7 @@
 </div>
 
 <div class="app-main">
-<div class="topbar">
-  <div class="topbar-search">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="topSearch" placeholder="بحث عن قالب...">
-  </div>
+<div class="topbar" style="justify-content:flex-end">
   <div class="topbar-actions">
     <button class="topbar-bell" title="الإشعارات — قريباً">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
@@ -800,11 +797,6 @@
   <!-- HEADER -->
     <header class="header">
     <div class="header-logo" style="display:flex;align-items:center;gap:12px">
-      <svg viewBox="0 0 64 64" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="2" width="28" height="28" rx="7" fill="#4FCDE8"/>
-        <rect x="2" y="34" width="28" height="28" rx="7" fill="#0AAED0"/>
-        <rect x="34" y="34" width="28" height="28" rx="7" fill="#0AAED0"/>
-      </svg>
       <div>
         <div style="font-size:16px;font-weight:700;color:var(--text)">مُصنِّف الأنشطة الاقتصادية</div>
         <div style="font-size:11px;color:var(--text3);margin-top:1px">ISIC Classifier · المحتوى المحلي</div>
@@ -987,12 +979,6 @@ function displayName(email){
   }
 })();
 function logout(){ if(sb) sb.auth.signOut().then(()=>window.location.href='login.html'); }
-document.getElementById('topSearch').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){
-    const q=e.target.value.trim();
-    location.href='app.html'+(q?('?q='+encodeURIComponent(q)):'');
-  }
-});
 
 // ─── SSIC FULL DATASET (2,816 نشاط رسمي — الهيئة العامة للإحصاء، يوليو 2025) ──
 let SSIC_FULL = [];
