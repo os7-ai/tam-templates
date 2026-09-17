@@ -45,6 +45,19 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .tbg.xl{background:#FFF7ED;color:#9a3412}
 .tic.xl{background:#FFF7ED}
 .fcard{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;box-shadow:0 4px 20px rgba(28,38,83,.08)}
+.form-shell{display:flex;gap:24px;align-items:flex-start}
+.form-tabs{width:190px;flex-shrink:0;display:flex;flex-direction:column;gap:4px;position:sticky;top:20px}
+.form-tab{background:none;border:none;text-align:right;padding:11px 14px;border-radius:10px;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .18s}
+.form-tab:hover{background:var(--bg);color:var(--text)}
+.form-tab.active{background:var(--navy);color:#fff}
+.form-panels{flex:1;min-width:0}
+.form-panel{display:none}
+.form-panel.active{display:block}
+@media(max-width:700px){
+  .form-shell{flex-direction:column}
+  .form-tabs{width:100%;flex-direction:row;overflow-x:auto;position:static}
+  .form-tab{white-space:nowrap;flex-shrink:0}
+}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .ff{display:flex;flex-direction:column;gap:5px}
 .ff.full{grid-column:1/-1}
@@ -605,7 +618,7 @@ const T={
     {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
-  'entity-engagement':{name:'خطاب الارتباط - على مستوى المنشأة',file:'entity-engagement.docx',ext:'docx',fields:[
+  'entity-engagement':{name:'خطاب الارتباط - على مستوى المنشأة',file:'entity-engagement.docx',ext:'docx',sections:['بيانات الخطاب','معلومات الجهة','بيانات التواصل','الأتعاب والسداد','فوترة العميل (اختياري)'],fields:[
     {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
@@ -636,7 +649,7 @@ const T={
     {id:'service_location',lb:'موقع تقديم الخدمة',tp:'select',opts:['داخل المملكة','خارج المملكة'],invoiceOnly:true},
     {lb:'الخدمات المطلوب الفوترة عنها',tp:'service-rows',invoiceOnly:true},
   ]},
-  'contract-engagement':{name:'خطاب الارتباط - على مستوى العقد',file:'contract-engagement.docx',ext:'docx',fields:[
+  'contract-engagement':{name:'خطاب الارتباط - على مستوى العقد',file:'contract-engagement.docx',ext:'docx',sections:['بيانات الخطاب','معلومات الجهة والمشروع','بيانات التواصل','الأتعاب والسداد','فوترة العميل (اختياري)'],fields:[
     {id:'gregorian_date',lb:'تاريخ الخطاب',tp:'date',auto:true},
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
@@ -687,7 +700,7 @@ const T={
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
     {id:'Project_Name',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
   ]},
-  'invoice-request':{name:'نموذج طلب فوترة عميل',file:'invoice-request.xlsx',ext:'xlsx',fields:[
+  'invoice-request':{name:'نموذج طلب فوترة عميل',file:'invoice-request.xlsx',ext:'xlsx',sections:['معلومات الجهة','العنوان','تفاصيل خطاب الارتباط','الخدمات المطلوب الفوترة عنها'],fields:[
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
     {id:'vat_registration_number',lb:'رقم تسجيل ضريبة القيمة المضافة',tp:'text',ph:'300012345600003'},
@@ -730,25 +743,79 @@ function renderForm(tid){
   document.getElementById('formTitle').textContent=tmpl.name;
   const cont=document.getElementById('formFields');
   cont.innerHTML=''; logoData=null;
+  if(tmpl.sections){renderSectionedForm(tmpl,cont);}
+  else{renderFlatForm(tmpl,cont);}
+}
+
+function renderFlatForm(tmpl,cont){
   const grid=document.createElement('div');grid.className='fgrid';
   let invoiceExtra=null; // حاوية الحقول الإضافية لنموذج الفوترة — تظهر/تختفي مع خانة الاختيار
   tmpl.fields.forEach(f=>{
     if(f.tp==='sep'){const s=document.createElement('div');s.className='fsep';grid.appendChild(s);return;}
-    if(f.tp==='invoice-toggle'){
-      const w=document.createElement('div');w.className='ff full';
-      const lbl=document.createElement('label');
-      lbl.style.cssText='display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;padding:10px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;align-self:flex-start;transition:border-color .18s';
-      const chk=document.createElement('input');chk.type='checkbox';chk.id='f_invoice_toggle';
-      chk.style.cssText='width:18px;height:18px;margin:0;padding:0;flex-shrink:0;accent-color:var(--accent);cursor:pointer;border:1.5px solid var(--border);border-radius:4px;background:#fff';
-      const txt=document.createElement('span');txt.textContent=f.lb;
-      lbl.appendChild(chk);lbl.appendChild(txt);w.appendChild(lbl);
-      if(f.hint){const h=document.createElement('div');h.className='hint';h.style.marginTop='6px';h.textContent=f.hint;w.appendChild(h);}
-      grid.appendChild(w);
-      invoiceExtra=document.createElement('div');invoiceExtra.id='invoiceExtraFields';invoiceExtra.className='fgrid full';invoiceExtra.style.cssText='display:none;margin-top:14px';
-      grid.appendChild(invoiceExtra);
-      chk.addEventListener('change',()=>{invoiceExtra.style.display=chk.checked?'':'none';lbl.style.borderColor=chk.checked?'var(--accent)':'var(--border)';});
-      return;
-    }
+    if(f.tp==='invoice-toggle'){invoiceExtra=buildInvoiceToggle(f,grid);return;}
+    const w=buildField(f);
+    (f.invoiceOnly&&invoiceExtra?invoiceExtra:grid).appendChild(w);
+  });
+  cont.appendChild(grid);
+}
+
+function renderSectionedForm(tmpl,cont){
+  const groups=[[]];
+  tmpl.fields.forEach(f=>{
+    if(f.tp==='sep'){groups.push([]);}
+    else groups[groups.length-1].push(f);
+  });
+
+  const shell=document.createElement('div');shell.className='form-shell';
+  const tabs=document.createElement('div');tabs.className='form-tabs';
+  const panels=document.createElement('div');panels.className='form-panels';
+
+  groups.forEach((flds,i)=>{
+    const title=(tmpl.sections&&tmpl.sections[i])||('قسم '+(i+1));
+    const panel=document.createElement('div');panel.className='form-panel'+(i===0?' active':'');
+    const grid=document.createElement('div');grid.className='fgrid';
+    let invoiceExtra=null;
+    flds.forEach(f=>{
+      if(f.tp==='invoice-toggle'){invoiceExtra=buildInvoiceToggle(f,grid);return;}
+      const w=buildField(f);
+      (f.invoiceOnly&&invoiceExtra?invoiceExtra:grid).appendChild(w);
+    });
+    panel.appendChild(grid);
+    panels.appendChild(panel);
+
+    const tabBtn=document.createElement('button');
+    tabBtn.type='button';tabBtn.className='form-tab'+(i===0?' active':'');
+    tabBtn.textContent=title;
+    tabBtn.onclick=()=>{
+      tabs.querySelectorAll('.form-tab').forEach(b=>b.classList.remove('active'));
+      tabBtn.classList.add('active');
+      panels.querySelectorAll('.form-panel').forEach(p=>p.classList.remove('active'));
+      panel.classList.add('active');
+    };
+    tabs.appendChild(tabBtn);
+  });
+
+  shell.appendChild(panels);shell.appendChild(tabs);
+  cont.appendChild(shell);
+}
+
+function buildInvoiceToggle(f,grid){
+  const w=document.createElement('div');w.className='ff full';
+  const lbl=document.createElement('label');
+  lbl.style.cssText='display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;padding:10px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;align-self:flex-start;transition:border-color .18s';
+  const chk=document.createElement('input');chk.type='checkbox';chk.id='f_invoice_toggle';
+  chk.style.cssText='width:18px;height:18px;margin:0;padding:0;flex-shrink:0;accent-color:var(--accent);cursor:pointer;border:1.5px solid var(--border);border-radius:4px;background:#fff';
+  const txt=document.createElement('span');txt.textContent=f.lb;
+  lbl.appendChild(chk);lbl.appendChild(txt);w.appendChild(lbl);
+  if(f.hint){const h=document.createElement('div');h.className='hint';h.style.marginTop='6px';h.textContent=f.hint;w.appendChild(h);}
+  grid.appendChild(w);
+  const invoiceExtra=document.createElement('div');invoiceExtra.id='invoiceExtraFields';invoiceExtra.className='fgrid full';invoiceExtra.style.cssText='display:none;margin-top:14px';
+  grid.appendChild(invoiceExtra);
+  chk.addEventListener('change',()=>{invoiceExtra.style.display=chk.checked?'':'none';lbl.style.borderColor=chk.checked?'var(--accent)':'var(--border)';});
+  return invoiceExtra;
+}
+
+function buildField(f){
     const w=document.createElement('div');
     w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'?' full':'');
     if(f.lb){const l=document.createElement('label');l.textContent=f.lb;w.appendChild(l);}
@@ -904,9 +971,7 @@ function renderForm(tid){
       };
       wrap.appendChild(addBtn);w.appendChild(wrap);
     }
-    (f.invoiceOnly&&invoiceExtra?invoiceExtra:grid).appendChild(w);
-  });
-  cont.appendChild(grid);
+    return w;
 }
 
 // مشتركة بين نموذج الفوترة المباشر وفوترة خطاب الارتباط — تجميع صفوف الخدمات المطلوب فوترتها
