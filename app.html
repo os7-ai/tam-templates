@@ -993,10 +993,13 @@ function buildField(f){
       wrap.appendChild(addBtn);w.appendChild(wrap);
     }else if(f.tp==='doc-extract'){
       const box=document.createElement('div');box.className='lu';
-      box.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><p>رفع السجل التجاري أو شهادة ضريبة القيمة المضافة لتعبئة البيانات تلقائياً (اختياري)</p>';
-      const fInp=document.createElement('input');fInp.type='file';fInp.accept='image/*,application/pdf';fInp.style.display='none';
+      box.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><p>رفع السجل التجاري والعنوان الوطني وشهادة الضريبة (حتى 3 ملفات دفعة واحدة) لتعبئة البيانات تلقائياً (اختياري)</p>';
+      const fInp=document.createElement('input');fInp.type='file';fInp.accept='image/*,application/pdf';fInp.multiple=true;fInp.style.display='none';
       box.onclick=()=>fInp.click();
-      fInp.onchange=e=>{const file=e.target.files[0];if(file)handleDocExtract(file,f.targets,box);};
+      fInp.onchange=e=>{
+        const files=Array.from(e.target.files||[]).slice(0,3);
+        if(files.length)handleDocExtract(files,f.targets,box);
+      };
       w.appendChild(box);w.appendChild(fInp);
     }
     return w;
@@ -1011,23 +1014,28 @@ function extractJsonFromText(text){
   return JSON.parse(cleaned.slice(s,e+1));
 }
 
-async function handleDocExtract(file,targets,box){
+async function handleDocExtract(files,targets,box){
   box.classList.remove('has','err');box.classList.add('loading');
-  box.innerHTML='<div class="extract-spin"></div><p>جاري استخراج البيانات...</p>';
+  box.innerHTML='<div class="extract-spin"></div><p>جاري استخراج البيانات من '+files.length+' '+(files.length===1?'ملف':'ملفات')+'...</p>';
   try{
-    const dataUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});
-    const base64=dataUrl.split(',')[1];
-    const mediaBlock=file.type==='application/pdf'
-      ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
-      :{type:'image',source:{type:'base64',media_type:file.type,data:base64}};
-    const sys='أنت مساعد يستخرج بيانات المنشأة من صورة أو ملف مستند رسمي سعودي (سجل تجاري أو شهادة ضريبة القيمة المضافة). أعد فقط كائن JSON بدون أي شرح إضافي وبدون Markdown، بالمفاتيح التالية بالضبط، واترك القيمة نصاً فارغاً "" إن لم تظهر بوضوح بالمستند: entity_name, commercial_reg, unified_number, tax_number, national_address, street, building_number, district, additional_number, region, city, postal_code. tax_number هو الرقم الضريبي / رقم تسجيل ضريبة القيمة المضافة (عادة 15 رقماً). national_address نص مُجمّع مقروء للعنوان الوطني الكامل إن أمكن تكوينه من العنوان الظاهر بالمستند.';
+    const mediaBlocks=await Promise.all(files.map(file=>new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>{
+        const base64=r.result.split(',')[1];
+        res(file.type==='application/pdf'
+          ?{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}}
+          :{type:'image',source:{type:'base64',media_type:file.type,data:base64}});
+      };
+      r.onerror=rej;r.readAsDataURL(file);
+    })));
+    const sys='أنت مساعد يستخرج بيانات المنشأة من صور أو ملفات مستندات رسمية سعودية (سجل تجاري، شهادة العنوان الوطني، شهادة ضريبة القيمة المضافة). قد يصلك أكثر من مستند لنفس المنشأة دفعة واحدة — اجمع البيانات من كل المستندات المرفقة معاً. أعد فقط كائن JSON بدون أي شرح إضافي وبدون Markdown، بالمفاتيح التالية بالضبط، واترك القيمة نصاً فارغاً "" إن لم تظهر بوضوح بأي من المستندات: entity_name, commercial_reg, unified_number, tax_number, national_address, street, building_number, district, additional_number, region, city, postal_code. tax_number هو الرقم الضريبي / رقم تسجيل ضريبة القيمة المضافة (عادة 15 رقماً). national_address نص مُجمّع مقروء للعنوان الوطني الكامل إن أمكن تكوينه من العنوان الظاهر بالمستندات.';
     const res=await fetch('/.netlify/functions/claude',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+accessToken},
       body:JSON.stringify({
         max_tokens:600,
         system:sys,
-        messages:[{role:'user',content:[mediaBlock,{type:'text',text:'استخرج البيانات المطلوبة من هذا المستند بصيغة JSON فقط.'}]}]
+        messages:[{role:'user',content:[...mediaBlocks,{type:'text',text:'استخرج البيانات المطلوبة من هذه المستندات بصيغة JSON فقط.'}]}]
       })
     });
     if(!res.ok){
