@@ -658,6 +658,7 @@ const T={
     {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
     {tp:'sep'},
     {tp:'invoice-toggle',lb:'إنشاء نموذج طلب فوترة عميل أيضاً',hint:'سنستخدم اسم الجهة والأرقام والأتعاب تلقائياً من الأعلى — تبقى فقط تفاصيل العنوان المُجزأ وتفاصيل الخدمة المطلوب فوترتها'},
+    {tp:'doc-extract',invoiceOnly:true,label:'رفع العنوان الوطني لتعبئة تفاصيل العنوان تلقائياً (اختياري)',targets:{street:'street',building_number:'building_number',district:'district',additional_number:'additional_number',region:'region',city:'city',postal_code:'postal_code'}},
     {id:'street',lb:'الشارع',tp:'text',ph:'شارع الملك فهد',invoiceOnly:true},
     {id:'building_number',lb:'رقم المبنى',tp:'text',ph:'1234',invoiceOnly:true},
     {id:'district',lb:'الحي',tp:'text',ph:'حي العليا',invoiceOnly:true},
@@ -692,6 +693,7 @@ const T={
     {id:'payment_method',lb:'طريقة السداد',tp:'select',opts:['يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير','يتم سداد أتعابنا المهنية 50٪ دفعة مقدمة و50٪ عند تسليم مسودة التقرير']},
     {tp:'sep'},
     {tp:'invoice-toggle',lb:'إنشاء نموذج طلب فوترة عميل أيضاً',hint:'سنستخدم اسم الجهة والأرقام والأتعاب تلقائياً من الأعلى — تبقى فقط تفاصيل العنوان المُجزأ وتفاصيل الخدمة المطلوب فوترتها'},
+    {tp:'doc-extract',invoiceOnly:true,label:'رفع العنوان الوطني لتعبئة تفاصيل العنوان تلقائياً (اختياري)',targets:{street:'street',building_number:'building_number',district:'district',additional_number:'additional_number',region:'region',city:'city',postal_code:'postal_code'}},
     {id:'street',lb:'الشارع',tp:'text',ph:'شارع الملك فهد',invoiceOnly:true},
     {id:'building_number',lb:'رقم المبنى',tp:'text',ph:'1234',invoiceOnly:true},
     {id:'district',lb:'الحي',tp:'text',ph:'حي العليا',invoiceOnly:true},
@@ -993,7 +995,8 @@ function buildField(f){
       wrap.appendChild(addBtn);w.appendChild(wrap);
     }else if(f.tp==='doc-extract'){
       const box=document.createElement('div');box.className='lu';
-      box.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><p>رفع السجل التجاري والعنوان الوطني وشهادة الضريبة (حتى 3 ملفات دفعة واحدة) لتعبئة البيانات تلقائياً (اختياري)</p>';
+      const dzLabel=f.label||'رفع السجل التجاري والعنوان الوطني وشهادة الضريبة (حتى 3 ملفات دفعة واحدة) لتعبئة البيانات تلقائياً (اختياري)';
+      box.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6B7A9E" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><p>'+dzLabel+'</p>';
       const fInp=document.createElement('input');fInp.type='file';fInp.accept='image/*,application/pdf';fInp.multiple=true;fInp.style.display='none';
       box.onclick=()=>fInp.click();
       fInp.onchange=e=>{
