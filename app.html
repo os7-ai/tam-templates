@@ -265,6 +265,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
         <button class="tpl-chip active" data-cat="all" onclick="setCat('all')">الكل</button>
         <button class="tpl-chip" data-cat="proposal" onclick="setCat('proposal')">العروض</button>
         <button class="tpl-chip" data-cat="engagement" onclick="setCat('engagement')">خطاب الارتباط</button>
+        <button class="tpl-chip" data-cat="completion" onclick="setCat('completion')">شهادة إنجاز</button>
         <button class="tpl-chip" data-cat="other" onclick="setCat('other')">أخرى</button>
       </div>
     </div>
@@ -351,7 +352,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
         </div>
       </div>
 
-      <div class="hcard" data-cat="other" onclick="selAndGo('work-completion-certificate')">
+      <div class="hcard" data-cat="completion" onclick="selAndGo('work-completion-certificate')">
         <div class="hcard-main">
           <div class="hcard-icon ic-doc"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2B579A"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">W</text></svg></div>
           <div class="hcard-meta">
@@ -757,19 +758,19 @@ const T={
   'work-completion-certificate':{name:'شهادة إنجاز الأعمال',file:'work-completion-certificate.docx',ext:'docx',sections:['بيانات الشهادة','معلومات العميل والمشروع','الأعمال المنجزة','الاعتماد والتوقيع'],fields:[
     {id:'gregorian_date',lb:'تاريخ الشهادة',tp:'date',auto:true},
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
-    {id:'Certificate_No',lb:'رقم الشهادة',tp:'text',ph:'1234'},
+    {id:'Certificate_No',lb:'رقم الشهادة',tp:'text',ph:'1234',lnk:true},
     {tp:'sep'},
     {id:'CLIENT_NAME',lb:'اسم العميل',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'PO_Number',lb:'رقم أمر الشراء',tp:'text',ph:'92748304'},
-    {id:'Engagement_No',lb:'رقم خطاب الارتباط',tp:'text',ph:'9348'},
+    {id:'Engagement_No',lb:'رقم خطاب الارتباط',tp:'text',ph:'9348',lnk:true},
     {id:'Project_Number',lb:'رقم المشروع',tp:'text',ph:'PRJ-2025-001'},
     {id:'Project_Name',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
     {tp:'sep'},
     {lb:'وصف الأعمال المنجزة',tp:'wcc-rows'},
-    {id:'Completion_Percentage',lb:'نسبة الإنجاز',tp:'text',ph:'100%'},
+    {id:'Completion_Percentage',lb:'نسبة الإنجاز',tp:'percent',ph:'100'},
     {tp:'sep'},
-    {id:'Client_Signer_Name',lb:'اسم المعتمد من العميل',tp:'text',ph:'اسم الشخص'},
-    {id:'Our_Signer_Name',lb:'اسم المعتمد من الاستشاري',tp:'text',ph:'اسم الشخص'},
+    {id:'Client_Signer_Name',lb:'مدير المشروع من العميل',tp:'text',ph:'اسم الشخص'},
+    {id:'Our_Signer_Name',lb:'مدير المشروع من مجموعة ألفا',tp:'select',opts:['مصعب الزامل','مازن الدويش']},
   ]}
 };
 
@@ -924,6 +925,11 @@ function buildField(f){
       const i=document.createElement('input');i.type='number';i.id='f_'+f.id;i.min='1';i.step='1';
       i.value=f.def!==undefined?f.def:'';
       w.appendChild(i);
+    }else if(f.tp==='percent'){
+      const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder=f.ph||'100';
+      i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9]/g,'');});
+      w.appendChild(i);
+      const h=document.createElement('div');h.className='hint';h.textContent='أدخل الرقم فقط — تتم إضافة % تلقائياً';w.appendChild(h);
     }else if(f.tp==='fee'){
       const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder='19,000';
       i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9.]/g,'');});
@@ -1047,9 +1053,15 @@ function buildField(f){
         row.style.cssText='display:'+(i===1?'grid':'none')+';grid-template-columns:2.5fr 1fr 1.5fr;gap:8px';
         const desc=document.createElement('input');desc.type='text';desc.id='f_wcc_desc_'+i;desc.placeholder='وصف العمل المنجز';
         row.appendChild(desc);
+        const qtyWrap=document.createElement('div');
         const qty=document.createElement('select');qty.id='f_wcc_qty_'+i;
-        ['1','2','3'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;qty.appendChild(o);});
-        row.appendChild(qty);
+        ['1','2','3','غير ذلك'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;qty.appendChild(o);});
+        qtyWrap.appendChild(qty);
+        const qtyCustom=document.createElement('input');qtyCustom.type='number';qtyCustom.min='1';qtyCustom.step='1';qtyCustom.id='f_wcc_qty_custom_'+i;qtyCustom.placeholder='أدخل الكمية';
+        qtyCustom.style.cssText='display:none;margin-top:6px';
+        qtyWrap.appendChild(qtyCustom);
+        qty.addEventListener('change',()=>{qtyCustom.style.display=qty.value==='غير ذلك'?'':'none';});
+        row.appendChild(qtyWrap);
         const amt=document.createElement('input');amt.type='text';amt.inputMode='numeric';amt.id='f_wcc_amount_'+i;amt.placeholder='0';
         amt.addEventListener('input',()=>{amt.value=amt.value.replace(/[^0-9.]/g,'');recalcWcc();});
         amt.addEventListener('blur',()=>{const v=parseFloat(amt.value)||0;if(v>0)amt.value=v.toLocaleString('en-US',{maximumFractionDigits:2});});
@@ -1189,7 +1201,8 @@ function collectWccRowsVars(){
       const amt=parseFloat((document.getElementById('f_wcc_amount_'+i)?.value||'').replace(/,/g,''))||0;
       sum+=amt;
       vars['Description_'+i]=document.getElementById('f_wcc_desc_'+i)?.value||'';
-      vars['Quantity_'+i]=document.getElementById('f_wcc_qty_'+i)?.value||'';
+      const qtySel=document.getElementById('f_wcc_qty_'+i)?.value||'';
+      vars['Quantity_'+i]=qtySel==='غير ذلك'?(document.getElementById('f_wcc_qty_custom_'+i)?.value||''):qtySel;
       vars['Taxable_Amount_'+i]=fmt(amt);
     }else{
       vars['Description_'+i]='';
@@ -1259,6 +1272,10 @@ function collectVars(tid){
       const v=parseFloat((document.getElementById('f_'+f.id)?.value||'').replace(/,/g,''))||0;
       vars['total_fees']=fmt(v);vars['الأتعاب_المهنية']=fmt(v);return;
     }
+    if(f.tp==='percent'){
+      const v=document.getElementById('f_'+f.id)?.value||'';
+      vars[f.id]=v?v+'%':'';return;
+    }
     if(f.tp==='engfee'){
       const base=parseFloat((document.getElementById('f_total_fees')?.value||'').replace(/,/g,''))||0;
       const tx=Math.round(base*0.15*100)/100;
@@ -1308,7 +1325,9 @@ function validate(tid){
       for(let i=1;i<=rowCount;i++){
         const desc=document.getElementById('f_wcc_desc_'+i)?.value;
         const amt=parseFloat((document.getElementById('f_wcc_amount_'+i)?.value||'').replace(/,/g,''))||0;
+        const qtySel=document.getElementById('f_wcc_qty_'+i)?.value;
         if(!desc)return'يرجى إدخال وصف العمل '+(i===1?'الأول':i);
+        if(qtySel==='غير ذلك'&&!(document.getElementById('f_wcc_qty_custom_'+i)?.value))return'يرجى إدخال الكمية للعمل '+(i===1?'الأول':i);
         if(amt<=0)return'يرجى إدخال مبلغ العمل '+(i===1?'الأول':i);
       }
       continue;
