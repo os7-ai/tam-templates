@@ -22,11 +22,20 @@ function escXml(v) {
 }
 
 // يحذف صف الجدول بالكامل (وليس فقط تفريغ خلاياه) عندما لا يُستخدم — لشهادة إنجاز الأعمال، الصفوف 2 و3 اختيارية
+// ملاحظة: البحث عن بداية الصف لازم يتأكد إنه <w:tr فعلاً (وليس <w:trPr> أو أي عنصر آخر يبدأ بنفس الحروف)
+function lastRowOpenIndex(xml, beforeIdx) {
+  const re = /<w:tr(?=[\s>])/g;
+  let m, last = -1;
+  while ((m = re.exec(xml)) !== null && m.index < beforeIdx) {
+    last = m.index;
+  }
+  return last;
+}
 function removeTableRow(xml, tag) {
   const tagStr = '<w:tag w:val="' + tag + '"/>';
   const tagIdx = xml.indexOf(tagStr);
   if (tagIdx === -1) return xml;
-  const trStart = xml.lastIndexOf('<w:tr', tagIdx);
+  const trStart = lastRowOpenIndex(xml, tagIdx);
   if (trStart === -1) return xml;
   const trEndTagIdx = xml.indexOf('</w:tr>', tagIdx);
   if (trEndTagIdx === -1) return xml;
