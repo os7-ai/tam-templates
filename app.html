@@ -653,6 +653,7 @@ function tafqeet(n){
 // Templates
 const T={
   'entity-proposal':{name:'العرض الفني والمالي - على مستوى المنشأة',file:'entity-proposal.pptx',ext:'pptx',fields:[
+    {tp:'client-picker',targets:{entity_name:'اسم_الجهة'}},
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
@@ -663,6 +664,7 @@ const T={
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
   'contract-proposal':{name:'العرض الفني والمالي - على مستوى العقد',file:'contract-proposal.pptx',ext:'pptx',fields:[
+    {tp:'client-picker',targets:{entity_name:'اسم_الجهة'}},
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العقد',lb:'رقم العقد',tp:'text',ph:'92748304'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
@@ -678,6 +680,7 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
+    {tp:'client-picker',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
     {tp:'doc-extract',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
@@ -711,6 +714,7 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
+    {tp:'client-picker',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
     {tp:'doc-extract',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
@@ -746,6 +750,7 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
+    {tp:'client-picker',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
     {id:'fiscal_year',lb:'العام المالي',tp:'fiscal'},
@@ -755,11 +760,13 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
+    {tp:'client-picker',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
     {id:'Project_Name',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
   ]},
   'invoice-request':{name:'نموذج طلب فوترة عميل',file:'invoice-request.xlsx',ext:'xlsx',sections:['معلومات الجهة','العنوان','تفاصيل خطاب الارتباط','الخدمات المطلوب الفوترة عنها'],fields:[
+    {tp:'client-picker',targets:{entity_name:'entity_name',unified_number:'unified_number',tax_number:'vat_registration_number',street:'street',building_number:'building_number',district:'district',additional_number:'additional_number',region:'region',city:'city',postal_code:'postal_code'}},
     {tp:'doc-extract',targets:{entity_name:'entity_name',unified_number:'unified_number',tax_number:'vat_registration_number',street:'street',building_number:'building_number',district:'district',additional_number:'additional_number',region:'region',city:'city',postal_code:'postal_code'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
@@ -785,6 +792,7 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'Certificate_No',lb:'رقم الشهادة',tp:'text',ph:'1234',lnk:true},
     {tp:'sep'},
+    {tp:'client-picker',targets:{entity_name:'CLIENT_NAME'}},
     {id:'CLIENT_NAME',lb:'اسم العميل',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'PO_Number',lb:'رقم أمر الشراء',tp:'text',ph:'92748304'},
     {id:'Engagement_No',lb:'رقم خطاب الارتباط',tp:'text',ph:'9348',lnk:true},
@@ -892,9 +900,66 @@ function buildInvoiceToggle(f,grid){
   return invoiceExtra;
 }
 
+// ── عملاء محفوظون ─────────────────────────────────
+let CLIENTS_CACHE=null;
+async function fetchClients(force){
+  if(CLIENTS_CACHE&&!force)return CLIENTS_CACHE;
+  const{data,error}=await sb.from('clients').select('*').order('entity_name',{ascending:true});
+  if(error){console.error('fetch clients error:',error.message);CLIENTS_CACHE=CLIENTS_CACHE||[];return CLIENTS_CACHE;}
+  CLIENTS_CACHE=data||[];
+  return CLIENTS_CACHE;
+}
+async function loadClientsInto(sel){
+  const clients=await fetchClients();
+  clients.forEach(c=>{
+    const op=document.createElement('option');op.value=c.id;
+    op.textContent=c.entity_name+(c.commercial_reg?' — '+c.commercial_reg:'');
+    sel.appendChild(op);
+  });
+}
+function applyClientToFields(sel,targets){
+  const id=sel.value;
+  if(!id)return;
+  const c=(CLIENTS_CACHE||[]).find(x=>x.id===id);
+  if(!c)return;
+  Object.entries(targets).forEach(([canonKey,fieldId])=>{
+    const el=document.getElementById('f_'+fieldId);
+    if(el&&c[canonKey])el.value=c[canonKey];
+  });
+}
+async function saveClientFromFields(targets,hintEl,sel){
+  const rec={};
+  Object.entries(targets).forEach(([canonKey,fieldId])=>{
+    const el=document.getElementById('f_'+fieldId);
+    const v=el?el.value||'':'';
+    rec[canonKey]=v?v:null; // فاضي يصير null بدل '' عشان قيد commercial_reg الفريد ما يتعارض بين عدة عملاء بدون سجل تجاري
+  });
+  if(!rec.entity_name){hintEl.textContent='⚠️ عبّي اسم الجهة أولاً';hintEl.style.color='#e53e3e';return;}
+  hintEl.textContent='جارٍ الحفظ...';hintEl.style.color='var(--muted)';
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    rec.created_by=session?.user?.id||null;
+    let res;
+    if(rec.commercial_reg){
+      res=await sb.from('clients').upsert(rec,{onConflict:'commercial_reg'}).select();
+    }else{
+      res=await sb.from('clients').insert(rec).select();
+    }
+    if(res.error)throw new Error(res.error.message);
+    hintEl.textContent='✅ تم حفظ بيانات العميل';hintEl.style.color='#16a34a';
+    const savedId=res.data&&res.data[0]?res.data[0].id:null;
+    await fetchClients(true);
+    while(sel.options.length>1)sel.remove(1);
+    await loadClientsInto(sel);
+    if(savedId)sel.value=savedId;
+  }catch(e){
+    hintEl.textContent='حدث خطأ أثناء الحفظ: '+e.message;hintEl.style.color='#e53e3e';
+  }
+}
+
 function buildField(f){
     const w=document.createElement('div');
-    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'||f.tp==='wcc-rows'||f.tp==='doc-extract'?' full':'');
+    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'||f.tp==='wcc-rows'||f.tp==='doc-extract'||f.tp==='client-picker'?' full':'');
     if(f.lb){const l=document.createElement('label');l.textContent=f.lb;w.appendChild(l);}
     if(f.wn){const h=document.createElement('div');h.className='warn';h.textContent=f.wn;w.appendChild(h);}
     if(f.tp==='text'){
@@ -1143,6 +1208,20 @@ function buildField(f){
       tot.innerHTML='<div>الأتعاب (بدون ضريبة): <span id="wccFeesExcl">—</span></div><div>ضريبة القيمة المضافة 15%: <span id="wccVat">—</span></div><div>الإجمالي المستحق: <span id="wccTotal">—</span></div>';
       wrap.appendChild(tot);
       w.appendChild(wrap);
+    }else if(f.tp==='client-picker'){
+      const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;align-items:center;width:100%';
+      const sel=document.createElement('select');sel.id='f_client_picker_'+curTpl;sel.style.flex='1';
+      const defOpt=document.createElement('option');defOpt.value='';defOpt.textContent='— اختر عميل محفوظ (اختياري) —';sel.appendChild(defOpt);
+      row.appendChild(sel);
+      const saveBtn=document.createElement('button');saveBtn.type='button';saveBtn.textContent='💾 حفظ كعميل';
+      saveBtn.style.cssText='flex-shrink:0;background:var(--card);border:1.5px solid var(--border);color:var(--navy);padding:10px 16px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap';
+      row.appendChild(saveBtn);
+      w.appendChild(row);
+      const hint=document.createElement('div');hint.className='hint';hint.style.marginTop='6px';
+      w.appendChild(hint);
+      loadClientsInto(sel);
+      sel.addEventListener('change',()=>applyClientToFields(sel,f.targets));
+      saveBtn.addEventListener('click',()=>saveClientFromFields(f.targets,hint,sel));
     }else if(f.tp==='doc-extract'){
       const box=document.createElement('div');box.className='lu';
       const dzLabel=f.label||'رفع السجل التجاري والعنوان الوطني وشهادة الضريبة (حتى 3 ملفات دفعة واحدة) لتعبئة البيانات تلقائياً (اختياري)';
