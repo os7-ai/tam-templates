@@ -604,6 +604,30 @@ function fmtDate(ds){
   return p[0]+'/'+String(parseInt(p[1]))+'/'+String(parseInt(p[2]));
 }
 function fmtPeriod(f,t){return'من '+fmtDate(f)+' حتى '+fmtDate(t);}
+// بعض المتصفحات تعرض أرقام مربع type=date حسب لغة نظام التشغيل (عربية) بغض النظر عن lang على العنصر —
+// نغطي النص الأصلي ونعرض فوقه نصاً بأرقام إنجليزية موحّدة مع حقل التاريخ الهجري، بدون ما نأثر على قيمة الحقل نفسه
+function fmtDateOverlay(iso){
+  if(!iso)return'';
+  const p=iso.split('-');
+  if(p.length!==3)return'';
+  return p[2]+'/'+p[1]+'/'+p[0];
+}
+function attachDateOverlay(input){
+  const wrap=document.createElement('div');wrap.style.cssText='position:relative;width:100%';
+  input.style.color='transparent';input.style.caretColor='transparent';
+  wrap.appendChild(input);
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;padding:10px 13px;pointer-events:none;font-family:Tajawal,sans-serif;font-size:13px;direction:ltr';
+  wrap.appendChild(overlay);
+  const update=()=>{
+    if(!input.value){overlay.textContent='يوم/شهر/سنة';overlay.style.color='var(--muted)';}
+    else{overlay.textContent=fmtDateOverlay(input.value);overlay.style.color='var(--text)';}
+  };
+  input.addEventListener('input',update);
+  input.addEventListener('change',update);
+  update();
+  return wrap;
+}
 function fmt(n){return n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});}
 
 // Tafqeet
@@ -887,7 +911,7 @@ function buildField(f){
     }else if(f.tp==='date'){
       const i=document.createElement('input');i.type='date';i.id='f_'+f.id;i.lang='en-US-u-nu-latn';
       if(f.auto)i.value=todayLocal();
-      w.appendChild(i);
+      w.appendChild(attachDateOverlay(i));
     }else if(f.tp==='hijri'){
       const i=document.createElement('input');i.type='text';i.id='f_'+f.id;
       i.value=toHijri(todayLocal());
@@ -911,7 +935,7 @@ function buildField(f){
         if(!existing){existing=document.createElement('option');existing.setAttribute('data-custom','1');s.appendChild(existing);}
         existing.value=formatted;existing.textContent=formatted;s.value=formatted;
       });
-      dateWrap.appendChild(dateInp);w.appendChild(dateWrap);
+      dateWrap.appendChild(attachDateOverlay(dateInp));w.appendChild(dateWrap);
       s.addEventListener('change',()=>{
         if(s.value==='أخرى'){dateWrap.style.display='block';}
         else{dateWrap.style.display='none';}
@@ -960,7 +984,7 @@ function buildField(f){
         const d=document.createElement('div');d.className='ff';
         const l=document.createElement('label');l.textContent=idx===0?'من تاريخ':'حتى تاريخ';
         const i=document.createElement('input');i.type='date';i.id=id;i.lang='en-US-u-nu-latn';
-        d.appendChild(l);d.appendChild(i);r.appendChild(d);
+        d.appendChild(l);d.appendChild(attachDateOverlay(i));r.appendChild(d);
       });
       const periodErr=document.createElement('div');periodErr.id='periodErrMsg';periodErr.style.cssText='display:none;color:#e53e3e;font-size:12px;margin-top:4px;grid-column:1/-1';
       r.appendChild(periodErr);
