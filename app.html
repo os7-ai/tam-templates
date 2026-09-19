@@ -1048,9 +1048,31 @@ function buildField(f){
         if(ct)ct.textContent=sum>0?fmt(tx)+' ريال':'—';
         if(ci)ci.textContent=sum>0?fmt(total)+' ريال':'—';
       };
+      let addBtn;
+      // يظهر زر الإزالة على آخر صف مُضاف بس (نحافظ على ترقيم متسلسل بدون فجوات، وصف 1 ثابت دائماً)
+      const updateWccRemoveButtons=()=>{
+        const cur=parseInt(rc.dataset.rowCount);
+        for(let i=2;i<=3;i++){
+          const btn=document.getElementById('wccRemoveBtn_'+i);
+          if(btn)btn.style.display=(i===cur)?'':'none';
+        }
+      };
+      const removeWccRow=(i)=>{
+        document.getElementById('f_wcc_desc_'+i).value='';
+        const qtySel=document.getElementById('f_wcc_qty_'+i);qtySel.selectedIndex=0;
+        const qtyCustom=document.getElementById('f_wcc_qty_custom_'+i);qtyCustom.value='';qtyCustom.style.display='none';
+        document.getElementById('f_wcc_amount_'+i).value='';
+        document.getElementById('wccRow_'+i).style.display='none';
+        rc.dataset.rowCount=String(i-1);
+        addBtn.style.display='';
+        updateWccRemoveButtons();
+        recalcWcc();
+      };
       for(let i=1;i<=3;i++){
-        const row=document.createElement('div');row.id='wccRow_'+i;
-        row.style.cssText='display:'+(i===1?'grid':'none')+';grid-template-columns:2.5fr 1fr 1.5fr;gap:8px';
+        const rowOuter=document.createElement('div');rowOuter.id='wccRow_'+i;
+        rowOuter.style.cssText='display:'+(i===1?'flex':'none')+';gap:8px;align-items:flex-start';
+        const row=document.createElement('div');
+        row.style.cssText='display:grid;grid-template-columns:2.5fr 1fr 1.5fr;gap:8px;flex:1';
         const desc=document.createElement('input');desc.type='text';desc.id='f_wcc_desc_'+i;desc.placeholder='وصف العمل المنجز';
         row.appendChild(desc);
         const qtyWrap=document.createElement('div');
@@ -1067,21 +1089,29 @@ function buildField(f){
         amt.addEventListener('blur',()=>{const v=parseFloat(amt.value)||0;if(v>0)amt.value=v.toLocaleString('en-US',{maximumFractionDigits:2});});
         amt.addEventListener('focus',()=>{amt.value=amt.value.replace(/,/g,'');});
         row.appendChild(amt);
-        rc.appendChild(row);
+        rowOuter.appendChild(row);
+        if(i>=2){
+          const rmBtn=document.createElement('button');rmBtn.type='button';rmBtn.id='wccRemoveBtn_'+i;
+          rmBtn.textContent='×';rmBtn.title='إزالة هذا العمل';
+          rmBtn.style.cssText='flex-shrink:0;width:34px;height:34px;border:1.5px solid var(--border);background:#fff;color:#e53e3e;border-radius:8px;cursor:pointer;font-size:16px;font-weight:700;line-height:1;display:none';
+          rmBtn.onclick=()=>removeWccRow(i);
+          rowOuter.appendChild(rmBtn);
+        }
+        rc.appendChild(rowOuter);
       }
       wrap.appendChild(rc);
-      const addBtn=document.createElement('button');addBtn.type='button';
+      addBtn=document.createElement('button');addBtn.type='button';
       addBtn.textContent='+ إضافة عمل';
       addBtn.style.cssText='margin-top:10px;background:transparent;border:1.5px dashed var(--border);color:var(--navy);padding:7px 18px;border-radius:9px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer';
       addBtn.onclick=()=>{
-        const c=document.getElementById('wccRows');
-        const cur=parseInt(c.dataset.rowCount);
+        const cur=parseInt(rc.dataset.rowCount);
         if(cur>=3)return;
         const next=cur+1;
-        c.dataset.rowCount=String(next);
+        rc.dataset.rowCount=String(next);
         const row=document.getElementById('wccRow_'+next);
-        if(row)row.style.display='grid';
+        if(row)row.style.display='flex';
         if(next>=3)addBtn.style.display='none';
+        updateWccRemoveButtons();
       };
       wrap.appendChild(addBtn);
       const tot=document.createElement('div');tot.className='comp-row';tot.style.marginTop='10px';

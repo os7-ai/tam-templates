@@ -66,22 +66,25 @@ function repVars(text, vars) {
       if (sdtStart === -1) { pos = tagIdx + 1; continue; }
       const sdtEnd = r.indexOf('</w:sdt>', tagIdx);
       if (sdtEnd === -1) { pos = tagIdx + 1; continue; }
-      const sdtFull = r.substring(sdtStart, sdtEnd + 8);
-      const scStart = sdtFull.indexOf('<w:sdtContent>');
-      if (scStart === -1) { pos = tagIdx + 1; continue; }
-      const scEnd = sdtFull.indexOf('</w:sdtContent>');
-      if (scEnd === -1) { pos = tagIdx + 1; continue; }
-      // نستبدل sdtContent بالكامل بتشغيلة واحدة، لأن وورد أحياناً يقسّم نص العنصر النائب على عدة <w:r>
-      // (بسبب التدقيق الإملائي) — والاستبدال الجزئي كان يترك بقايا النص الأصلي (مثل "No"/"Number") ظاهرة
-      const oldContent = sdtFull.substring(scStart, scEnd + 15);
-      const innerContent = sdtFull.substring(scStart + 14, scEnd);
-      const rprStart = innerContent.indexOf('<w:rPr>');
-      const rprEnd = innerContent.indexOf('</w:rPr>');
-      const rpr = rprStart !== -1 && rprEnd !== -1 ? innerContent.substring(rprStart, rprEnd + 8) : '';
-      const newContent = '<w:sdtContent><w:r>' + rpr + '<w:t xml:space="preserve">' + sv + '</w:t></w:r></w:sdtContent>';
-      const replaceAt = sdtStart + sdtFull.indexOf(oldContent);
-      r = r.substring(0, replaceAt) + newContent + r.substring(replaceAt + oldContent.length);
-      pos = replaceAt + newContent.length;
+      const scStart = r.indexOf('<w:sdtContent>', tagIdx);
+      if (scStart === -1 || scStart > sdtEnd) { pos = tagIdx + 1; continue; }
+      const scEnd = r.indexOf('</w:sdtContent>', scStart);
+      if (scEnd === -1 || scEnd > sdtEnd) { pos = tagIdx + 1; continue; }
+      const contentStart = scStart + '<w:sdtContent>'.length;
+      const region = r.slice(contentStart, scEnd);
+      const wtOpenMatch = /<w:t(\s[^>]*)?>/.exec(region);
+      if (!wtOpenMatch) { pos = tagIdx + 1; continue; }
+      const wtOpenEnd = contentStart + wtOpenMatch.index + wtOpenMatch[0].length;
+      // العنصر النائب داخل sdtContent قد ينقسم على أكثر من <w:r> بسبب التدقيق الإملائي في وورد — نحتفظ
+      // بكل شيء قبل نص <w:t> (التشغيلة وتنسيقها الأصليين كما هما) ونستبدل النص فقط، فما يبقى نص قديم زائد.
+      // بعض عناصر هذا القالب على مستوى الفقرة (sdtContent يبدأ بـ <w:p>) وبعضها مضمّن (يبدأ بـ <w:r> مباشرة)
+      // — لازم نغلق </w:p> أيضاً في الحالة الأولى وإلا ننكسر بنية الجدول/الخلية المحيطة
+      const pMatch = /<w:p[\s>]/.exec(region);
+      const rMatch = /<w:r[\s>]/.exec(region);
+      const isBlockLevel = !!(pMatch && (!rMatch || pMatch.index < rMatch.index));
+      const closing = isBlockLevel ? '</w:t></w:r></w:p>' : '</w:t></w:r>';
+      r = r.slice(0, wtOpenEnd) + sv + closing + r.slice(scEnd);
+      pos = wtOpenEnd + sv.length + closing.length;
     }
   }
   return r;
