@@ -680,7 +680,7 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
-    {tp:'client-picker',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
+    {tp:'client-picker',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address',contact_person:'contact_person',mobile_number:'mobile_number',email:'email'}},
     {tp:'doc-extract',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
@@ -714,7 +714,7 @@ const T={
     {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
     {id:'letter_number',lb:'رقم الخطاب',tp:'text',ph:'9348',lnk:true},
     {tp:'sep'},
-    {tp:'client-picker',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
+    {tp:'client-picker',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address',contact_person:'contact_person',mobile_number:'mobile_number',email:'email'}},
     {tp:'doc-extract',targets:{entity_name:'entity_name',commercial_reg:'commercial_reg',unified_number:'unified_number',tax_number:'tax_number',national_address:'national_address'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'commercial_reg',lb:'السجل التجاري',tp:'text',ph:'1234567890'},
@@ -766,7 +766,7 @@ const T={
     {id:'Project_Name',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
   ]},
   'invoice-request':{name:'نموذج طلب فوترة عميل',file:'invoice-request.xlsx',ext:'xlsx',sections:['معلومات الجهة','العنوان','تفاصيل خطاب الارتباط','الخدمات المطلوب الفوترة عنها'],fields:[
-    {tp:'client-picker',targets:{entity_name:'entity_name',unified_number:'unified_number',tax_number:'vat_registration_number',street:'street',building_number:'building_number',district:'district',additional_number:'additional_number',region:'region',city:'city',postal_code:'postal_code'}},
+    {tp:'client-picker',targets:{entity_name:'entity_name',unified_number:'unified_number',tax_number:'vat_registration_number'}},
     {tp:'doc-extract',targets:{entity_name:'entity_name',unified_number:'unified_number',tax_number:'vat_registration_number',street:'street',building_number:'building_number',district:'district',additional_number:'additional_number',region:'region',city:'city',postal_code:'postal_code'}},
     {id:'entity_name',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'unified_number',lb:'الرقم الموحد',tp:'text',ph:'7012345678'},
@@ -901,10 +901,21 @@ function buildInvoiceToggle(f,grid){
 }
 
 // ── عملاء محفوظون ─────────────────────────────────
+// يربط مفاتيحنا الداخلية (نفس مفاتيح doc-extract) بأسماء أعمدة جدول clients الفعلية بسوبابيس
+const CLIENT_DB_COL={
+  entity_name:'اسم_الجهة',
+  commercial_reg:'السجل_التجاري',
+  unified_number:'الرقم_الموحد',
+  tax_number:'الرقم_الضريبي',
+  national_address:'العنوان_الوطني',
+  contact_person:'مسؤول_التواصل',
+  mobile_number:'رقم_الجوال',
+  email:'البريد_الإلكتروني',
+};
 let CLIENTS_CACHE=null;
 async function fetchClients(force){
   if(CLIENTS_CACHE&&!force)return CLIENTS_CACHE;
-  const{data,error}=await sb.from('clients').select('*').order('entity_name',{ascending:true});
+  const{data,error}=await sb.from('clients').select('*').order('اسم_الجهة',{ascending:true});
   if(error){console.error('fetch clients error:',error.message);CLIENTS_CACHE=CLIENTS_CACHE||[];return CLIENTS_CACHE;}
   CLIENTS_CACHE=data||[];
   return CLIENTS_CACHE;
@@ -913,7 +924,7 @@ async function loadClientsInto(sel){
   const clients=await fetchClients();
   clients.forEach(c=>{
     const op=document.createElement('option');op.value=c.id;
-    op.textContent=c.entity_name+(c.commercial_reg?' — '+c.commercial_reg:'');
+    op.textContent=c['اسم_الجهة']+(c['السجل_التجاري']?' — '+c['السجل_التجاري']:'');
     sel.appendChild(op);
   });
 }
@@ -923,25 +934,39 @@ function applyClientToFields(sel,targets){
   const c=(CLIENTS_CACHE||[]).find(x=>x.id===id);
   if(!c)return;
   Object.entries(targets).forEach(([canonKey,fieldId])=>{
+    const col=CLIENT_DB_COL[canonKey];
+    if(!col)return;
     const el=document.getElementById('f_'+fieldId);
-    if(el&&c[canonKey])el.value=c[canonKey];
+    if(el&&c[col])el.value=c[col];
   });
 }
 async function saveClientFromFields(targets,hintEl,sel){
   const rec={};
   Object.entries(targets).forEach(([canonKey,fieldId])=>{
+    const col=CLIENT_DB_COL[canonKey];
+    if(!col)return;
     const el=document.getElementById('f_'+fieldId);
     const v=el?el.value||'':'';
-    rec[canonKey]=v?v:null; // فاضي يصير null بدل '' عشان قيد commercial_reg الفريد ما يتعارض بين عدة عملاء بدون سجل تجاري
+    rec[col]=v?v:null;
   });
-  if(!rec.entity_name){hintEl.textContent='⚠️ عبّي اسم الجهة أولاً';hintEl.style.color='#e53e3e';return;}
+  if(!rec['اسم_الجهة']){hintEl.textContent='⚠️ عبّي اسم الجهة أولاً';hintEl.style.color='#e53e3e';return;}
   hintEl.textContent='جارٍ الحفظ...';hintEl.style.color='var(--muted)';
   try{
     const{data:{session}}=await sb.auth.getSession();
-    rec.created_by=session?.user?.id||null;
+    rec['created_by']=session?.user?.id||null;
+    // ما فيه قيد تفرّد بقاعدة البيانات على السجل التجاري، فنتحقق يدوياً: نفس السجل التجاري ثم نفس الاسم يعتبران نفس العميل
+    let existing=null;
+    if(rec['السجل_التجاري']){
+      const r=await sb.from('clients').select('id').eq('السجل_التجاري',rec['السجل_التجاري']).limit(1);
+      if(!r.error&&r.data&&r.data[0])existing=r.data[0];
+    }
+    if(!existing){
+      const r=await sb.from('clients').select('id').eq('اسم_الجهة',rec['اسم_الجهة']).limit(1);
+      if(!r.error&&r.data&&r.data[0])existing=r.data[0];
+    }
     let res;
-    if(rec.commercial_reg){
-      res=await sb.from('clients').upsert(rec,{onConflict:'commercial_reg'}).select();
+    if(existing){
+      res=await sb.from('clients').update(rec).eq('id',existing.id).select();
     }else{
       res=await sb.from('clients').insert(rec).select();
     }
