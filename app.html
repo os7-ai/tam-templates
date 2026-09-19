@@ -265,6 +265,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
         <button class="tpl-chip active" data-cat="all" onclick="setCat('all')">الكل</button>
         <button class="tpl-chip" data-cat="proposal" onclick="setCat('proposal')">العروض</button>
         <button class="tpl-chip" data-cat="engagement" onclick="setCat('engagement')">خطاب الارتباط</button>
+        <button class="tpl-chip" data-cat="completion" onclick="setCat('completion')">شهادة إنجاز</button>
         <button class="tpl-chip" data-cat="other" onclick="setCat('other')">أخرى</button>
       </div>
     </div>
@@ -349,6 +350,17 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
           <span>إنشاء مستند</span>
           <span>←</span>
         </div>
+      </div>
+
+      <div class="hcard" data-cat="completion" onclick="selAndGo('work-completion-certificate')">
+        <div class="hcard-main">
+          <div class="hcard-icon ic-doc"><svg width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#2B579A"/><text x="12" y="17" font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">W</text></svg></div>
+          <div class="hcard-meta">
+            <h3>شهادة إنجاز الأعمال</h3>
+            <p>Work Completion Certificate (WCC)</p>
+          </div>
+        </div>
+        <div class="hcard-footer"><span>إنشاء مستند</span><span>←</span></div>
       </div>
 
     </div>
@@ -742,6 +754,23 @@ const T={
     {id:'service_location',lb:'موقع تقديم الخدمة',tp:'select',opts:['داخل المملكة','خارج المملكة']},
     {tp:'sep'},
     {lb:'الخدمات المطلوب الفوترة عنها',tp:'service-rows'},
+  ]},
+  'work-completion-certificate':{name:'شهادة إنجاز الأعمال',file:'work-completion-certificate.docx',ext:'docx',sections:['بيانات الشهادة','معلومات العميل والمشروع','الأعمال المنجزة','الاعتماد والتوقيع'],fields:[
+    {id:'gregorian_date',lb:'تاريخ الشهادة',tp:'date',auto:true},
+    {id:'hijri_date',lb:'التاريخ الهجري',tp:'hijri'},
+    {id:'Certificate_No',lb:'رقم الشهادة',tp:'text',ph:'1234',lnk:true},
+    {tp:'sep'},
+    {id:'CLIENT_NAME',lb:'اسم العميل',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'PO_Number',lb:'رقم أمر الشراء',tp:'text',ph:'92748304'},
+    {id:'Engagement_No',lb:'رقم خطاب الارتباط',tp:'text',ph:'9348',lnk:true},
+    {id:'Project_Number',lb:'رقم المشروع',tp:'text',ph:'PRJ-2025-001'},
+    {id:'Project_Name',lb:'اسم المشروع',tp:'text',ph:'مشروع بحث الحالات الاجتماعية',full:true},
+    {tp:'sep'},
+    {lb:'وصف الأعمال المنجزة',tp:'wcc-rows'},
+    {id:'Completion_Percentage',lb:'نسبة الإنجاز',tp:'percent',ph:'100'},
+    {tp:'sep'},
+    {id:'Client_Signer_Name',lb:'مدير المشروع من العميل',tp:'text',ph:'اسم الشخص'},
+    {id:'Our_Signer_Name',lb:'مدير المشروع من مجموعة ألفا',tp:'select',opts:['مصعب الزامل','مازن الدويش']},
   ]}
 };
 
@@ -840,7 +869,7 @@ function buildInvoiceToggle(f,grid){
 
 function buildField(f){
     const w=document.createElement('div');
-    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'||f.tp==='doc-extract'?' full':'');
+    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'||f.tp==='wcc-rows'||f.tp==='doc-extract'?' full':'');
     if(f.lb){const l=document.createElement('label');l.textContent=f.lb;w.appendChild(l);}
     if(f.wn){const h=document.createElement('div');h.className='warn';h.textContent=f.wn;w.appendChild(h);}
     if(f.tp==='text'){
@@ -896,6 +925,11 @@ function buildField(f){
       const i=document.createElement('input');i.type='number';i.id='f_'+f.id;i.min='1';i.step='1';
       i.value=f.def!==undefined?f.def:'';
       w.appendChild(i);
+    }else if(f.tp==='percent'){
+      const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder=f.ph||'100';
+      i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9]/g,'');});
+      w.appendChild(i);
+      const h=document.createElement('div');h.className='hint';h.textContent='أدخل الرقم فقط — تتم إضافة % تلقائياً';w.appendChild(h);
     }else if(f.tp==='fee'){
       const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder='19,000';
       i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9.]/g,'');});
@@ -993,6 +1027,97 @@ function buildField(f){
         if(next>=4)addBtn.style.display='none';
       };
       wrap.appendChild(addBtn);w.appendChild(wrap);
+    }else if(f.tp==='wcc-rows'){
+      const wrap=document.createElement('div');
+      const hdrRow=document.createElement('div');
+      hdrRow.style.cssText='display:grid;grid-template-columns:2.5fr 1fr 1.5fr;gap:8px;margin-bottom:4px';
+      ['وصف العمل المنجز','الكمية','المبلغ الخاضع للضريبة'].forEach(h=>{
+        const hd=document.createElement('div');
+        hd.style.cssText='font-size:11.5px;font-weight:700;color:var(--muted)';
+        hd.textContent=h;hdrRow.appendChild(hd);
+      });
+      wrap.appendChild(hdrRow);
+      const rc=document.createElement('div');rc.id='wccRows';rc.dataset.rowCount='1';
+      rc.style.cssText='display:flex;flex-direction:column;gap:8px';
+      const recalcWcc=()=>{
+        let sum=0;
+        for(let i=1;i<=3;i++)sum+=parseFloat((document.getElementById('f_wcc_amount_'+i)?.value||'').replace(/,/g,''))||0;
+        const tx=Math.round(sum*.15*100)/100,total=Math.round((sum+tx)*100)/100;
+        const cw=document.getElementById('wccFeesExcl'),ct=document.getElementById('wccVat'),ci=document.getElementById('wccTotal');
+        if(cw)cw.textContent=sum>0?fmt(sum)+' ريال':'—';
+        if(ct)ct.textContent=sum>0?fmt(tx)+' ريال':'—';
+        if(ci)ci.textContent=sum>0?fmt(total)+' ريال':'—';
+      };
+      let addBtn;
+      // يظهر زر الإزالة على آخر صف مُضاف بس (نحافظ على ترقيم متسلسل بدون فجوات، وصف 1 ثابت دائماً)
+      const updateWccRemoveButtons=()=>{
+        const cur=parseInt(rc.dataset.rowCount);
+        for(let i=2;i<=3;i++){
+          const btn=document.getElementById('wccRemoveBtn_'+i);
+          if(btn)btn.style.display=(i===cur)?'':'none';
+        }
+      };
+      const removeWccRow=(i)=>{
+        document.getElementById('f_wcc_desc_'+i).value='';
+        const qtySel=document.getElementById('f_wcc_qty_'+i);qtySel.selectedIndex=0;
+        const qtyCustom=document.getElementById('f_wcc_qty_custom_'+i);qtyCustom.value='';qtyCustom.style.display='none';
+        document.getElementById('f_wcc_amount_'+i).value='';
+        document.getElementById('wccRow_'+i).style.display='none';
+        rc.dataset.rowCount=String(i-1);
+        addBtn.style.display='';
+        updateWccRemoveButtons();
+        recalcWcc();
+      };
+      for(let i=1;i<=3;i++){
+        const rowOuter=document.createElement('div');rowOuter.id='wccRow_'+i;
+        rowOuter.style.cssText='display:'+(i===1?'flex':'none')+';gap:8px;align-items:flex-start';
+        const row=document.createElement('div');
+        row.style.cssText='display:grid;grid-template-columns:2.5fr 1fr 1.5fr;gap:8px;flex:1';
+        const desc=document.createElement('input');desc.type='text';desc.id='f_wcc_desc_'+i;desc.placeholder='وصف العمل المنجز';
+        row.appendChild(desc);
+        const qtyWrap=document.createElement('div');
+        const qty=document.createElement('select');qty.id='f_wcc_qty_'+i;
+        ['1','2','3','غير ذلك'].forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;qty.appendChild(o);});
+        qtyWrap.appendChild(qty);
+        const qtyCustom=document.createElement('input');qtyCustom.type='number';qtyCustom.min='1';qtyCustom.step='1';qtyCustom.id='f_wcc_qty_custom_'+i;qtyCustom.placeholder='أدخل الكمية';
+        qtyCustom.style.cssText='display:none;margin-top:6px';
+        qtyWrap.appendChild(qtyCustom);
+        qty.addEventListener('change',()=>{qtyCustom.style.display=qty.value==='غير ذلك'?'':'none';});
+        row.appendChild(qtyWrap);
+        const amt=document.createElement('input');amt.type='text';amt.inputMode='numeric';amt.id='f_wcc_amount_'+i;amt.placeholder='0';
+        amt.addEventListener('input',()=>{amt.value=amt.value.replace(/[^0-9.]/g,'');recalcWcc();});
+        amt.addEventListener('blur',()=>{const v=parseFloat(amt.value)||0;if(v>0)amt.value=v.toLocaleString('en-US',{maximumFractionDigits:2});});
+        amt.addEventListener('focus',()=>{amt.value=amt.value.replace(/,/g,'');});
+        row.appendChild(amt);
+        rowOuter.appendChild(row);
+        if(i>=2){
+          const rmBtn=document.createElement('button');rmBtn.type='button';rmBtn.id='wccRemoveBtn_'+i;
+          rmBtn.textContent='×';rmBtn.title='إزالة هذا العمل';
+          rmBtn.style.cssText='flex-shrink:0;width:34px;height:34px;border:1.5px solid var(--border);background:#fff;color:#e53e3e;border-radius:8px;cursor:pointer;font-size:16px;font-weight:700;line-height:1;display:none';
+          rmBtn.onclick=()=>removeWccRow(i);
+          rowOuter.appendChild(rmBtn);
+        }
+        rc.appendChild(rowOuter);
+      }
+      wrap.appendChild(rc);
+      addBtn=document.createElement('button');addBtn.type='button';
+      addBtn.textContent='+ إضافة عمل';
+      addBtn.style.cssText='margin-top:10px;background:transparent;border:1.5px dashed var(--border);color:var(--navy);padding:7px 18px;border-radius:9px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer';
+      addBtn.onclick=()=>{
+        const cur=parseInt(rc.dataset.rowCount);
+        if(cur>=3)return;
+        const next=cur+1;
+        rc.dataset.rowCount=String(next);
+        const row=document.getElementById('wccRow_'+next);
+        if(row)row.style.display='flex';
+        if(next>=3)addBtn.style.display='none';
+        updateWccRemoveButtons();
+      };
+      wrap.appendChild(addBtn);
+      const tot=document.createElement('div');tot.className='comp-row';tot.style.marginTop='10px';
+      tot.innerHTML='<div>الأتعاب (بدون ضريبة): <span id="wccFeesExcl">—</span></div><div>ضريبة القيمة المضافة 15%: <span id="wccVat">—</span></div><div>الإجمالي المستحق: <span id="wccTotal">—</span></div>';
+      wrap.appendChild(tot);
+      w.appendChild(wrap);
     }else if(f.tp==='doc-extract'){
       const box=document.createElement('div');box.className='lu';
       const dzLabel=f.label||'رفع السجل التجاري والعنوان الوطني وشهادة الضريبة (حتى 3 ملفات دفعة واحدة) لتعبئة البيانات تلقائياً (اختياري)';
@@ -1096,6 +1221,33 @@ function collectServiceRowsVars(){
   return vars;
 }
 
+// يجمع صفوف جدول الأعمال المنجزة لشهادة إنجاز الأعمال، ويحسب الأتعاب والضريبة والإجمالي تلقائياً من مجموع المبالغ المُدخلة
+function collectWccRowsVars(){
+  const vars={};
+  const rowCount=parseInt(document.getElementById('wccRows')?.dataset.rowCount||'1');
+  let sum=0;
+  for(let i=1;i<=3;i++){
+    if(i<=rowCount){
+      const amt=parseFloat((document.getElementById('f_wcc_amount_'+i)?.value||'').replace(/,/g,''))||0;
+      sum+=amt;
+      vars['Description_'+i]=document.getElementById('f_wcc_desc_'+i)?.value||'';
+      const qtySel=document.getElementById('f_wcc_qty_'+i)?.value||'';
+      vars['Quantity_'+i]=qtySel==='غير ذلك'?(document.getElementById('f_wcc_qty_custom_'+i)?.value||''):qtySel;
+      vars['Taxable_Amount_'+i]=fmt(amt);
+    }else{
+      vars['Description_'+i]='';
+      vars['Quantity_'+i]='';
+      vars['Taxable_Amount_'+i]='';
+    }
+  }
+  const tx=Math.round(sum*0.15*100)/100;
+  const total=Math.round((sum+tx)*100)/100;
+  vars['Fees_Excl_VAT']=fmt(sum);
+  vars['VAT_15%']=fmt(tx);
+  vars['Total_Due']=fmt(total);
+  return vars;
+}
+
 // إن فعّل المستخدم خانة "إنشاء نموذج طلب فوترة أيضاً" بخطاب الارتباط — يبني بيانات نموذج الفوترة
 // بدمج ما يُشتق تلقائياً من حقول خطاب الارتباط (اسم الجهة، الأرقام، الأتعاب) مع الحقول الإضافية المُدخلة يدوياً (العنوان المُجزأ + الخدمات)
 function collectInvoiceVarsFromEngagement(){
@@ -1125,6 +1277,10 @@ function collectVars(tid){
       Object.assign(vars,collectServiceRowsVars());
       return;
     }
+    if(f.tp==='wcc-rows'){
+      Object.assign(vars,collectWccRowsVars());
+      return;
+    }
     if(!f.id&&f.tp!=='engfee')return;
     if(f.tp==='inv-amount'){
       vars[f.id]=parseFloat((document.getElementById('f_'+f.id)?.value||'').replace(/,/g,''))||0;
@@ -1145,6 +1301,10 @@ function collectVars(tid){
     if(f.tp==='fee'){
       const v=parseFloat((document.getElementById('f_'+f.id)?.value||'').replace(/,/g,''))||0;
       vars['total_fees']=fmt(v);vars['الأتعاب_المهنية']=fmt(v);return;
+    }
+    if(f.tp==='percent'){
+      const v=document.getElementById('f_'+f.id)?.value||'';
+      vars[f.id]=v?v+'%':'';return;
     }
     if(f.tp==='engfee'){
       const base=parseFloat((document.getElementById('f_total_fees')?.value||'').replace(/,/g,''))||0;
@@ -1168,9 +1328,9 @@ function collectVars(tid){
 }
 
 function buildName(tid,vars){
-  const m={'entity-proposal':'العرض الفني والمالي_على مستوى المنشأة','contract-proposal':'العرض الفني والمالي_على مستوى العقد','entity-engagement':'خطاب الارتباط_على مستوى المنشأة','contract-engagement':'خطاب الارتباط_على مستوى العقد','entity-confirmation-letter':'خطاب الإفادة_على مستوى المنشأة','contract-confirmation-letter':'خطاب الإفادة_على مستوى العقد','invoice-request':'نموذج طلب فوترة'};
+  const m={'entity-proposal':'العرض الفني والمالي_على مستوى المنشأة','contract-proposal':'العرض الفني والمالي_على مستوى العقد','entity-engagement':'خطاب الارتباط_على مستوى المنشأة','contract-engagement':'خطاب الارتباط_على مستوى العقد','entity-confirmation-letter':'خطاب الإفادة_على مستوى المنشأة','contract-confirmation-letter':'خطاب الإفادة_على مستوى العقد','invoice-request':'نموذج طلب فوترة','work-completion-certificate':'شهادة إنجاز الأعمال'};
   const ext=T[tid].ext;
-  const parts=[m[tid],vars['entity_name']||vars['اسم_الجهة']||'',vars['رقم_العرض']||vars['letter_number']||vars['engagement_letter_number']||''].filter(Boolean);
+  const parts=[m[tid],vars['entity_name']||vars['اسم_الجهة']||vars['CLIENT_NAME']||'',vars['رقم_العرض']||vars['letter_number']||vars['engagement_letter_number']||vars['Certificate_No']||''].filter(Boolean);
   return parts.join('_')+'.'+ext;
 }
 
@@ -1187,6 +1347,18 @@ function validate(tid){
         const amt=parseFloat(document.getElementById('f_invoice_amount_before_vat_'+i)?.value||'')||0;
         if(!sub)return'يرجى اختيار التصنيف الفرعي للخدمة '+(i===1?'الأولى':i);
         if(amt<=0)return'يرجى إدخال مبلغ الفاتورة للخدمة '+(i===1?'الأولى':i);
+      }
+      continue;
+    }
+    if(f.tp==='wcc-rows'){
+      const rowCount=parseInt(document.getElementById('wccRows')?.dataset.rowCount||'1');
+      for(let i=1;i<=rowCount;i++){
+        const desc=document.getElementById('f_wcc_desc_'+i)?.value;
+        const amt=parseFloat((document.getElementById('f_wcc_amount_'+i)?.value||'').replace(/,/g,''))||0;
+        const qtySel=document.getElementById('f_wcc_qty_'+i)?.value;
+        if(!desc)return'يرجى إدخال وصف العمل '+(i===1?'الأول':i);
+        if(qtySel==='غير ذلك'&&!(document.getElementById('f_wcc_qty_custom_'+i)?.value))return'يرجى إدخال الكمية للعمل '+(i===1?'الأول':i);
+        if(amt<=0)return'يرجى إدخال مبلغ العمل '+(i===1?'الأول':i);
       }
       continue;
     }

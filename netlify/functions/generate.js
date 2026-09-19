@@ -9,6 +9,7 @@ const ALLOWED_TEMPLATES = new Set([
   'contract-engagement.docx',
   'confirmation-letter.docx',
   'confirmation-letter-contract.docx',
+  'work-completion-certificate.docx',
 ]);
 
 function escXml(v) {
@@ -20,6 +21,38 @@ function escXml(v) {
     .replace(/'/g, '&apos;');
 }
 
+// يحذف صف الجدول بالكامل (وليس فقط تفريغ خلاياه) عندما لا يُستخدم — لشهادة إنجاز الأعمال، الصفوف 2 و3 اختيارية
+// ملاحظة: البحث عن بداية الصف لازم يتأكد إنه <w:tr فعلاً (وليس <w:trPr> أو أي عنصر آخر يبدأ بنفس الحروف)
+function lastRowOpenIndex(xml, beforeIdx) {
+  const re = /<w:tr(?=[\s>])/g;
+  let m, last = -1;
+  while ((m = re.exec(xml)) !== null && m.index < beforeIdx) {
+    last = m.index;
+  }
+  return last;
+}
+function removeTableRow(xml, tag) {
+  const tagStr = '<w:tag w:val="' + tag + '"/>';
+  const tagIdx = xml.indexOf(tagStr);
+  if (tagIdx === -1) return xml;
+  const trStart = lastRowOpenIndex(xml, tagIdx);
+  if (trStart === -1) return xml;
+  const trEndTagIdx = xml.indexOf('</w:tr>', tagIdx);
+  if (trEndTagIdx === -1) return xml;
+  const trEnd = trEndTagIdx + '</w:tr>'.length;
+  return xml.substring(0, trStart) + xml.substring(trEnd);
+}
+
+function removeEmptyWccRows(xml, vars) {
+  let r = xml;
+  for (let i = 2; i <= 3; i++) {
+    if (!vars['Description_' + i] && !vars['Quantity_' + i] && !vars['Taxable_Amount_' + i]) {
+      r = removeTableRow(r, 'Description_' + i);
+    }
+  }
+  return r;
+}
+
 function repVars(text, vars) {
   let r = text;
   for (const [k, v] of Object.entries(vars)) {
@@ -29,26 +62,29 @@ function repVars(text, vars) {
     while (true) {
       const tagIdx = r.indexOf(tagStr, pos);
       if (tagIdx === -1) break;
-      const sdtStart = r.lastIndexOf('<w:sdt', tagIdx);
+      const sdtStart = r.lastIndexOf('<w:sdt>', tagIdx);
       if (sdtStart === -1) { pos = tagIdx + 1; continue; }
       const sdtEnd = r.indexOf('</w:sdt>', tagIdx);
       if (sdtEnd === -1) { pos = tagIdx + 1; continue; }
-      const sdtFull = r.substring(sdtStart, sdtEnd + 8);
-      const scStart = sdtFull.indexOf('<w:sdtContent>');
-      if (scStart === -1) { pos = tagIdx + 1; continue; }
-      const scEnd = sdtFull.indexOf('</w:sdtContent>');
-      if (scEnd === -1) { pos = tagIdx + 1; continue; }
-      const sdtContent = sdtFull.substring(scStart, scEnd + 15);
-      const wtStart = sdtContent.indexOf('<w:t');
-      if (wtStart === -1) { pos = tagIdx + 1; continue; }
-      const wtClose = sdtContent.indexOf('>', wtStart);
-      if (wtClose === -1) { pos = tagIdx + 1; continue; }
-      const wtEnd = sdtContent.indexOf('</w:t>', wtClose);
-      if (wtEnd === -1) { pos = tagIdx + 1; continue; }
-      const absWtStart = sdtStart + scStart + wtClose + 1;
-      const absWtEnd = sdtStart + scStart + wtEnd;
-      r = r.substring(0, absWtStart) + sv + r.substring(absWtEnd);
-      pos = absWtStart + sv.length;
+      const scStart = r.indexOf('<w:sdtContent>', tagIdx);
+      if (scStart === -1 || scStart > sdtEnd) { pos = tagIdx + 1; continue; }
+      const scEnd = r.indexOf('</w:sdtContent>', scStart);
+      if (scEnd === -1 || scEnd > sdtEnd) { pos = tagIdx + 1; continue; }
+      const contentStart = scStart + '<w:sdtContent>'.length;
+      const region = r.slice(contentStart, scEnd);
+      const wtOpenMatch = /<w:t(\s[^>]*)?>/.exec(region);
+      if (!wtOpenMatch) { pos = tagIdx + 1; continue; }
+      const wtOpenEnd = contentStart + wtOpenMatch.index + wtOpenMatch[0].length;
+      // العنصر النائب داخل sdtContent قد ينقسم على أكثر من <w:r> بسبب التدقيق الإملائي في وورد — نحتفظ
+      // بكل شيء قبل نص <w:t> (التشغيلة وتنسيقها الأصليين كما هما) ونستبدل النص فقط، فما يبقى نص قديم زائد.
+      // بعض عناصر هذا القالب على مستوى الفقرة (sdtContent يبدأ بـ <w:p>) وبعضها مضمّن (يبدأ بـ <w:r> مباشرة)
+      // — لازم نغلق </w:p> أيضاً في الحالة الأولى وإلا ننكسر بنية الجدول/الخلية المحيطة
+      const pMatch = /<w:p[\s>]/.exec(region);
+      const rMatch = /<w:r[\s>]/.exec(region);
+      const isBlockLevel = !!(pMatch && (!rMatch || pMatch.index < rMatch.index));
+      const closing = isBlockLevel ? '</w:t></w:r></w:p>' : '</w:t></w:r>';
+      r = r.slice(0, wtOpenEnd) + sv + closing + r.slice(scEnd);
+      pos = wtOpenEnd + sv.length + closing.length;
     }
   }
   return r;
@@ -96,7 +132,10 @@ exports.handler = async (event) => {
     for (const xmlFile of xmlFiles) {
       const entry = zip.getEntry(xmlFile);
       if (!entry) continue;
-      const content = zip.readAsText(entry, 'utf8');
+      let content = zip.readAsText(entry, 'utf8');
+      if (templateFile === 'work-completion-certificate.docx') {
+        content = removeEmptyWccRows(content, vars);
+      }
       zip.updateFile(xmlFile, Buffer.from(repVars(content, vars), 'utf8'));
     }
 
