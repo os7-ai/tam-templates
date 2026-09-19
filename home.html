@@ -68,8 +68,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .banner{border-radius:18px;padding:26px;margin-bottom:22px;background:linear-gradient(135deg,var(--navy),var(--navy2) 55%,var(--accent) 145%);position:relative;overflow:hidden;color:#fff}
 .banner::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 88% 15%,rgba(255,255,255,.18),transparent 55%)}
 .banner-mountains{position:absolute;bottom:0;left:0;width:100%;height:70%}
-.banner p{position:relative;z-index:1;font-size:15px;font-weight:800;max-width:70%;line-height:1.6}
-@media(max-width:700px){.banner p{max-width:100%}}
+.banner-content{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.banner p{font-size:15px;font-weight:800;max-width:70%;line-height:1.6;margin:0}
+.banner-date{flex-shrink:0;background:rgba(255,255,255,.14);border-radius:12px;padding:10px 16px;text-align:center;font-size:12.5px;font-weight:700;line-height:1.9;white-space:nowrap}
+@media(max-width:700px){.banner p{max-width:100%}.banner-content{flex-direction:column;align-items:flex-start}}
 
 .auth-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .25s ease}
 .auth-loading.hide{opacity:0;pointer-events:none}
@@ -137,7 +139,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
         <polygon points="0,150 45,75 90,115 140,50 190,105 230,65 280,110 330,60 400,100 400,150" fill="rgba(255,255,255,.08)"/>
         <polygon points="0,150 70,100 130,130 190,80 250,120 310,90 400,130 400,150" fill="rgba(255,255,255,.14)"/>
       </svg>
-      <p>"ليس المهم أن تسرع، المهم أن تستمر."</p>
+      <div class="banner-content">
+        <div class="banner-date" id="bannerDate" dir="ltr"></div>
+        <p>"ليس المهم أن تسرع، المهم أن تستمر."</p>
+      </div>
     </div>
   </div>
 </div>
@@ -181,6 +186,44 @@ function greetingByTime(){
   const h=new Date().getHours();
   return h<12?'أسعد الله صباحك بكل خير':'أسعد الله مسائك بكل خير';
 }
+
+// تحويل ميلادي→هجري (خوارزمية أم القرى التقريبية) — نفس المنطق المستخدم بصفحة إعداد المستند
+function toHijri(gy,gm,gd){
+  const a=Math.floor((14-gm)/12),y=gy+4800-a,m=gm+12*a-3;
+  const jdn=gd+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)-32045;
+  let days=jdn-1948439;
+  const leapYears=[2,5,7,10,13,15,18,21,24,26,29];
+  const cycle=Math.floor(days/10631);
+  let rem=days%10631;
+  let yic=0,yd=0;
+  for(let yi=1;yi<=30;yi++){
+    const yl=leapYears.includes(yi)?355:354;
+    if(rem<yl){yic=yi;yd=rem;break;}
+    rem-=yl;
+  }
+  if(!yic){yic=30;yd=rem;}
+  const hy=30*cycle+yic;
+  const isLeap=leapYears.includes(yic);
+  const mdays=[30,29,30,29,30,29,30,29,30,29,30,isLeap?30:29];
+  let hm=1,hd=1,rem2=yd;
+  for(let i=0;i<mdays.length;i++){
+    if(rem2<mdays[i]){hm=i+1;hd=rem2+1;break;}
+    rem2-=mdays[i];
+  }
+  return{y:hy,m:hm,d:hd};
+}
+function pad2(n){return String(n).padStart(2,'0');}
+function showBannerDate(){
+  const el=document.getElementById('bannerDate');
+  if(!el)return;
+  const now=new Date();
+  const gy=now.getFullYear(),gm=now.getMonth()+1,gd=now.getDate();
+  const greg=pad2(gd)+'/'+pad2(gm)+'/'+gy+' م';
+  const h=toHijri(gy,gm,gd);
+  const hijri=pad2(h.d)+'/'+pad2(h.m)+'/'+h.y+' هـ';
+  el.innerHTML=greg+'<br>'+hijri;
+}
+showBannerDate();
 </script>
 </body>
 </html>
