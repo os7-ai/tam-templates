@@ -652,7 +652,8 @@ function tafqeet(n){
 
 // Templates
 const T={
-  'entity-proposal':{name:'العرض الفني والمالي - على مستوى المنشأة',file:'entity-proposal.pptx',ext:'pptx',fields:[
+  'entity-proposal':{name:'العرض الفني والمالي - على مستوى المنشأة',file:'entity-proposal.pptx',fileV2:'entity-proposal-v2.pptx',ext:'pptx',fields:[
+    {id:'نسخة_العرض',lb:'هوية العرض',tp:'tplver'},
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
@@ -662,7 +663,8 @@ const T={
     {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
-  'contract-proposal':{name:'العرض الفني والمالي - على مستوى العقد',file:'contract-proposal.pptx',ext:'pptx',fields:[
+  'contract-proposal':{name:'العرض الفني والمالي - على مستوى العقد',file:'contract-proposal.pptx',fileV2:'contract-proposal-v2.pptx',ext:'pptx',fields:[
+    {id:'نسخة_العرض',lb:'هوية العرض',tp:'tplver'},
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
     {id:'رقم_العقد',lb:'رقم العقد',tp:'text',ph:'92748304'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
@@ -955,12 +957,24 @@ function buildField(f){
       i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9]/g,'');});
       w.appendChild(i);
       const h=document.createElement('div');h.className='hint';h.textContent='أدخل الرقم فقط — تتم إضافة % تلقائياً';w.appendChild(h);
+    }else if(f.tp==='tplver'){
+      // الهوية الجديدة (v2) أو القديمة — مؤقتاً حتى اعتماد الهوية الجديدة نهائياً
+      const s=document.createElement('select');s.id='f_'+f.id;
+      [['new','الهوية الجديدة'],['old','الهوية القديمة']].forEach(([v,t])=>{const op=document.createElement('option');op.value=v;op.textContent=t;s.appendChild(op);});
+      w.appendChild(s);
     }else if(f.tp==='fee'){
       const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder='19,000';
-      i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9.]/g,'');});
+      const c=document.createElement('div');c.className='comp-row';
+      c.innerHTML='<div>الأتعاب: <span id="cw">—</span></div><div>الضريبة 15%: <span id="ct">—</span></div><div>الإجمالي: <span id="ci">—</span></div>';
+      i.addEventListener('input',()=>{
+        i.value=i.value.replace(/[^0-9.]/g,'');
+        const v=parseFloat(i.value)||0;
+        if(v>0){const tx=Math.round(v*.15*100)/100;document.getElementById('cw').textContent=fmt(v)+' ريال';document.getElementById('ct').textContent=fmt(tx)+' ريال';document.getElementById('ci').textContent=fmt(v+tx)+' ريال';}
+        else['cw','ct','ci'].forEach(id=>document.getElementById(id).textContent='—');
+      });
       i.addEventListener('blur',()=>{const v=parseFloat(i.value)||0;if(v>0)i.value=v.toLocaleString('en-US',{maximumFractionDigits:2});});
       i.addEventListener('focus',()=>{i.value=i.value.replace(/,/g,'');});
-      w.appendChild(i);
+      w.appendChild(i);w.appendChild(c);
     }else if(f.tp==='inv-amount'){
       const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder='100,000';
       i.addEventListener('input',()=>{i.value=i.value.replace(/[^0-9.]/g,'');});
@@ -1296,7 +1310,7 @@ function collectInvoiceVarsFromEngagement(){
 function collectVars(tid){
   const tmpl=T[tid],vars={};
   tmpl.fields.forEach(f=>{
-    if(f.tp==='sep'||f.tp==='logo'||f.tp==='invoice-toggle')return;
+    if(f.tp==='sep'||f.tp==='logo'||f.tp==='invoice-toggle'||f.tp==='tplver')return;
     if(f.invoiceOnly)return; // تُجمَّع عبر collectInvoiceVarsFromEngagement بدلاً من مستند خطاب الارتباط نفسه
     if(f.tp==='service-rows'){
       Object.assign(vars,collectServiceRowsVars());
@@ -1325,7 +1339,11 @@ function collectVars(tid){
     }
     if(f.tp==='fee'){
       const v=parseFloat((document.getElementById('f_'+f.id)?.value||'').replace(/,/g,''))||0;
-      vars['total_fees']=fmt(v);vars['الأتعاب_المهنية']=fmt(v);return;
+      const tx=Math.round(v*0.15*100)/100;
+      const total=Math.round((v+tx)*100)/100;
+      vars['total_fees']=fmt(v);vars['الأتعاب_المهنية']=fmt(v);
+      vars['vat_amount']=fmt(tx);vars['مبلغ_الضريبة']=fmt(tx);
+      vars['total_with_vat']=fmt(total);vars['المبلغ_الإجمالي']=fmt(total);return;
     }
     if(f.tp==='percent'){
       const v=document.getElementById('f_'+f.id)?.value||'';
@@ -1393,7 +1411,7 @@ function validate(tid){
       if(!v||v<=0)return'يرجى إدخال: '+f.lb;
       continue;
     }
-    if(!f.id||['logo','sep','hijri','engfee','fee'].includes(f.tp))continue;
+    if(!f.id||['logo','sep','hijri','engfee','fee','tplver'].includes(f.tp))continue;
     if(f.tp==='period'){
       const pf=document.getElementById('f_period_from')?.value;
       const pt=document.getElementById('f_period_to')?.value;
@@ -1436,11 +1454,13 @@ async function genDoc(){
       genBlob=await procExcel(vars,tmpl.file);
       document.getElementById('btnDl').onclick=()=>dlBlob(genBlob,genName);
     }else{
-      const{data,error}=await sb.storage.from('templates').download(tmpl.file);
+      const useV2=!!tmpl.fileV2&&document.getElementById('f_نسخة_العرض')?.value!=='old';
+      const file=useV2?tmpl.fileV2:tmpl.file;
+      const{data,error}=await sb.storage.from('templates').download(file);
       if(error)throw new Error('فشل تحميل النموذج: '+error.message);
       const ab=await data.arrayBuffer();
       if(tmpl.ext==='docx')await procDocx(ab,vars,tmpl.file);
-      else await procPptx(ab,vars);
+      else await procPptx(ab,vars,useV2);
     }
     setStep(3);
     document.getElementById('sucMsg').textContent=genName;
@@ -1556,11 +1576,12 @@ function repVarsPptx(text,vars){
   return r;
 }
 
-async function procPptx(ab,vars){
+async function procPptx(ab,vars,v2){
   const zip=await JSZip.loadAsync(ab);
   const slides=Object.keys(zip.files).filter(f=>/^ppt\/slides\/slide[0-9]+\.xml$/.test(f));
   for(const p of slides){let c=await zip.file(p).async('string');c=repVarsPptx(c,vars);zip.file(p,c);}
-  if(logoData)await insertLogoPptx(zip,slides);
+  if(logoData)await insertLogoPptx(zip,slides,v2);
+  else if(v2)await removeLogoPlaceholderPptx(zip,slides);
   const blob=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
   genBlob=blob;document.getElementById('btnDl').onclick=()=>dlBlob(blob,genName);
 }
@@ -1587,7 +1608,73 @@ async function findWhiteTriangle(zip){
   return null;
 }
 
-async function insertLogoPptx(zip,slides){
+// حدود الشكل (موقعه وحجمه) من xfrm
+function spBox(sp){
+  const m=sp.match(/<a:off x="(-?\d+)" y="(-?\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/);
+  return m?{x:+m[1],y:+m[2],cx:+m[3],cy:+m[4]}:null;
+}
+
+// مواقع كل الأشكال <p:sp> على الشريحة بالإحداثيات الفعلية — تطبيق تحويلات المجموعات المتداخلة (off/ext/chOff/chExt)
+function absShapeBoxes(xml){
+  const out=[],stack=[];
+  const toAbs=(b)=>{
+    let r={...b};
+    for(let i=stack.length-1;i>=0;i--){
+      const g=stack[i];
+      const sx=g.chCx?g.cx/g.chCx:1,sy=g.chCy?g.cy/g.chCy:1;
+      r={x:g.x+(r.x-g.chX)*sx,y:g.y+(r.y-g.chY)*sy,cx:r.cx*sx,cy:r.cy*sy};
+    }
+    return r;
+  };
+  const re=/<p:grpSp>|<\/p:grpSp>|<p:sp>/g;let m;
+  while((m=re.exec(xml))!==null){
+    if(m[0]==='</p:grpSp>'){stack.pop();continue;}
+    if(m[0]==='<p:grpSp>'){
+      const e=xml.indexOf('</p:grpSpPr>',m.index);
+      const gx=xml.slice(m.index,e).match(/<a:off x="(-?\d+)" y="(-?\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>\s*<a:chOff x="(-?\d+)" y="(-?\d+)"\/>\s*<a:chExt cx="(\d+)" cy="(\d+)"\/>/);
+      stack.push(gx?{x:+gx[1],y:+gx[2],cx:+gx[3],cy:+gx[4],chX:+gx[5],chY:+gx[6],chCx:+gx[7],chCy:+gx[8]}:{x:0,y:0,cx:1,cy:1,chX:0,chY:0,chCx:1,chCy:1});
+      continue;
+    }
+    const e=xml.indexOf('</p:sp>',m.index)+7;
+    const b=spBox(xml.slice(m.index,e));
+    if(b)out.push({start:m.index,box:toAbs(b)});
+    re.lastIndex=e;
+  }
+  return out;
+}
+
+// الهوية الجديدة: الشعار يوضع داخل الإطار المحيط بنص }}شعار_الجهة{{ (الشكل الأكثر تداخلاً معه)
+function findLogoFrame(xml,phStart,slideW,slideH){
+  const shapes=absShapeBoxes(xml);
+  const phEntry=shapes.find(s=>s.start===phStart);
+  if(!phEntry)return null;
+  const ph=phEntry.box;
+  let best=null,bestArea=0;
+  for(const s of shapes){
+    if(s.start===phStart)continue;
+    const b=s.box;
+    if(b.cx*b.cy>slideW*slideH*0.25)continue;
+    const ox=Math.min(ph.x+ph.cx,b.x+b.cx)-Math.max(ph.x,b.x);
+    const oy=Math.min(ph.y+ph.cy,b.y+b.cy)-Math.max(ph.y,b.y);
+    if(ox<=0||oy<=0)continue;
+    if(ox*oy>bestArea){bestArea=ox*oy;best=b;}
+  }
+  return best||ph;
+}
+
+async function removeLogoPlaceholderPptx(zip,slides){
+  for(const p of slides){
+    let xml=await zip.files[p].async('string');
+    const logoIdx=xml.indexOf('<a:t>شعار_الجهة</a:t>');
+    if(logoIdx===-1)continue;
+    const spStart=xml.lastIndexOf('<p:sp>',logoIdx);
+    const spEnd=xml.indexOf('</p:sp>',logoIdx)+7;
+    if(spStart===-1||spEnd<7)continue;
+    zip.file(p,xml.slice(0,spStart)+xml.slice(spEnd));
+  }
+}
+
+async function insertLogoPptx(zip,slides,v2){
   const mime=logoData.split(';')[0].split(':')[1]||'image/png';
   const ext=(mime.split('/')[1]||'png').replace('jpeg','jpg');
   const fileName='logo_company.'+ext;
@@ -1622,9 +1709,9 @@ async function insertLogoPptx(zip,slides){
   else{finalCy=SLOT_CY;finalCx=Math.round(SLOT_CY*ratio);}
   // Anchor bottom-right of logo to bottom-right of triangle (0.3" margin)
   const MARGIN=274320;
-  const cx=String(finalCx),cy=String(finalCy);
-  const x=String(Math.max(0,anchorX-MARGIN-finalCx));
-  const y=String(Math.max(0,anchorY-MARGIN-finalCy));
+  const cx0=String(finalCx),cy0=String(finalCy);
+  const x0=String(Math.max(0,anchorX-MARGIN-finalCx));
+  const y0=String(Math.max(0,anchorY-MARGIN-finalCy));
 
   for(const p of slides){
     if(!zip.files[p])continue;
@@ -1635,6 +1722,19 @@ async function insertLogoPptx(zip,slides){
     const spStart=xml.lastIndexOf('<p:sp>',logoIdx);
     const spEnd=xml.indexOf('</p:sp>',logoIdx)+7;
     if(spStart===-1||spEnd<7)continue;
+    let x=x0,y=y0,cx=cx0,cy=cy0,atTop=false;
+    if(v2){
+      const fr=findLogoFrame(xml,spStart,slideW,slideH);
+      if(fr){
+        // هامش داخلي 12% من أصغر بُعد للإطار، والشعار في المنتصف مع الحفاظ على النسبة
+        const pad=Math.round(Math.min(fr.cx,fr.cy)*0.12);
+        const bw=fr.cx-2*pad,bh=fr.cy-2*pad;
+        let w,h;
+        if(ratio>=bw/bh){w=bw;h=Math.round(bw/ratio);}else{h=bh;w=Math.round(bh*ratio);}
+        x=String(Math.round(fr.x+(fr.cx-w)/2));y=String(Math.round(fr.y+(fr.cy-h)/2));cx=String(w);cy=String(h);
+        atTop=true; // الإحداثيات فعلية على الشريحة، فالصورة تُضاف خارج أي مجموعة
+      }
+    }
     const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
     let relsXml=zip.files[relsPath]
       ?await zip.files[relsPath].async('string')
@@ -1644,7 +1744,11 @@ async function insertLogoPptx(zip,slides){
     relsXml=relsXml.replace('</Relationships>','<Relationship Id="'+newRid+'" Type="'+IMAGE_REL+'" Target="../media/'+fileName+'"/></Relationships>');
     zip.file(relsPath,relsXml);
     const picXml='<p:pic><p:nvPicPr><p:cNvPr id="999" name="logo_company"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="'+newRid+'"><a:extLst><a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}"><a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/></a:ext></a:extLst></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="'+x+'" y="'+y+'"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
-    xml=xml.slice(0,spStart)+picXml+xml.slice(spEnd);
+    if(atTop){
+      xml=xml.slice(0,spStart)+xml.slice(spEnd);
+      const treeEnd=xml.lastIndexOf('</p:spTree>');
+      xml=xml.slice(0,treeEnd)+picXml+xml.slice(treeEnd);
+    }else xml=xml.slice(0,spStart)+picXml+xml.slice(spEnd);
     zip.file(p,xml);
   }
 }
