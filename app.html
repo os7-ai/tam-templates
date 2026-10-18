@@ -1456,9 +1456,12 @@ async function genDoc(){
     }else{
       const useV2=!!tmpl.fileV2&&document.getElementById('f_نسخة_العرض')?.value!=='old';
       const file=useV2?tmpl.fileV2:tmpl.file;
-      const{data,error}=await sb.storage.from('templates').download(file);
+      // رابط موقّع + no-store: يتجاوز التخزين المؤقت (ساعة) حتى يظهر أي نموذج يُستبدل في Supabase فوراً
+      const{data:signed,error}=await sb.storage.from('templates').createSignedUrl(file,60);
       if(error)throw new Error('فشل تحميل النموذج: '+error.message);
-      const ab=await data.arrayBuffer();
+      const res=await fetch(signed.signedUrl+'&t='+Date.now(),{cache:'no-store'});
+      if(!res.ok)throw new Error('فشل تحميل النموذج: '+res.status);
+      const ab=await res.arrayBuffer();
       if(tmpl.ext==='docx')await procDocx(ab,vars,tmpl.file);
       else await procPptx(ab,vars,useV2);
     }
