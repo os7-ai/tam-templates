@@ -1614,17 +1614,46 @@ function spBox(sp){
   return m?{x:+m[1],y:+m[2],cx:+m[3],cy:+m[4]}:null;
 }
 
+// مواقع كل الأشكال <p:sp> على الشريحة بالإحداثيات الفعلية — تطبيق تحويلات المجموعات المتداخلة (off/ext/chOff/chExt)
+function absShapeBoxes(xml){
+  const out=[],stack=[];
+  const toAbs=(b)=>{
+    let r={...b};
+    for(let i=stack.length-1;i>=0;i--){
+      const g=stack[i];
+      const sx=g.chCx?g.cx/g.chCx:1,sy=g.chCy?g.cy/g.chCy:1;
+      r={x:g.x+(r.x-g.chX)*sx,y:g.y+(r.y-g.chY)*sy,cx:r.cx*sx,cy:r.cy*sy};
+    }
+    return r;
+  };
+  const re=/<p:grpSp>|<\/p:grpSp>|<p:sp>/g;let m;
+  while((m=re.exec(xml))!==null){
+    if(m[0]==='</p:grpSp>'){stack.pop();continue;}
+    if(m[0]==='<p:grpSp>'){
+      const e=xml.indexOf('</p:grpSpPr>',m.index);
+      const gx=xml.slice(m.index,e).match(/<a:off x="(-?\d+)" y="(-?\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>\s*<a:chOff x="(-?\d+)" y="(-?\d+)"\/>\s*<a:chExt cx="(\d+)" cy="(\d+)"\/>/);
+      stack.push(gx?{x:+gx[1],y:+gx[2],cx:+gx[3],cy:+gx[4],chX:+gx[5],chY:+gx[6],chCx:+gx[7],chCy:+gx[8]}:{x:0,y:0,cx:1,cy:1,chX:0,chY:0,chCx:1,chCy:1});
+      continue;
+    }
+    const e=xml.indexOf('</p:sp>',m.index)+7;
+    const b=spBox(xml.slice(m.index,e));
+    if(b)out.push({start:m.index,box:toAbs(b)});
+    re.lastIndex=e;
+  }
+  return out;
+}
+
 // الهوية الجديدة: الشعار يوضع داخل الإطار المحيط بنص }}شعار_الجهة{{ (الشكل الأكثر تداخلاً معه)
-function findLogoFrame(xml,phStart,phEnd,slideW,slideH){
-  const ph=spBox(xml.slice(phStart,phEnd));
-  if(!ph)return null;
-  let best=null,bestArea=0,pos=0;
-  while(true){
-    const s=xml.indexOf('<p:sp>',pos);if(s===-1)break;
-    const e=xml.indexOf('</p:sp>',s)+7;pos=e;
-    if(s===phStart)continue;
-    const b=spBox(xml.slice(s,e));
-    if(!b||b.cx*b.cy>slideW*slideH*0.25)continue;
+function findLogoFrame(xml,phStart,slideW,slideH){
+  const shapes=absShapeBoxes(xml);
+  const phEntry=shapes.find(s=>s.start===phStart);
+  if(!phEntry)return null;
+  const ph=phEntry.box;
+  let best=null,bestArea=0;
+  for(const s of shapes){
+    if(s.start===phStart)continue;
+    const b=s.box;
+    if(b.cx*b.cy>slideW*slideH*0.25)continue;
     const ox=Math.min(ph.x+ph.cx,b.x+b.cx)-Math.max(ph.x,b.x);
     const oy=Math.min(ph.y+ph.cy,b.y+b.cy)-Math.max(ph.y,b.y);
     if(ox<=0||oy<=0)continue;
@@ -1693,16 +1722,17 @@ async function insertLogoPptx(zip,slides,v2){
     const spStart=xml.lastIndexOf('<p:sp>',logoIdx);
     const spEnd=xml.indexOf('</p:sp>',logoIdx)+7;
     if(spStart===-1||spEnd<7)continue;
-    let x=x0,y=y0,cx=cx0,cy=cy0;
+    let x=x0,y=y0,cx=cx0,cy=cy0,atTop=false;
     if(v2){
-      const fr=findLogoFrame(xml,spStart,spEnd,slideW,slideH);
+      const fr=findLogoFrame(xml,spStart,slideW,slideH);
       if(fr){
         // هامش داخلي 12% من أصغر بُعد للإطار، والشعار في المنتصف مع الحفاظ على النسبة
         const pad=Math.round(Math.min(fr.cx,fr.cy)*0.12);
         const bw=fr.cx-2*pad,bh=fr.cy-2*pad;
         let w,h;
         if(ratio>=bw/bh){w=bw;h=Math.round(bw/ratio);}else{h=bh;w=Math.round(bh*ratio);}
-        x=String(fr.x+Math.round((fr.cx-w)/2));y=String(fr.y+Math.round((fr.cy-h)/2));cx=String(w);cy=String(h);
+        x=String(Math.round(fr.x+(fr.cx-w)/2));y=String(Math.round(fr.y+(fr.cy-h)/2));cx=String(w);cy=String(h);
+        atTop=true; // الإحداثيات فعلية على الشريحة، فالصورة تُضاف خارج أي مجموعة
       }
     }
     const relsPath='ppt/slides/_rels/'+p.split('/').pop()+'.rels';
@@ -1714,7 +1744,11 @@ async function insertLogoPptx(zip,slides,v2){
     relsXml=relsXml.replace('</Relationships>','<Relationship Id="'+newRid+'" Type="'+IMAGE_REL+'" Target="../media/'+fileName+'"/></Relationships>');
     zip.file(relsPath,relsXml);
     const picXml='<p:pic><p:nvPicPr><p:cNvPr id="999" name="logo_company"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="'+newRid+'"><a:extLst><a:ext uri="{28A0092B-C50C-407E-A947-70E740481C1C}"><a14:useLocalDpi xmlns:a14="http://schemas.microsoft.com/office/drawing/2010/main" val="0"/></a:ext></a:extLst></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="'+x+'" y="'+y+'"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
-    xml=xml.slice(0,spStart)+picXml+xml.slice(spEnd);
+    if(atTop){
+      xml=xml.slice(0,spStart)+xml.slice(spEnd);
+      const treeEnd=xml.lastIndexOf('</p:spTree>');
+      xml=xml.slice(0,treeEnd)+picXml+xml.slice(treeEnd);
+    }else xml=xml.slice(0,spStart)+picXml+xml.slice(spEnd);
     zip.file(p,xml);
   }
 }
