@@ -62,6 +62,9 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);min-height:100vh;dire
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .ff{display:flex;flex-direction:column;gap:5px}
 .ff.full{grid-column:1/-1}
+.seg{display:inline-flex;align-self:flex-start;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:transparent;padding:7px 18px;border-radius:7px;font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
+.seg button.on{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(15,23,42,.12)}
 .ff label{font-size:12.5px;font-weight:700;color:var(--text)}
 .ff .hint{font-size:11px;color:var(--muted)}
 .ff .warn{font-size:11px;color:var(--orange);font-weight:600}
@@ -655,12 +658,12 @@ const T={
   'entity-proposal':{name:'العرض الفني والمالي - على مستوى المنشأة',file:'entity-proposal.pptx',fileV2:'entity-proposal-v2.pptx',ext:'pptx',fields:[
     {id:'نسخة_العرض',lb:'هوية العرض',tp:'tplver'},
     {id:'اسم_الجهة',lb:'اسم الجهة',tp:'text',ph:'شركة أسامة القابضة'},
+    {id:'السنة_المالية',lb:'السنة المالية',tp:'fiscal'},
     {id:'رقم_العرض',lb:'رقم العرض',tp:'text',ph:'1234',lnk:true},
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
-    {id:'السنة_المالية',lb:'السنة المالية',tp:'fiscal'},
     {id:'أيام_العمل',lb:'أيام العمل',tp:'number',def:15},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
     {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
   'contract-proposal':{name:'العرض الفني والمالي - على مستوى العقد',file:'contract-proposal.pptx',fileV2:'contract-proposal-v2.pptx',ext:'pptx',fields:[
@@ -671,8 +674,8 @@ const T={
     {id:'تاريخ_العرض',lb:'تاريخ العرض',tp:'date',auto:true},
     {id:'measurement_period',lb:'فترة القياس',tp:'period'},
     {id:'أيام_العمل',lb:'أيام العمل',tp:'number',def:15},
-    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
     {id:'طريقة_السداد',lb:'طريقة السداد',tp:'select',opts:['يتم سداد 50٪ من الأتعاب المهنية مقدمًا قبل بدء الأعمال.','يتم سداد أتعابنا المهنية عند تسليم مسودة التقرير.']},
+    {id:'total_fees',lb:'الأتعاب المهنية',tp:'fee',wn:'المبلغ غير شامل ضريبة القيمة المضافة'},
     {id:'شعار_الجهة',lb:'شعار الجهة (اختياري)',tp:'logo'},
   ]},
   'entity-engagement':{name:'خطاب الارتباط - على مستوى المنشأة',file:'entity-engagement.docx',ext:'docx',sections:['بيانات الخطاب','معلومات الجهة','بيانات التواصل','الأتعاب والسداد','فوترة العميل (اختياري)'],fields:[
@@ -896,7 +899,7 @@ function buildInvoiceToggle(f,grid){
 
 function buildField(f){
     const w=document.createElement('div');
-    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='service-rows'||f.tp==='wcc-rows'||f.tp==='doc-extract'?' full':'');
+    w.className='ff'+(f.full||f.tp==='logo'||f.tp==='period'||f.tp==='engfee'||f.tp==='fee'||f.tp==='tplver'||f.tp==='service-rows'||f.tp==='wcc-rows'||f.tp==='doc-extract'?' full':'');
     if(f.lb){const l=document.createElement('label');l.textContent=f.lb;w.appendChild(l);}
     if(f.wn){const h=document.createElement('div');h.className='warn';h.textContent=f.wn;w.appendChild(h);}
     if(f.tp==='text'){
@@ -949,7 +952,7 @@ function buildField(f){
       f.opts.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;s.appendChild(op);});
       w.appendChild(s);
     }else if(f.tp==='number'){
-      const i=document.createElement('input');i.type='number';i.id='f_'+f.id;i.min='1';i.step='1';
+      const i=document.createElement('input');i.type='number';i.id='f_'+f.id;i.min='1';i.step='1';i.lang='en';
       i.value=f.def!==undefined?f.def:'';
       w.appendChild(i);
     }else if(f.tp==='percent'){
@@ -959,9 +962,14 @@ function buildField(f){
       const h=document.createElement('div');h.className='hint';h.textContent='أدخل الرقم فقط — تتم إضافة % تلقائياً';w.appendChild(h);
     }else if(f.tp==='tplver'){
       // الهوية الجديدة (v2) أو القديمة — مؤقتاً حتى اعتماد الهوية الجديدة نهائياً
-      const s=document.createElement('select');s.id='f_'+f.id;
-      [['new','الهوية الجديدة'],['old','الهوية القديمة']].forEach(([v,t])=>{const op=document.createElement('option');op.value=v;op.textContent=t;s.appendChild(op);});
-      w.appendChild(s);
+      const h=document.createElement('input');h.type='hidden';h.id='f_'+f.id;h.value='new';w.appendChild(h);
+      const seg=document.createElement('div');seg.className='seg';
+      [['new','الهوية الجديدة'],['old','الهوية القديمة']].forEach(([v,t])=>{
+        const b=document.createElement('button');b.type='button';b.textContent=t;b.className=v===h.value?'on':'';
+        b.onclick=()=>{h.value=v;seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));};
+        seg.appendChild(b);
+      });
+      w.appendChild(seg);
     }else if(f.tp==='fee'){
       const i=document.createElement('input');i.type='text';i.inputMode='numeric';i.id='f_'+f.id;i.placeholder='19,000';
       const c=document.createElement('div');c.className='comp-row';
