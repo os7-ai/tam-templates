@@ -1059,6 +1059,18 @@ function divisionCodes(div) {
   return SSIC_FULL.filter(d => d.c.startsWith(div));
 }
 
+// سطر كامل لكل نشاط بكل أعمدة القاعدة الرسمية، ليحكم النموذج على الوصف والتسلسل لا على المسمى وحده
+function ssicLine(d) {
+  return [
+    `${d.c} | المسمى: ${d.n}`,
+    d.e ? `الوصف: ${d.e}` : '',
+    `الفئة: ${d.kn}`,
+    `المجموعة: ${d.gn}`,
+    `الشعبة ${d.q}: ${d.qn}`,
+    `القسم ${d.b}: ${d.bn}`
+  ].filter(Boolean).join(' | ');
+}
+
 function officialFields(rec) {
   return { isicCode: rec.c, isicName: rec.n, chapterCode: rec.b, chapterName: rec.bn, sectionCode: rec.q, sectionName: rec.qn };
 }
@@ -1095,7 +1107,7 @@ async function requestRepairs(items) {
   const blocks = items.map((x, k) => `#${k}
 النشاط كما وصفه التصنيف الأولي: ${x.act.isicName || '—'} — ${x.act.reason || '—'}
 القائمة الرسمية المسموحة:
-${x.pool.map(c => `${c.c} — ${c.n}`).join('\n')}`).join('\n\n');
+${x.pool.map(ssicLine).join('\n')}`).join('\n\n');
   const text = `السياق:
 - المورد: "${state.vendorName || 'غير محدد'}"
 - السجل التجاري: "${state.crActivity || 'غير محدد'}"
@@ -1107,7 +1119,7 @@ ${blocks}
 
 أجب بـ JSON فقط:
 {"fixes":[{"index":0,"isicCode":"XXXXXX أو null","reason":"سبب الاختيار في جملة واحدة"}]}`;
-  const out = await callClaude(SYSTEM_RULES, [{ role: 'user', content: text }], { maxTokens: 1000 });
+  const out = extractJson(await callClaudeStream(SYSTEM_RULES, [{ role: 'user', content: text }], { maxTokens: 8000 }));
   return Array.isArray(out.fixes) ? out.fixes : [];
 }
 
@@ -1285,6 +1297,7 @@ ${SSIC_DIVISION_INDEX}
 
 القواعد الأساسية:
 0. ⚠️ أهم قاعدة: كود isicCode واسمه isicName يجب أن يطابقا فعلياً النشاط الموصوف في reason — ممنوع منعاً باتاً وصف نشاط استشاري/تدقيقي في reason ثم اختيار كود تصنيع أو اختبارات فنية لا علاقة له. مع كل طلب سترد قائمة "أكواد مرشّحة" حقيقية من القاعدة الرسمية الكاملة (٦ أرقام لكل كود) مبنية على وصف الحالة — اختر isicCode منها حصراً إن وُجد ما يطابق النشاط فعلياً. إن لم يطابق أي مرشّح، استخدم معرفتك الكاملة بـ ISIC السعودي واختر كوداً حقيقياً من ٦ أرقام (لا تخترع كوداً غير موجود فعلياً)، مستعيناً بفهرس الشُّعب أعلاه لتحديد الفرع الصحيح.
+0.1 كل كود مرشّح يصلك بكامل أعمدته الرسمية (المسمى | الوصف | الفئة | المجموعة | الشعبة | القسم). احكم على المطابقة من الوصف والفئة والمجموعة معاً، لا من المسمى وحده؛ وفرّق بين الأكواد المتشابهة بالمسمى (مثل سكني/غير سكني، جملة/تجزئة) بالرجوع إلى وصفها.
 1. السجل التجاري هو مصدر الحقيقة — إذا مسجل "تجارة جملة" لا يمكن أن يكون مصنعاً
 2. إذا ذُكر مصنع معروف (سابك، أرامكو، معادن...) مع شركة أخرى → الشركة غالباً موزع وليست مصنعاً
 3. إذا الدور واضح من السجل والفاتورة → أعطِ الإجابة مباشرة (needsClarification: false)
@@ -1363,6 +1376,7 @@ async function callClaudeStream(systemText, messages, { maxTokens = 1000, onDelt
   const decoder = new TextDecoder();
   let buffer = '';
   let fullText = '';
+  let stopReason = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -1384,12 +1398,17 @@ async function callClaudeStream(systemText, messages, { maxTokens = 1000, onDelt
       if (eventType === 'content_block_delta' && parsed.delta && parsed.delta.type === 'text_delta') {
         fullText += parsed.delta.text;
         if (onDelta) onDelta(fullText, parsed.delta.text);
+      } else if (eventType === 'message_delta' && parsed.delta && parsed.delta.stop_reason) {
+        stopReason = parsed.delta.stop_reason;
       } else if (eventType === 'error') {
         throw new Error((parsed.error && parsed.error.message) || 'خطأ من خدمة التصنيف');
       }
     }
   }
 
+  if (stopReason === 'refusal') {
+    throw new Error('اعتذرت خدمة التصنيف عن هذا الطلب — عدّل صياغة الوصف وحاول مجدداً');
+  }
   return fullText;
 }
 
@@ -1399,7 +1418,7 @@ function buildCandidateText(candidates) {
     return 'لم يتم العثور على أكواد مرشّحة مطابقة نصياً — استخدم معرفتك الكاملة بـ ISIC السعودي واختر كوداً حقيقياً من 6 أرقام.';
   }
   return 'أكواد مرشّحة من القاعدة الرسمية الكاملة (اختر isicCode منها حصراً إن طابقت النشاط فعلياً، وإلا استخدم معرفتك):\n' +
-    candidates.map(c => `${c.c} — ${c.n} (${c.qn})`).join('\n');
+    candidates.map(ssicLine).join('\n');
 }
 
 // يبني محتوى رسالة المستخدم (نص، أو صورة/PDF + نص)
@@ -1473,7 +1492,7 @@ ${candidateBlock}
 
     const content = buildUserContent(userText, state.inputMode === 'image');
     const fullText = await callClaudeStream(SYSTEM_RULES, [{ role: 'user', content }], {
-      maxTokens: 1500,
+      maxTokens: 8000,
       onDelta: updateAnalyzeStage
     });
     const parsed = extractJson(fullText);
@@ -1569,7 +1588,7 @@ ${candidateBlock}
 }`;
 
     const fullText = await callClaudeStream(SYSTEM_RULES, [{ role: 'user', content: userText }], {
-      maxTokens: 1500,
+      maxTokens: 8000,
       onDelta: updateClarifyStage
     });
     const parsed = extractJson(fullText);
@@ -1684,7 +1703,7 @@ function classificationContext() {
   ).join('\n');
   const divisions = [...new Set(state.results.map(r => String(r.isicCode).slice(0, 2)))];
   const official = divisions.map(div =>
-    divisionCodes(div).slice(0, MAX_REPAIR_POOL).map(d => `${d.c} — ${d.n}`).join('\n')
+    divisionCodes(div).slice(0, MAX_REPAIR_POOL).map(ssicLine).join('\n')
   ).filter(Boolean).join('\n');
   return `سياق التصنيف الحالي:
 - المورد: "${state.vendorName || 'غير محدد'}"
@@ -1754,7 +1773,7 @@ async function sendDiscuss() {
 
   try {
     const answer = await callClaudeStream(DISCUSS_SCOPE, state.discussion, {
-      maxTokens: 800,
+      maxTokens: 4000,
       onDelta: (textSoFar) => {
         typing.textContent = stripMarkdown(textSoFar);
         typing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
