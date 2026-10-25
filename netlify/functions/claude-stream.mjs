@@ -55,26 +55,33 @@ export default async (req) => {
     return jsonError('طلب غير صالح', 400);
   }
 
+  // warm: تسخين الكاش بـ max_tokens: 0 — يكتب البادئة في الكاش دون توليد؛ يرفضه الـ API مع stream،
+  // ويجب أن يطابق effort الطلبات الفعلية وإلا كُتب مدخل كاش لا تقرؤه
+  const warm = body.warm === true;
   const payload = {
     model: MODEL,
-    max_tokens: Math.min(Number(body.max_tokens) || 8000, MAX_TOKENS_CAP),
+    max_tokens: warm ? 0 : Math.min(Number(body.max_tokens) || 8000, MAX_TOKENS_CAP),
     messages: Array.isArray(body.messages) ? body.messages : [],
-    output_config: { effort: EFFORT },
-    fallbacks: 'default',
-    stream: true
+    output_config: { effort: EFFORT }
   };
+  if (!warm) {
+    payload.fallbacks = 'default';
+    payload.stream = true;
+  }
   if (body.system) payload.system = body.system;
+
+  const headers = {
+    'content-type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01'
+  };
+  if (!warm) headers['anthropic-beta'] = 'server-side-fallback-2026-07-01';
 
   let upstream;
   try {
     upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'server-side-fallback-2026-07-01'
-      },
+      headers,
       body: JSON.stringify(payload)
     });
   } catch (e) {
@@ -85,6 +92,14 @@ export default async (req) => {
     const errData = await upstream.json().catch(() => ({}));
     const msg = (errData && errData.error && errData.error.message) || 'خطأ في خدمة التصنيف';
     return jsonError(msg, upstream.status);
+  }
+
+  if (warm) {
+    const data = await upstream.json().catch(() => ({}));
+    return new Response(JSON.stringify({ usage: data.usage || null }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   // تمرير مباشر (passthrough) لتيار SSE من Anthropic — يُقرأ ويُفكّك على المتصفح
