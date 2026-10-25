@@ -1183,7 +1183,7 @@ let state = {
   imageData: null, imageType: null,
   inputMode: 'text',
   clarifyQuestion: '', clarifyOptions: [], clarifyAnswer: '',
-  detectedRole: null, crConflict: null, results: [],
+  detectedRole: null, crConflict: null, supplierType: 'unknown', results: [],
   discussion: []
 };
 
@@ -1308,7 +1308,13 @@ ${SSIC_DIVISION_INDEX}
 قواعد خاصة بالخدمات المهنية (شُعب 69-74):
 5. الاستثناء الوحيد الرسمي من LCGPA: إذا كانت الخدمة تحديداً "تدقيق القوائم المالية" أو "الزكاة" أو "الضريبة" → قطاع 5 دائماً بنسبة 50% حتى لو المورد وكيل لأجنبي. هذا الاستثناء لا يشمل المحاسبة القانونية العامة ولا الفحص النافي للجهالة ولا الاستشارات المالية.
 6. أي خدمة مهنية أخرى في شُعب 69-74 (استشارات، محاسبة، فحص نافي للجهالة، هندسة، قانون، تسويق، due diligence) → اسأل سؤالاً توضيحياً واحداً: "هل المورد شركة سعودية مستقلة أم فرع/وكيل لشركة أجنبية؟" — محلي مستقل = قطاع 5 (50%)، وكيل لأجنبي = قطاع 6 (20%)
-7. إذا كانت شركة أجنبية لها فرع سعودي وتقدم تراخيص → اسأل: "هل هو ترخيص برنامج/تقنية أم خدمة مهنية (استشارة/تدريب)؟" — برنامج/تقنية = قطاع 19 (41%)، خدمة مهنية = قطاع 5 أو 6 حسب استقلالية الفرع`;
+7. إذا كانت شركة أجنبية لها فرع سعودي وتقدم تراخيص → اسأل: "هل هو ترخيص برنامج/تقنية أم خدمة مهنية (استشارة/تدريب)؟" — برنامج/تقنية = قطاع 19 (41%)، خدمة مهنية = قطاع 5 أو 6 حسب استقلالية الفرع
+8. نوع المورد (supplierType) — الملحق (ب) يحدد قطاعات حسب نوع المورد لا حسب الكود، فحدّده دائماً بإحدى القيم:
+   - "local": منشأة سعودية تقدّم الخدمة أو المنتج بنفسها (ويشمل الفرع السعودي لشركة أجنبية في حالة ترخيص البرنامج/التقنية بالقاعدة 7).
+   - "saudi_agent_of_foreign": وكيل أو ممثل أو فرع سعودي يقدّم خدمة أو منتجاً لمورد أجنبي (وهو جواب "فرع/وكيل لشركة أجنبية" في القاعدة 6).
+   - "foreign": مورد خارج المملكة مباشرة (فاتورة من جهة أجنبية بلا سجل أو رقم ضريبي سعودي).
+   - "unknown": إن لم يتضح من السجل والفاتورة.
+   لا تغيّر isicCode بسبب نوع المورد؛ اختر الكود حسب النشاط فقط، والتطبيق يحوّل القطاع وفق الملحق.`;
 
 // ─── API CALL ─────────────────────────────────────────────────────────────────
 // يستخرج ويحلّل أول كتلة JSON من نص الرد (يشترك فيه المسار العادي والمبثوث)
@@ -1477,6 +1483,7 @@ ${candidateBlock}
   "crConflict": "وصف التعارض" | null,
   "detectedRole": "manufacturer|distributor|contractor|importer|mixed|unknown",
   "detectedRoleAr": "الدور بالعربي",
+  "supplierType": "local|saudi_agent_of_foreign|foreign|unknown",
   "activities": [
     {
       "isicCode": "XXXXXX",
@@ -1500,6 +1507,7 @@ ${candidateBlock}
     const parsed = extractJson(fullText);
     state.crConflict  = parsed.crConflict;
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
+    state.supplierType = parsed.supplierType || 'unknown';
 
     if (parsed.needsClarification && parsed.clarifyQuestion) {
       state.clarifyQuestion = parsed.clarifyQuestion;
@@ -1509,7 +1517,7 @@ ${candidateBlock}
     } else {
       state.results = await finalizeActivities(parsed.activities, candidateCodes);
       renderResult();
-      renderAnnexB(state.results, state.clarifyAnswer);
+      renderAnnexB(state.results, state.supplierType);
       setPhase(3);
     }
   } catch(e) {
@@ -1584,6 +1592,7 @@ ${candidateBlock}
   "detectedRole": "manufacturer|distributor|contractor|importer",
   "detectedRoleAr": "...",
   "crConflict": "..." | null,
+  "supplierType": "local|saudi_agent_of_foreign|foreign|unknown",
   "activities": [
     { "isicCode":"XXXXXX","isicName":"...","sectionCode":"XX","sectionName":"...","chapterCode":"X","chapterName":"...","roleLabel":"...","confidence":"عالي|متوسط|منخفض","reason":"..." }
   ]
@@ -1596,9 +1605,10 @@ ${candidateBlock}
     const parsed = extractJson(fullText);
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
     if (parsed.crConflict) state.crConflict = parsed.crConflict;
+    if (parsed.supplierType) state.supplierType = parsed.supplierType;
     state.results = await finalizeActivities(parsed.activities, candidateCodes);
     renderResult();
-    renderAnnexB(state.results, state.clarifyAnswer);
+    renderAnnexB(state.results, state.supplierType);
     setPhase(3);
   } catch(err) {
     console.error('answerClarify error:', err);
@@ -1712,6 +1722,7 @@ function classificationContext() {
 - النشاط في السجل التجاري: "${state.crActivity || 'غير محدد'}"
 - الفاتورة/التوريد: "${state.invoice || 'من صورة'}"
 - الدور المُكتشف: ${state.detectedRole?.label || '—'}
+- نوع المورد: ${SUPPLIER_TYPE_AR[state.supplierType] || 'غير محدد'}
 ${state.crConflict ? '- تعارض مع السجل: ' + state.crConflict + '\n' : ''}- الأكواد المُصنّفة:
 ${acts || '—'}
 ${official ? `- الأكواد الرسمية في نفس الشُّعب (لا تقترح أي كود خارج هذه القائمة):\n${official}` : ''}`;
@@ -1807,7 +1818,7 @@ function resetAll() {
     vendorName:'', crActivity:'', invoice:'',
     imageData:null, imageType:null, inputMode:'text',
     clarifyQuestion:'', clarifyOptions:[], clarifyAnswer:'',
-    detectedRole:null, crConflict:null, results:[], discussion:[]
+    detectedRole:null, crConflict:null, supplierType:'unknown', results:[], discussion:[]
   };
   const dlog = document.getElementById('discussLog'); if (dlog) dlog.innerHTML = '';
   document.getElementById('vendorName').value = '';
@@ -1851,7 +1862,10 @@ const ISIC_OVR = [
   {prefix:"2395",   len:4, output:"32_منتجات الاسمنت والجبس"},
   {prefix:"2790",   len:4, output:"35_منتجات محلية أخرى"},
   {prefix:"7911",   len:4, output:"13_خدمات النقل والخدمات اللوجستية"},
-  {prefix:"7730",   len:4, output:"17_خدمات تأجير السيارات والشاشات والمعدات"},
+  // الملحق: قطاع17 = "773-7730" وقطاع20 = "773074-7740" (تأجير الأثاث المكتبي والحاويات وتأجير الملكية الفكرية)
+  {prefix:"773074", len:6, output:"20_خدمات أخرى"},
+  {prefix:"773080", len:6, output:"20_خدمات أخرى"},
+  {prefix:"774",    len:3, output:"20_خدمات أخرى"},
   {prefix:"383",    len:3, output:"36_منتجات إعادة التدوير"},
   {prefix:"351",    len:3, output:"21_خدمات المرافق"},
   {prefix:"352",    len:3, output:"26_منتجات كيميائية والنفط والغاز"},
@@ -1917,9 +1931,34 @@ const ISIC_RULES = [
   {from:23,    to:23,    len:2, sector:"35_منتجات محلية أخرى"},
   {from:31,    to:32,    len:2, sector:"35_منتجات محلية أخرى"},
   {from:45,    to:47,    len:2, sector:"37_منتجات وكيل / موزع في المملكة"},
-  {from:45717, to:45717, len:5, sector:"24_منتجات الزراعة والغابات والأسماك"},
-  {from:46001, to:46001, len:5, sector:"25_منتجات الأغذية والمشروبات"},
 ];
+
+// قطاعات "نوع المورد" في الملحق (ب): لا ترتبط بكود، تُطبَّق فوق قطاع الكود حسب supplierType
+const SUPPLIER_SECTORS = {
+  6:  "6_خدمات ممثل محلي من مورد أجنبي",
+  22: "22_خدمات وكلاء أو ممثلي شركات الخدمات",
+  23: "23_الخدمات الأجنبية",
+  37: "37_منتجات وكيل / موزع في المملكة",
+  38: "38_منتجات مورد أجنبي"
+};
+// استثناء القاعدة 5: تدقيق القوائم المالية والزكاة والضريبة تبقى قطاع 5 حتى من وكيل لمورد أجنبي
+const AUDIT_EXCEPTION_CODES = new Set(['692010', '692030', '692042', '692043']);
+
+// القطاعات 1-23 خدمات و24-38 منتجات
+function applySupplierType(sector, isicCode, supplierType) {
+  const num = parseInt(sector.name, 10);
+  const isProduct = num >= 24;
+  let target = num;
+  if (supplierType === 'foreign') {
+    target = isProduct ? 38 : 23;
+  } else if (supplierType === 'saudi_agent_of_foreign') {
+    if (num === 5) target = AUDIT_EXCEPTION_CODES.has(String(isicCode)) ? 5 : 6;
+    else target = isProduct ? 37 : 22;
+  }
+  if (target === num) return sector;
+  const name = SUPPLIER_SECTORS[target];
+  return { name, pct: ANNEX_B_PCT[String(target)] ?? 0, from: sector.name };
+}
 
 // ─── MATCH ANNEX B — ACCURATE ────────────────────────────────────────────────
 function matchAnnexB(isicCode) {
@@ -1964,38 +2003,35 @@ function matchAnnexB(isicCode) {
 }
 
 // ─── RENDER ANNEX B ──────────────────────────────────────────────────────────
-function renderAnnexB(activities, clarifyAnswer) {
-  // If user confirmed foreign agent/representative → override sector 5 to sector 6
-  const isForeignAgent = clarifyAnswer && (
-    clarifyAnswer.includes('وكيل') || clarifyAnswer.includes('أجنبي') ||
-    clarifyAnswer.includes('فرع') || clarifyAnswer.includes('ممثل') ||
-    clarifyAnswer.toLowerCase().includes('foreign') || clarifyAnswer.toLowerCase().includes('agent')
-  );
-  const seen = new Set();
-  const matched = [];
+const SUPPLIER_TYPE_AR = {
+  local: 'مورد محلي',
+  saudi_agent_of_foreign: 'وكيل/ممثل سعودي لمورد أجنبي',
+  foreign: 'مورد من خارج المملكة',
+  unknown: 'غير محدد'
+};
 
+function renderAnnexB(activities, supplierType) {
+  const seen = new Set();
+  const finalMatched = [];
   for (const act of activities) {
-    const sectors = matchAnnexB(act.isicCode);
-    for (const s of sectors) {
-      if (!seen.has(s.name)) {
-        seen.add(s.name);
-        matched.push(s);
+    for (const s of matchAnnexB(act.isicCode)) {
+      const adj = applySupplierType(s, act.isicCode, supplierType);
+      if (!seen.has(adj.name)) {
+        seen.add(adj.name);
+        finalMatched.push(adj);
       }
     }
   }
 
-  if (matched.length === 0) {
+  if (finalMatched.length === 0) {
     document.getElementById('annexBSection').style.display = 'none';
     return;
   }
 
-  // Override: if foreign agent, replace sector 5 with sector 6
-  const finalMatched = matched.map(s => {
-    if (isForeignAgent && s.name.startsWith('5_')) {
-      return { name: '6_خدمات ممثل محلي من مورد أجنبي', pct: 0.20 };
-    }
-    return s;
-  });
+  const typeLabel = SUPPLIER_TYPE_AR[supplierType] || SUPPLIER_TYPE_AR.unknown;
+  const supplierNote = supplierType === 'unknown' || !SUPPLIER_TYPE_AR[supplierType]
+    ? `<div class="verify-note corrected"><span>ℹ️</span><div>نوع المورد غير محدد — النسبة محسوبة على افتراض مورد محلي. إن كان المورد أجنبياً أو وكيلاً لمورد أجنبي فالنسبة تختلف حسب الملحق (ب).</div></div>`
+    : `<div style="font-size:12px;color:var(--text3);margin-bottom:10px">نوع المورد: <strong style="color:var(--text)">${typeLabel}</strong></div>`;
 
   const cards = finalMatched.map((s, i) => {
     const pctDisplay = Math.round(s.pct * 100) + '%';
@@ -2015,12 +2051,12 @@ function renderAnnexB(activities, clarifyAnswer) {
           </div>
         </div>
         <div class="annexb-footer">
-          <span class="annexb-sector-num">قطاع ${num}</span>
+          <span class="annexb-sector-num">قطاع ${num}${s.from ? ` · بدل قطاع ${s.from.split('_')[0]} (${s.from.substring(s.from.indexOf('_')+1)}) لأن المورد ${typeLabel}` : ''}</span>
         </div>
       </div>`;
   }).join('');
 
-  document.getElementById('annexBCards').innerHTML = cards;
+  document.getElementById('annexBCards').innerHTML = supplierNote + cards;
   document.getElementById('annexBSection').style.display = '';
 }
 
