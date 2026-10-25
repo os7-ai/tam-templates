@@ -993,7 +993,6 @@ const authTimeout = setTimeout(() => window.location.href = 'login.html', 8000);
     document.getElementById('sbName').textContent = displayName(email);
     clearTimeout(authTimeout);
     document.getElementById('authLoading').classList.add('hide');
-    warmCache();
   } catch (e) {
     window.location.href = 'login.html';
   }
@@ -1039,23 +1038,6 @@ function systemBlocks(systemText) {
     SSIC_CATALOG && { type: 'text', text: SSIC_CATALOG, cache_control: CACHE_1H },
     { type: 'text', text: systemText, cache_control: CACHE_1H }
   ].filter(Boolean);
-}
-
-// تسخين الكاش عند فتح الصفحة: يكتب الكتالوج والقواعد في كاش النموذج قبل أول تصنيف
-async function warmCache() {
-  await ssicReady;
-  if (!SSIC_CATALOG || !accessToken) return;
-  try {
-    const res = await fetch('/.netlify/functions/claude-stream', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + accessToken },
-      body: JSON.stringify({ warm: true, system: systemBlocks(SYSTEM_RULES), messages: [{ role: 'user', content: 'warmup' }] })
-    });
-    const data = await res.json().catch(() => ({}));
-    console.info('تسخين كاش النموذج:', data.usage || data.error || res.status);
-  } catch (e) {
-    console.warn('تعذّر تسخين الكاش:', e);
-  }
 }
 
 function normalizeAr(s) {
