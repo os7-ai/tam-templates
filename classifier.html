@@ -459,6 +459,13 @@
   .verify-dot.verified   { background: var(--amber); }
   .verify-dot.unverified { background: var(--red); }
 
+  .unverified-banner {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 12px; margin-bottom: 12px;
+    background: rgba(224,80,80,.08); border: 1px solid rgba(224,80,80,.3);
+    border-radius: var(--radius); font-size: 12px; color: var(--red); line-height: 1.6;
+  }
+
   .isic-top-badge {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 10px;
@@ -996,7 +1003,7 @@ let SSIC_BY_CODE = new Map();
 let ssicSearchIndex = null;
 const ssicReady = fetch('/ssic-data.json').then(r => r.json()).then(data => {
   SSIC_FULL = data;
-  SSIC_BY_CODE = new Map(data.map(d => [d.c, d]));
+  SSIC_BY_CODE = new Map(data.map(d => [String(d.c), d]));
 }).catch(e => console.error('تعذّر تحميل قاعدة الأنشطة SSIC:', e));
 
 function normalizeAr(s) {
@@ -1516,6 +1523,7 @@ function renderResult() {
           <span class="rank-chip ${i===0?'first':''}">${i+1}</span>
           <span class="verify-dot ${tier}" title="${VERIFY_TOOLTIP[tier]}"></span>
         </div>
+        ${tier === 'unverified' ? `<div class="unverified-banner"><span>⚠️</span><div><strong>تنبيه:</strong> هذا الكود غير موجود في القائمة الرسمية الكاملة (2,816 نشاط) — على الأرجح من اختراع النموذج. راجعه يدوياً قبل الاعتماد عليه.</div></div>` : ''}
         <div class="isic-main">
           <div>
             <div class="isic-name">${r.isicName || '(غير متوفر)'}</div>
