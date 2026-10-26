@@ -443,7 +443,7 @@
   .isic-card:nth-child(2) { animation-delay: .12s; }
   .isic-card:nth-child(3) { animation-delay: .19s; }
   .isic-card.top { border-color: var(--accent2); }
-  .isic-card.unverified { border-color: var(--red); background: rgba(224,80,80,.04); }
+  .isic-card.auto { border-color: var(--red); background: rgba(224,80,80,.04); }
 
   .isic-topline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .rank-chip {
@@ -457,7 +457,16 @@
   .verify-dot { width: 8px; height: 8px; border-radius: 50%; cursor: help; flex-shrink: 0; }
   .verify-dot.candidate  { background: var(--green); }
   .verify-dot.verified   { background: var(--amber); }
-  .verify-dot.unverified { background: var(--red); }
+  .verify-dot.corrected  { background: var(--amber); }
+  .verify-dot.auto       { background: var(--red); }
+
+  .verify-note {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 12px; margin-bottom: 12px;
+    border-radius: var(--radius); font-size: 12px; line-height: 1.6;
+  }
+  .verify-note.corrected { background: rgba(245,166,35,.07); border: 1px solid rgba(245,166,35,.25); color: var(--amber); }
+  .verify-note.auto      { background: rgba(224,80,80,.08); border: 1px solid rgba(224,80,80,.3); color: var(--red); }
 
   .isic-top-badge {
     font-family: 'IBM Plex Mono', monospace;
@@ -996,7 +1005,7 @@ let SSIC_BY_CODE = new Map();
 let ssicSearchIndex = null;
 const ssicReady = fetch('/ssic-data.json').then(r => r.json()).then(data => {
   SSIC_FULL = data;
-  SSIC_BY_CODE = new Map(data.map(d => [d.c, d]));
+  SSIC_BY_CODE = new Map(data.map(d => [String(d.c), d]));
 }).catch(e => console.error('تعذّر تحميل قاعدة الأنشطة SSIC:', e));
 
 function normalizeAr(s) {
@@ -1013,20 +1022,20 @@ const AR_STOPWORDS = new Set(['من','في','على','الى','إلى','عن','�
 function tokenizeAr(s) {
   return normalizeAr(s).split(/[^a-zA-Zء-ي0-9]+/).filter(t => t.length >= 2 && !AR_STOPWORDS.has(t));
 }
+let ssicEntryByCode = null;
 function buildSsicIndex() {
   ssicSearchIndex = SSIC_FULL.map(item => ({
     item,
     nameText: normalizeAr(item.n),
     fullText: normalizeAr([item.n, item.e, item.gn, item.kn, item.qn].filter(Boolean).join(' '))
   }));
+  ssicEntryByCode = new Map(ssicSearchIndex.map(e => [e.item.c, e]));
 }
-// بحث محلي مرجّح: يرشّح أقرب الأنشطة الحقيقية لوصف المورد/الفاتورة (لا يستبدل حكم النموذج، فقط يوجّهه لأكواد حقيقية بدل الاختراع من الذاكرة)
-function searchSSIC(query, topN = 20) {
-  if (!ssicSearchIndex) buildSsicIndex();
+function rankEntries(entries, query, topN) {
   const qTokens = [...new Set(tokenizeAr(query))];
   if (!qTokens.length) return [];
   const scored = [];
-  for (const entry of ssicSearchIndex) {
+  for (const entry of entries) {
     let score = 0;
     for (const t of qTokens) {
       if (entry.nameText.includes(t)) score += 3;
@@ -1037,16 +1046,135 @@ function searchSSIC(query, topN = 20) {
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, topN).map(x => x.item);
 }
-// تحقّق نهائي: أي كود يرجعه النموذج يُقارَن بالقائمة الرسمية الكاملة؛ عند التطابق تُستبدَل بيانات الاسم/القسم/الباب بالبيانات الرسمية المؤكدة (تمنع أي تناقض بين الكود ووصفه).
-// verifyTier: candidate = من ضمن الأكواد المرشّحة (أعلى ثقة) | verified = كود حقيقي بس من معرفة النموذج مباشرة | unverified = غير موجود بالقائمة إطلاقاً
+// بحث محلي مرجّح: يرشّح أقرب الأنشطة الحقيقية لوصف المورد/الفاتورة (لا يستبدل حكم النموذج، فقط يوجّهه لأكواد حقيقية بدل الاختراع من الذاكرة)
+function searchSSIC(query, topN = 20) {
+  if (!ssicSearchIndex) buildSsicIndex();
+  return rankEntries(ssicSearchIndex, query, topN);
+}
+function rankItems(items, query, topN) {
+  if (!ssicSearchIndex) buildSsicIndex();
+  return rankEntries(items.map(it => ssicEntryByCode.get(it.c)).filter(Boolean), query, topN);
+}
+function divisionCodes(div) {
+  return SSIC_FULL.filter(d => d.c.startsWith(div));
+}
+
+// سطر كامل لكل نشاط بكل أعمدة القاعدة الرسمية، ليحكم النموذج على الوصف والتسلسل لا على المسمى وحده
+function ssicLine(d) {
+  return [
+    `${d.c} | المسمى: ${d.n}`,
+    d.e ? `الشرح: ${d.e}` : '',
+    `الفئة ${d.c.slice(0, 4)}: ${d.kn}`,
+    `المجموعة ${d.c.slice(0, 3)}: ${d.gn}`,
+    `القسم ${d.q}: ${d.qn}`,
+    `الباب ${d.b}: ${d.bn}`,
+    d.s ? `الجهة المشرفة: ${d.s}` : '',
+    d.l ? `الجهة المرخصة: ${d.l}` : ''
+  ].filter(Boolean).join(' | ');
+}
+
+function officialFields(rec) {
+  return { isicCode: rec.c, isicName: rec.n, chapterCode: rec.b, chapterName: rec.bn, sectionCode: rec.q, sectionName: rec.qn };
+}
+
+// verifyTier: candidate = من المرشّحين | verified = كود رسمي من معرفة النموذج | corrected = أُعيد اختياره من قائمة رسمية مقيّدة | auto = أقرب تطابق آلي (ثقة منخفضة)
+// يرجع null إذا الكود غير موجود بالقائمة الرسمية — هذا الكود لا يُعرض أبداً
 function enrichActivity(act, candidateCodes) {
   const code = String(act.isicCode || '').trim();
   const rec = SSIC_BY_CODE.get(code);
-  if (rec) {
-    const verifyTier = (candidateCodes && candidateCodes.has(code)) ? 'candidate' : 'verified';
-    return { ...act, isicCode: rec.c, isicName: rec.n, chapterCode: rec.b, chapterName: rec.bn, sectionCode: rec.q, sectionName: rec.qn, verifyTier };
+  if (!rec) return null;
+  const verifyTier = (candidateCodes && candidateCodes.has(code)) ? 'candidate' : 'verified';
+  return { ...act, ...officialFields(rec), verifyTier };
+}
+
+// القائمة الرسمية المسموح الاختيار منها لتصحيح كود غير موجود: الشعبة نفسها (أول رقمين) أو بحث نصي إن لم تُعرف الشعبة
+const MAX_REPAIR_POOL = 80;
+function repairPool(act) {
+  const digits = String(act.isicCode || '').replace(/\D/g, '');
+  const hint = [act.isicName, act.reason].filter(Boolean).join(' ');
+  const div = [digits.slice(0, 2), String(act.sectionCode || '').replace(/\D/g, '').slice(0, 2)]
+    .find(d => d.length === 2 && divisionCodes(d).length);
+  if (!div) return searchSSIC(hint, 40);
+  const inDiv = divisionCodes(div);
+  if (inDiv.length <= MAX_REPAIR_POOL) return inDiv;
+  const group = digits.length >= 3 ? inDiv.filter(d => d.c.startsWith(digits.slice(0, 3))) : [];
+  const pool = new Map();
+  [...group, ...rankItems(inDiv, hint, MAX_REPAIR_POOL), ...inDiv].forEach(d => {
+    if (pool.size < MAX_REPAIR_POOL) pool.set(d.c, d);
+  });
+  return [...pool.values()];
+}
+
+async function requestRepairs(items) {
+  const blocks = items.map((x, k) => `#${k}
+النشاط كما وصفه التصنيف الأولي: ${x.act.isicName || '—'} — ${x.act.reason || '—'}
+القائمة الرسمية المسموحة:
+${x.pool.map(ssicLine).join('\n')}`).join('\n\n');
+  const text = `السياق:
+- المورد: "${state.vendorName || 'غير محدد'}"
+- السجل التجاري: "${state.crActivity || 'غير محدد'}"
+- الفاتورة: "${state.invoice || 'من صورة'}"
+${state.clarifyAnswer ? `- إجابة المستخدم على سؤال التوضيح: "${state.clarifyAnswer}"\n` : ''}
+الأكواد التي اقترحتها لهذه الأنشطة غير موجودة في القائمة الرسمية. لكل رقم #، اختر كوداً واحداً منسوخاً حرفياً من قائمته فقط يطابق النشاط فعلياً. ممنوع أي كود خارج القائمة. إن لم يطابق أي كود فاكتب null.
+
+${blocks}
+
+أجب بـ JSON فقط:
+{"fixes":[{"index":0,"isicCode":"XXXXXX أو null","reason":"سبب الاختيار في جملة واحدة"}]}`;
+  const out = extractJson(await callClaudeStream(SYSTEM_RULES, [{ role: 'user', content: text }], { maxTokens: 8000 }));
+  return Array.isArray(out.fixes) ? out.fixes : [];
+}
+
+// الضمان: كل كود يُعرض موجود في ssic-data.json؛ أي كود مخترع يُصحَّح من قائمة رسمية مقيّدة أو يُحذف
+async function finalizeActivities(rawActs, candidateCodes) {
+  const acts = Array.isArray(rawActs) ? rawActs : [];
+  const results = acts.map(a => enrichActivity(a, candidateCodes));
+  const invalid = [];
+  acts.forEach((act, i) => {
+    if (results[i]) return;
+    const pool = repairPool(act);
+    if (pool.length) invalid.push({ i, act, pool });
+  });
+
+  if (invalid.length) {
+    let fixes = [];
+    try { fixes = await requestRepairs(invalid); }
+    catch (e) { console.error('تعذّر تصحيح الأكواد غير الموجودة:', e); }
+
+    invalid.forEach((x, k) => {
+      const originalCode = String(x.act.isicCode || '').replace(/\D/g, '');
+      const fix = fixes.find(f => Number(f.index) === k);
+      const chosen = fix && x.pool.find(c => c.c === String(fix.isicCode || '').trim());
+      if (chosen) {
+        results[x.i] = {
+          ...x.act, ...officialFields(chosen),
+          reason: fix.reason || '',
+          confidence: x.act.confidence === 'عالي' ? 'متوسط' : (x.act.confidence || 'متوسط'),
+          verifyTier: 'corrected', originalCode
+        };
+        return;
+      }
+      const best = rankItems(x.pool, [x.act.isicName, x.act.reason].filter(Boolean).join(' '), 1)[0];
+      if (best) {
+        results[x.i] = {
+          ...x.act, ...officialFields(best),
+          reason: `اختير آلياً كأقرب نشاط رسمي لوصف: «${x.act.isicName || '—'}»`,
+          confidence: 'منخفض',
+          verifyTier: 'auto', originalCode
+        };
+      }
+    });
   }
-  return { ...act, verifyTier: 'unverified' };
+
+  const seen = new Set();
+  return results.filter(r => r && !seen.has(r.isicCode) && seen.add(r.isicCode));
+}
+
+// أي رقم من ٦ خانات في نص النموذج وغير موجود بالقائمة الرسمية
+function unknownCodesIn(text) {
+  const western = (text || '').replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660));
+  const found = western.match(/(?<!\d)\d{6}(?!\d)/g) || [];
+  return [...new Set(found)].filter(c => !SSIC_BY_CODE.has(c));
 }
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
@@ -1055,7 +1183,7 @@ let state = {
   imageData: null, imageType: null,
   inputMode: 'text',
   clarifyQuestion: '', clarifyOptions: [], clarifyAnswer: '',
-  detectedRole: null, crConflict: null, results: [],
+  detectedRole: null, crConflict: null, supplierType: 'unknown', results: [],
   discussion: []
 };
 
@@ -1171,6 +1299,7 @@ ${SSIC_DIVISION_INDEX}
 
 القواعد الأساسية:
 0. ⚠️ أهم قاعدة: كود isicCode واسمه isicName يجب أن يطابقا فعلياً النشاط الموصوف في reason — ممنوع منعاً باتاً وصف نشاط استشاري/تدقيقي في reason ثم اختيار كود تصنيع أو اختبارات فنية لا علاقة له. مع كل طلب سترد قائمة "أكواد مرشّحة" حقيقية من القاعدة الرسمية الكاملة (٦ أرقام لكل كود) مبنية على وصف الحالة — اختر isicCode منها حصراً إن وُجد ما يطابق النشاط فعلياً. إن لم يطابق أي مرشّح، استخدم معرفتك الكاملة بـ ISIC السعودي واختر كوداً حقيقياً من ٦ أرقام (لا تخترع كوداً غير موجود فعلياً)، مستعيناً بفهرس الشُّعب أعلاه لتحديد الفرع الصحيح.
+0.1 كل كود مرشّح يصلك بكامل أعمدته الرسمية (المسمى | الشرح | الفئة | المجموعة | القسم | الباب | الجهة المشرفة | الجهة المرخصة). احكم على المطابقة من الشرح والفئة والمجموعة معاً، لا من المسمى وحده؛ وفرّق بين الأكواد المتشابهة بالمسمى (مثل سكني/غير سكني، جملة/تجزئة) بالرجوع إلى شرحها. الجهة المرخصة قرينة مساعدة (مثل وزارة البلديات والإسكان أو وزارة الصناعة والثروة المعدنية) لا دليل وحيد.
 1. السجل التجاري هو مصدر الحقيقة — إذا مسجل "تجارة جملة" لا يمكن أن يكون مصنعاً
 2. إذا ذُكر مصنع معروف (سابك، أرامكو، معادن...) مع شركة أخرى → الشركة غالباً موزع وليست مصنعاً
 3. إذا الدور واضح من السجل والفاتورة → أعطِ الإجابة مباشرة (needsClarification: false)
@@ -1179,7 +1308,13 @@ ${SSIC_DIVISION_INDEX}
 قواعد خاصة بالخدمات المهنية (شُعب 69-74):
 5. الاستثناء الوحيد الرسمي من LCGPA: إذا كانت الخدمة تحديداً "تدقيق القوائم المالية" أو "الزكاة" أو "الضريبة" → قطاع 5 دائماً بنسبة 50% حتى لو المورد وكيل لأجنبي. هذا الاستثناء لا يشمل المحاسبة القانونية العامة ولا الفحص النافي للجهالة ولا الاستشارات المالية.
 6. أي خدمة مهنية أخرى في شُعب 69-74 (استشارات، محاسبة، فحص نافي للجهالة، هندسة، قانون، تسويق، due diligence) → اسأل سؤالاً توضيحياً واحداً: "هل المورد شركة سعودية مستقلة أم فرع/وكيل لشركة أجنبية؟" — محلي مستقل = قطاع 5 (50%)، وكيل لأجنبي = قطاع 6 (20%)
-7. إذا كانت شركة أجنبية لها فرع سعودي وتقدم تراخيص → اسأل: "هل هو ترخيص برنامج/تقنية أم خدمة مهنية (استشارة/تدريب)؟" — برنامج/تقنية = قطاع 19 (41%)، خدمة مهنية = قطاع 5 أو 6 حسب استقلالية الفرع`;
+7. إذا كانت شركة أجنبية لها فرع سعودي وتقدم تراخيص → اسأل: "هل هو ترخيص برنامج/تقنية أم خدمة مهنية (استشارة/تدريب)؟" — برنامج/تقنية = قطاع 19 (41%)، خدمة مهنية = قطاع 5 أو 6 حسب استقلالية الفرع
+8. نوع المورد (supplierType) — الملحق (ب) يحدد قطاعات حسب نوع المورد لا حسب الكود، فحدّده دائماً بإحدى القيم:
+   - "local": منشأة سعودية تقدّم الخدمة أو المنتج بنفسها (ويشمل الفرع السعودي لشركة أجنبية في حالة ترخيص البرنامج/التقنية بالقاعدة 7).
+   - "saudi_agent_of_foreign": وكيل أو ممثل أو فرع سعودي يقدّم خدمة أو منتجاً لمورد أجنبي (وهو جواب "فرع/وكيل لشركة أجنبية" في القاعدة 6).
+   - "foreign": مورد خارج المملكة مباشرة (فاتورة من جهة أجنبية بلا سجل أو رقم ضريبي سعودي).
+   - "unknown": إن لم يتضح من السجل والفاتورة.
+   لا تغيّر isicCode بسبب نوع المورد؛ اختر الكود حسب النشاط فقط، والتطبيق يحوّل القطاع وفق الملحق.`;
 
 // ─── API CALL ─────────────────────────────────────────────────────────────────
 // يستخرج ويحلّل أول كتلة JSON من نص الرد (يشترك فيه المسار العادي والمبثوث)
@@ -1249,6 +1384,7 @@ async function callClaudeStream(systemText, messages, { maxTokens = 1000, onDelt
   const decoder = new TextDecoder();
   let buffer = '';
   let fullText = '';
+  let stopReason = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -1270,12 +1406,17 @@ async function callClaudeStream(systemText, messages, { maxTokens = 1000, onDelt
       if (eventType === 'content_block_delta' && parsed.delta && parsed.delta.type === 'text_delta') {
         fullText += parsed.delta.text;
         if (onDelta) onDelta(fullText, parsed.delta.text);
+      } else if (eventType === 'message_delta' && parsed.delta && parsed.delta.stop_reason) {
+        stopReason = parsed.delta.stop_reason;
       } else if (eventType === 'error') {
         throw new Error((parsed.error && parsed.error.message) || 'خطأ من خدمة التصنيف');
       }
     }
   }
 
+  if (stopReason === 'refusal') {
+    throw new Error('اعتذرت خدمة التصنيف عن هذا الطلب — عدّل صياغة الوصف وحاول مجدداً');
+  }
   return fullText;
 }
 
@@ -1285,7 +1426,7 @@ function buildCandidateText(candidates) {
     return 'لم يتم العثور على أكواد مرشّحة مطابقة نصياً — استخدم معرفتك الكاملة بـ ISIC السعودي واختر كوداً حقيقياً من 6 أرقام.';
   }
   return 'أكواد مرشّحة من القاعدة الرسمية الكاملة (اختر isicCode منها حصراً إن طابقت النشاط فعلياً، وإلا استخدم معرفتك):\n' +
-    candidates.map(c => `${c.c} — ${c.n} (${c.qn})`).join('\n');
+    candidates.map(ssicLine).join('\n');
 }
 
 // يبني محتوى رسالة المستخدم (نص، أو صورة/PDF + نص)
@@ -1342,6 +1483,7 @@ ${candidateBlock}
   "crConflict": "وصف التعارض" | null,
   "detectedRole": "manufacturer|distributor|contractor|importer|mixed|unknown",
   "detectedRoleAr": "الدور بالعربي",
+  "supplierType": "local|saudi_agent_of_foreign|foreign|unknown",
   "activities": [
     {
       "isicCode": "XXXXXX",
@@ -1359,12 +1501,13 @@ ${candidateBlock}
 
     const content = buildUserContent(userText, state.inputMode === 'image');
     const fullText = await callClaudeStream(SYSTEM_RULES, [{ role: 'user', content }], {
-      maxTokens: 1500,
+      maxTokens: 8000,
       onDelta: updateAnalyzeStage
     });
     const parsed = extractJson(fullText);
     state.crConflict  = parsed.crConflict;
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
+    state.supplierType = parsed.supplierType || 'unknown';
 
     if (parsed.needsClarification && parsed.clarifyQuestion) {
       state.clarifyQuestion = parsed.clarifyQuestion;
@@ -1372,9 +1515,9 @@ ${candidateBlock}
       renderClarify();
       setPhase(2);
     } else {
-      state.results = (parsed.activities || []).map(act => enrichActivity(act, candidateCodes));
+      state.results = await finalizeActivities(parsed.activities, candidateCodes);
       renderResult();
-      renderAnnexB(state.results, state.clarifyAnswer);
+      renderAnnexB(state.results, state.supplierType);
       setPhase(3);
     }
   } catch(e) {
@@ -1449,21 +1592,23 @@ ${candidateBlock}
   "detectedRole": "manufacturer|distributor|contractor|importer",
   "detectedRoleAr": "...",
   "crConflict": "..." | null,
+  "supplierType": "local|saudi_agent_of_foreign|foreign|unknown",
   "activities": [
     { "isicCode":"XXXXXX","isicName":"...","sectionCode":"XX","sectionName":"...","chapterCode":"X","chapterName":"...","roleLabel":"...","confidence":"عالي|متوسط|منخفض","reason":"..." }
   ]
 }`;
 
     const fullText = await callClaudeStream(SYSTEM_RULES, [{ role: 'user', content: userText }], {
-      maxTokens: 1500,
+      maxTokens: 8000,
       onDelta: updateClarifyStage
     });
     const parsed = extractJson(fullText);
     state.detectedRole = { role: parsed.detectedRole, label: parsed.detectedRoleAr };
     if (parsed.crConflict) state.crConflict = parsed.crConflict;
-    state.results = (parsed.activities || []).map(act => enrichActivity(act, candidateCodes));
+    if (parsed.supplierType) state.supplierType = parsed.supplierType;
+    state.results = await finalizeActivities(parsed.activities, candidateCodes);
     renderResult();
-    renderAnnexB(state.results, state.clarifyAnswer);
+    renderAnnexB(state.results, state.supplierType);
     setPhase(3);
   } catch(err) {
     console.error('answerClarify error:', err);
@@ -1505,17 +1650,25 @@ function renderResult() {
   const VERIFY_TOOLTIP = {
     candidate:  '✓ من الأكواد المرشّحة المطابقة فعلياً لوصف النشاط (أعلى ثقة)',
     verified:   '✓ كود حقيقي متحقق منه بالقائمة الرسمية (اختاره النموذج من معرفته مباشرة)',
-    unverified: '⚠️ لم يتم العثور على هذا الكود في القائمة الرسمية الكاملة (2,816 نشاط) — يُنصح بالمراجعة اليدوية'
+    corrected:  '✓ كود رسمي — أُعيد اختياره من القائمة الرسمية بعد رفض كود غير موجود',
+    auto:       '⚠️ أقرب تطابق آلي من القائمة الرسمية — يُنصح بالمراجعة اليدوية'
   };
   const cards = state.results.map((r, i) => {
     const confClass = { عالي:'green', متوسط:'amber', منخفض:'red' }[r.confidence] || 'gray';
-    const tier = r.verifyTier || 'unverified';
+    const tier = r.verifyTier;
+    const orig = r.originalCode ? ` (${r.originalCode})` : '';
+    const note = tier === 'corrected'
+      ? `<div class="verify-note corrected"><span>ℹ️</span><div>صُحّح آلياً: الكود المقترح أولاً${orig} غير موجود في القائمة الرسمية، فأُعيد الاختيار من أكواد رسمية فقط.</div></div>`
+      : tier === 'auto'
+      ? `<div class="verify-note auto"><span>⚠️</span><div><strong>راجعه يدوياً:</strong> الكود المقترح أولاً${orig} غير موجود في القائمة الرسمية، وهذا أقرب نشاط رسمي له بالمطابقة النصية.</div></div>`
+      : '';
     return `
-      <div class="isic-card ${i===0?'top':''} ${tier==='unverified'?'unverified':''}">
+      <div class="isic-card ${i===0?'top':''} ${tier==='auto'?'auto':''}">
         <div class="isic-topline">
           <span class="rank-chip ${i===0?'first':''}">${i+1}</span>
           <span class="verify-dot ${tier}" title="${VERIFY_TOOLTIP[tier]}"></span>
         </div>
+        ${note}
         <div class="isic-main">
           <div>
             <div class="isic-name">${r.isicName || '(غير متوفر)'}</div>
@@ -1543,7 +1696,8 @@ function renderResult() {
       </div>`;
   }).join('');
 
-  document.getElementById('resultCards').innerHTML = cards;
+  document.getElementById('resultCards').innerHTML = cards ||
+    `<div class="verify-note auto"><span>⚠️</span><div>تعذّر تحديد كود رسمي مطابق من القائمة الرسمية (2,816 نشاط). أضف وصفاً أوضح للفاتورة أو لنشاط السجل التجاري وأعد المحاولة.</div></div>`;
   document.querySelectorAll('#resultCards .copy-btn').forEach(btn => {
     btn.addEventListener('click', () => copyCode(btn));
   });
@@ -1553,19 +1707,25 @@ function renderResult() {
 }
 
 // ─── DISCUSSION (محصورة بسياق التصنيف) ───────────────────────────────────────
-const DISCUSS_SCOPE = `أنت تناقش نتيجة تصنيف ISIC ومحتوى محلي محددة مع مدقق. مهمتك: شرح التصنيف والإجابة عن أسئلة تتعلق بهذا التصنيف تحديداً ونطاق تدقيق ISIC/المحتوى المحلي فقط، مع الاستشهاد بالقاعدة المناسبة. إذا سُئلت عن شيء خارج هذا النطاق، اعتذر بلطف وذكّر أن دورك محصور بمناقشة هذا التصنيف. كن موجزاً وعملياً. أجب بنص عادي فقط دون أي تنسيق Markdown — ممنوع استخدام النجمتين ** أو # أو _ أو أي رموز تنسيق؛ إن أردت التشديد على كلمة استخدم علامات تنصيص عادية "هكذا" فقط.`;
+const DISCUSS_SCOPE = `أنت تناقش نتيجة تصنيف ISIC ومحتوى محلي محددة مع مدقق. مهمتك: شرح التصنيف والإجابة عن أسئلة تتعلق بهذا التصنيف تحديداً ونطاق تدقيق ISIC/المحتوى المحلي فقط، مع الاستشهاد بالقاعدة المناسبة. إذا سُئلت عن شيء خارج هذا النطاق، اعتذر بلطف وذكّر أن دورك محصور بمناقشة هذا التصنيف. كن موجزاً وعملياً. ممنوع ذكر أي كود ISIC غير موجود حرفياً في الأكواد المُصنّفة أو في قائمة الأكواد الرسمية المرفقة بالسياق؛ إن لم تجد كوداً مناسباً فيها فقل ذلك صراحة. أجب بنص عادي فقط دون أي تنسيق Markdown — ممنوع استخدام النجمتين ** أو # أو _ أو أي رموز تنسيق؛ إن أردت التشديد على كلمة استخدم علامات تنصيص عادية "هكذا" فقط.`;
 
 function classificationContext() {
   const acts = state.results.map((r, i) =>
     `${i+1}) ${r.isicCode} — ${r.isicName} (${r.chapterName} ← ${r.sectionName}) | الدور: ${r.roleLabel || '—'} | الثقة: ${r.confidence || '—'} | السبب: ${r.reason || '—'}`
   ).join('\n');
+  const divisions = [...new Set(state.results.map(r => String(r.isicCode).slice(0, 2)))];
+  const official = divisions.map(div =>
+    divisionCodes(div).slice(0, MAX_REPAIR_POOL).map(ssicLine).join('\n')
+  ).filter(Boolean).join('\n');
   return `سياق التصنيف الحالي:
 - المورد: "${state.vendorName || 'غير محدد'}"
 - النشاط في السجل التجاري: "${state.crActivity || 'غير محدد'}"
 - الفاتورة/التوريد: "${state.invoice || 'من صورة'}"
 - الدور المُكتشف: ${state.detectedRole?.label || '—'}
+- نوع المورد: ${SUPPLIER_TYPE_AR[state.supplierType] || 'غير محدد'}
 ${state.crConflict ? '- تعارض مع السجل: ' + state.crConflict + '\n' : ''}- الأكواد المُصنّفة:
-${acts || '—'}`;
+${acts || '—'}
+${official ? `- الأكواد الرسمية في نفس الشُّعب (لا تقترح أي كود خارج هذه القائمة):\n${official}` : ''}`;
 }
 
 function initDiscussion() {
@@ -1626,7 +1786,7 @@ async function sendDiscuss() {
 
   try {
     const answer = await callClaudeStream(DISCUSS_SCOPE, state.discussion, {
-      maxTokens: 800,
+      maxTokens: 4000,
       onDelta: (textSoFar) => {
         typing.textContent = stripMarkdown(textSoFar);
         typing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1634,6 +1794,13 @@ async function sendDiscuss() {
     });
     typing.textContent = stripMarkdown(answer);
     state.discussion.push({ role: 'assistant', content: answer });
+    const unknown = unknownCodesIn(answer);
+    if (unknown.length) {
+      const warn = document.createElement('div');
+      warn.className = 'verify-note auto';
+      warn.textContent = `⚠️ تنبيه: الرقم ${unknown.join('، ')} المذكور أعلاه ليس كوداً في القائمة الرسمية — لا تعتمد عليه.`;
+      typing.after(warn);
+    }
   } catch (e) {
     typing.textContent = 'تعذّر جلب الرد. حاول مجدداً.';
     state.discussion.pop(); // إزالة سؤال المستخدم غير المُجاب حتى لا يفسد السياق
@@ -1651,7 +1818,7 @@ function resetAll() {
     vendorName:'', crActivity:'', invoice:'',
     imageData:null, imageType:null, inputMode:'text',
     clarifyQuestion:'', clarifyOptions:[], clarifyAnswer:'',
-    detectedRole:null, crConflict:null, results:[], discussion:[]
+    detectedRole:null, crConflict:null, supplierType:'unknown', results:[], discussion:[]
   };
   const dlog = document.getElementById('discussLog'); if (dlog) dlog.innerHTML = '';
   document.getElementById('vendorName').value = '';
@@ -1695,7 +1862,10 @@ const ISIC_OVR = [
   {prefix:"2395",   len:4, output:"32_منتجات الاسمنت والجبس"},
   {prefix:"2790",   len:4, output:"35_منتجات محلية أخرى"},
   {prefix:"7911",   len:4, output:"13_خدمات النقل والخدمات اللوجستية"},
-  {prefix:"7730",   len:4, output:"17_خدمات تأجير السيارات والشاشات والمعدات"},
+  // الملحق: قطاع17 = "773-7730" وقطاع20 = "773074-7740" (تأجير الأثاث المكتبي والحاويات وتأجير الملكية الفكرية)
+  {prefix:"773074", len:6, output:"20_خدمات أخرى"},
+  {prefix:"773080", len:6, output:"20_خدمات أخرى"},
+  {prefix:"774",    len:3, output:"20_خدمات أخرى"},
   {prefix:"383",    len:3, output:"36_منتجات إعادة التدوير"},
   {prefix:"351",    len:3, output:"21_خدمات المرافق"},
   {prefix:"352",    len:3, output:"26_منتجات كيميائية والنفط والغاز"},
@@ -1761,9 +1931,34 @@ const ISIC_RULES = [
   {from:23,    to:23,    len:2, sector:"35_منتجات محلية أخرى"},
   {from:31,    to:32,    len:2, sector:"35_منتجات محلية أخرى"},
   {from:45,    to:47,    len:2, sector:"37_منتجات وكيل / موزع في المملكة"},
-  {from:45717, to:45717, len:5, sector:"24_منتجات الزراعة والغابات والأسماك"},
-  {from:46001, to:46001, len:5, sector:"25_منتجات الأغذية والمشروبات"},
 ];
+
+// قطاعات "نوع المورد" في الملحق (ب): لا ترتبط بكود، تُطبَّق فوق قطاع الكود حسب supplierType
+const SUPPLIER_SECTORS = {
+  6:  "6_خدمات ممثل محلي من مورد أجنبي",
+  22: "22_خدمات وكلاء أو ممثلي شركات الخدمات",
+  23: "23_الخدمات الأجنبية",
+  37: "37_منتجات وكيل / موزع في المملكة",
+  38: "38_منتجات مورد أجنبي"
+};
+// استثناء القاعدة 5: تدقيق القوائم المالية والزكاة والضريبة تبقى قطاع 5 حتى من وكيل لمورد أجنبي
+const AUDIT_EXCEPTION_CODES = new Set(['692010', '692030', '692042', '692043']);
+
+// القطاعات 1-23 خدمات و24-38 منتجات
+function applySupplierType(sector, isicCode, supplierType) {
+  const num = parseInt(sector.name, 10);
+  const isProduct = num >= 24;
+  let target = num;
+  if (supplierType === 'foreign') {
+    target = isProduct ? 38 : 23;
+  } else if (supplierType === 'saudi_agent_of_foreign') {
+    if (num === 5) target = AUDIT_EXCEPTION_CODES.has(String(isicCode)) ? 5 : 6;
+    else target = isProduct ? 37 : 22;
+  }
+  if (target === num) return sector;
+  const name = SUPPLIER_SECTORS[target];
+  return { name, pct: ANNEX_B_PCT[String(target)] ?? 0, from: sector.name };
+}
 
 // ─── MATCH ANNEX B — ACCURATE ────────────────────────────────────────────────
 function matchAnnexB(isicCode) {
@@ -1808,38 +2003,35 @@ function matchAnnexB(isicCode) {
 }
 
 // ─── RENDER ANNEX B ──────────────────────────────────────────────────────────
-function renderAnnexB(activities, clarifyAnswer) {
-  // If user confirmed foreign agent/representative → override sector 5 to sector 6
-  const isForeignAgent = clarifyAnswer && (
-    clarifyAnswer.includes('وكيل') || clarifyAnswer.includes('أجنبي') ||
-    clarifyAnswer.includes('فرع') || clarifyAnswer.includes('ممثل') ||
-    clarifyAnswer.toLowerCase().includes('foreign') || clarifyAnswer.toLowerCase().includes('agent')
-  );
-  const seen = new Set();
-  const matched = [];
+const SUPPLIER_TYPE_AR = {
+  local: 'مورد محلي',
+  saudi_agent_of_foreign: 'وكيل/ممثل سعودي لمورد أجنبي',
+  foreign: 'مورد من خارج المملكة',
+  unknown: 'غير محدد'
+};
 
+function renderAnnexB(activities, supplierType) {
+  const seen = new Set();
+  const finalMatched = [];
   for (const act of activities) {
-    const sectors = matchAnnexB(act.isicCode);
-    for (const s of sectors) {
-      if (!seen.has(s.name)) {
-        seen.add(s.name);
-        matched.push(s);
+    for (const s of matchAnnexB(act.isicCode)) {
+      const adj = applySupplierType(s, act.isicCode, supplierType);
+      if (!seen.has(adj.name)) {
+        seen.add(adj.name);
+        finalMatched.push(adj);
       }
     }
   }
 
-  if (matched.length === 0) {
+  if (finalMatched.length === 0) {
     document.getElementById('annexBSection').style.display = 'none';
     return;
   }
 
-  // Override: if foreign agent, replace sector 5 with sector 6
-  const finalMatched = matched.map(s => {
-    if (isForeignAgent && s.name.startsWith('5_')) {
-      return { name: '6_خدمات ممثل محلي من مورد أجنبي', pct: 0.20 };
-    }
-    return s;
-  });
+  const typeLabel = SUPPLIER_TYPE_AR[supplierType] || SUPPLIER_TYPE_AR.unknown;
+  const supplierNote = supplierType === 'unknown' || !SUPPLIER_TYPE_AR[supplierType]
+    ? `<div class="verify-note corrected"><span>ℹ️</span><div>نوع المورد غير محدد — النسبة محسوبة على افتراض مورد محلي. إن كان المورد أجنبياً أو وكيلاً لمورد أجنبي فالنسبة تختلف حسب الملحق (ب).</div></div>`
+    : `<div style="font-size:12px;color:var(--text3);margin-bottom:10px">نوع المورد: <strong style="color:var(--text)">${typeLabel}</strong></div>`;
 
   const cards = finalMatched.map((s, i) => {
     const pctDisplay = Math.round(s.pct * 100) + '%';
@@ -1859,12 +2051,12 @@ function renderAnnexB(activities, clarifyAnswer) {
           </div>
         </div>
         <div class="annexb-footer">
-          <span class="annexb-sector-num">قطاع ${num}</span>
+          <span class="annexb-sector-num">قطاع ${num}${s.from ? ` · بدل قطاع ${s.from.split('_')[0]} (${s.from.substring(s.from.indexOf('_')+1)}) لأن المورد ${typeLabel}` : ''}</span>
         </div>
       </div>`;
   }).join('');
 
-  document.getElementById('annexBCards').innerHTML = cards;
+  document.getElementById('annexBCards').innerHTML = supplierNote + cards;
   document.getElementById('annexBSection').style.display = '';
 }
 

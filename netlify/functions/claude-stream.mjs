@@ -4,8 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 const SURL = process.env.SUPABASE_URL;
 const SKEY = process.env.SUPABASE_KEY;
 
-const MODEL = 'claude-haiku-4-5';
-const MAX_TOKENS_CAP = 2000;
+const MODEL = 'claude-opus-5-5';
+// التفكير دائماً مفعّل في هذا الموديل ويُحسب ضمن max_tokens، فالسقف يتسع للتفكير + الرد
+const MAX_TOKENS_CAP = 16000;
+const EFFORT = 'medium';
 
 function jsonError(message, status) {
   return new Response(JSON.stringify({ error: message }), {
@@ -55,8 +57,10 @@ export default async (req) => {
 
   const payload = {
     model: MODEL,
-    max_tokens: Math.min(Number(body.max_tokens) || 1000, MAX_TOKENS_CAP),
+    max_tokens: Math.min(Number(body.max_tokens) || 8000, MAX_TOKENS_CAP),
     messages: Array.isArray(body.messages) ? body.messages : [],
+    output_config: { effort: EFFORT },
+    fallbacks: 'default',
     stream: true
   };
   if (body.system) payload.system = body.system;
@@ -68,7 +72,8 @@ export default async (req) => {
       headers: {
         'content-type': 'application/json',
         'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'server-side-fallback-2026-07-01'
       },
       body: JSON.stringify(payload)
     });
